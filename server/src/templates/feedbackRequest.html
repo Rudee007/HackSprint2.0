@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Feedback Request</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; text-align: center; }
+        .content { background: #f9f9f9; padding: 30px; }
+        .feedback-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+        .btn { display: inline-block; background: #4facfe; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: bold; }
+        .footer { text-align: center; padding: 20px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💝 Share Your Experience</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{patientName}},</p>
+            
+            <p>We hope you had a wonderful {{therapyType}} session with us! Your feedback helps us continue providing excellent Panchakarma care.</p>
+            
+            <div class="feedback-box">
+                <h3>⭐ Rate Your Experience</h3>
+                <p>How was your therapy session? Please take a moment to share your thoughts.</p>
+                
+                <a href="{{feedbackUrl}}" class="btn">Give Feedback</a>
+                
+                <p style="font-size: 12px; color: #666;">
+                    Takes less than 2 minutes • Your feedback is valuable to us
+                </p>
+            </div>
+            
+            <p>Your insights help us:</p>
+            <ul>
+                <li>Improve our services</li>
+                <li>Better understand your needs</li>
+                <li>Enhance your future sessions</li>
+                <li>Help other patients make informed decisions</li>
+            </ul>
+            
+            <p>Thank you for choosing {{clinicName}} for your wellness journey!</p>
+        </div>
+        
+        <div class="footer">
+            <p>With gratitude,<br>The {{clinicName}} Team 🌿</p>
+        </div>
+    </div>
+</body>
+</html>

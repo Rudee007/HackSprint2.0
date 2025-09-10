@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Appointment Confirmation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .content { background: #f9f9f9; padding: 30px; }
+        .appointment-details { background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; }
+        .btn { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 {{clinicName}}</h1>
+            <h2>Appointment Confirmed</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{patientName}},</p>
+            
+            <p>Your appointment has been successfully confirmed. We look forward to providing you with excellent Panchakarma care.</p>
+            
+            <div class="appointment-details">
+                <h3>📅 Appointment Details</h3>
+                <ul>
+                    <li><strong>Therapy:</strong> {{therapyType}}</li>
+                    <li><strong>Date:</strong> {{appointmentDate}}</li>
+                    <li><strong>Time:</strong> {{appointmentTime}}</li>
+                    <li><strong>Location:</strong> {{clinicName}}</li>
+                </ul>
+            </div>
+            
+            <h3>🌿 Preparation Instructions</h3>
+            <ul>
+                <li>Please arrive 15 minutes early</li>
+                <li>Wear comfortable, loose-fitting clothes</li>
+                <li>Avoid heavy meals 2 hours before treatment</li>
+                <li>Stay hydrated by drinking plenty of water</li>
+            </ul>
+            
+            <p>If you need to reschedule or have any questions, please contact us immediately.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing {{clinicName}} for your wellness journey.</p>
+            <p><em>🌿 Ancient Wisdom, Modern Care 🌿</em></p>
+        </div>
+    </div>
+</body>
+</html>
