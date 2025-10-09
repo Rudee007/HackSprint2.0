@@ -5,13 +5,157 @@ const Consultation = require('../models/Consultation');
 const Therapist = require('../models/Therapist');
 const Doctor = require('../models/Doctor');
 const moment = require('moment');
+const Admin = require('../models/Admin');
+const jwt = require('jsonwebtoken'); // ✅ ADD THIS
+const bcrypt = require('bcryptjs'); // ✅ ADD THIS
+
 
 class AdminController {
   
   // ================================
   // USER MANAGEMENT SECTION
   // ================================
+  login = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    
+    console.log('🔐 Admin login attempt:', email);
+    
+    // Validate input
+    if (!email || !password) {
+      throw new AppError('Email and password are required', 400, 'MISSING_CREDENTIALS');
+    }
+    
+    // Find admin by email
+    const admin = await Admin.findOne({ email });
+    if (!admin) {
+      console.log('❌ Admin not found');
+      throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
+    }
+    
+    // Check if admin is active
+    if (!admin.isActive) {
+      console.log('❌ Admin account disabled');
+      throw new AppError('Account is disabled', 403, 'ACCOUNT_DISABLED');
+    }
+    
+    // Verify password
+    const isPasswordValid = await admin.comparePassword(password);
+    if (!isPasswordValid) {
+      console.log('❌ Invalid password');
+      throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
+    }
+    
+    // Update last login
+    admin.lastLogin = new Date();
+    await admin.save();
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: admin._id, 
+        email: admin.email, 
+        role: admin.role,
+        permissions: admin.permissions,
+        type: 'admin' // ✅ Important for middleware
+      },
+      process.env.JWT_SECRET || 'your-secret-key-change-this',
+      { expiresIn: '7d' }
+    );
+    
+    // Prepare admin data (without password)
+    const adminData = {
+      id: admin._id,
+      name: admin.name,
+      email: admin.email,
+      role: admin.role,
+      permissions: admin.permissions,
+      lastLogin: admin.lastLogin
+    };
+    
+    console.log('✅ Admin login successful');
+    
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        admin: adminData,
+        token
+      }
+    });
+  });
   
+  // Create First Admin (One-time setup)
+  createFirstAdmin = asyncHandler(async (req, res) => {
+    // Check if any admin exists
+    const adminCount = await Admin.countDocuments();
+    if (adminCount > 0) {
+      throw new AppError('Admin already exists. Use regular admin creation.', 400, 'ADMIN_EXISTS');
+    }
+    
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+      throw new AppError('Name, email and password are required', 400, 'MISSING_FIELDS');
+    }
+    
+    // Create super admin
+    const admin = await Admin.create({
+      name,
+      email,
+      passwordHash: password, // Will be hashed by pre-save hook
+      role: 'super_admin',
+      permissions: ['user_management', 'appointment_management', 'system_analytics', 'feedback_management'],
+      isActive: true
+    });
+    
+    console.log('✅ First admin created:', admin.email);
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Super admin created successfully',
+      data: {
+        admin: {
+          id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          role: admin.role
+        }
+      }
+    });
+  });
+  
+  // Verify Token
+  verifyToken = asyncHandler(async (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      throw new AppError('No token provided', 401, 'NO_TOKEN');
+    }
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this');
+      const admin = await Admin.findById(decoded.id).select('-passwordHash');
+      
+      if (!admin || !admin.isActive) {
+        throw new AppError('Invalid token', 401, 'INVALID_TOKEN');
+      }
+      
+      return res.json({
+        success: true,
+        data: { 
+          admin: {
+            id: admin._id,
+            name: admin.name,
+            email: admin.email,
+            role: admin.role,
+            permissions: admin.permissions
+          }
+        }
+      });
+    } catch (error) {
+      throw new AppError('Invalid token', 401, 'INVALID_TOKEN');
+    }
+  });
   // Get all users with filtering and pagination
   getUsers = asyncHandler(async (req, res) => {
     const {

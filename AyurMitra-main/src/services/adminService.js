@@ -1,285 +1,549 @@
 // src/services/adminService.js
 import axios from 'axios';
-import { getAuthHeader } from './authService';
+import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.REACT_APP_API_URL || '/api';
-
-// Create axios instance with auth headers
-const apiClient = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
+class AdminService {
+  constructor() {
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3003/api';
+    this.axiosInstance = axios.create({
+      baseURL: this.baseURL,
+      timeout: 30000,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    this.isLoggingOut = false;
+    this.setupInterceptors();
   }
-});
 
-// Add auth token to every request
-apiClient.interceptors.request.use(async (config) => {
-  const authHeader = await getAuthHeader();
-  if (authHeader) {
-    config.headers.Authorization = authHeader;
+  setupInterceptors() {
+    this.axiosInstance.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('adminToken') || localStorage.getItem('accessToken');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401 && !this.isLoggingOut) {
+          const currentPath = window.location.pathname;
+          const isLoginRequest = error.config?.url?.includes('/auth/login');
+          const isOnLoginPage = currentPath.includes('/admin-login');
+          
+          console.log('❌ 401 Error:', {
+            url: error.config?.url,
+            isLoginRequest,
+            isOnLoginPage,
+            currentPath
+          });
+          
+          if (!isLoginRequest && !isOnLoginPage) {
+            this.isLoggingOut = true;
+            
+            console.log('🚪 Session expired - logging out');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminData');
+            toast.error('Session expired. Please login again.');
+            
+            setTimeout(() => {
+              window.location.href = '/admin-login';
+              this.isLoggingOut = false;
+            }, 100);
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
-  return config;
-});
 
-const adminService = {
-  // ============ USER MANAGEMENT SECTION ============
-  
-  /**
-   * Get users with filtering and pagination
-   * @param {Object} params - Query parameters
-   * @param {number} params.page - Page number
-   * @param {number} params.limit - Items per page
-   * @param {string} params.role - Filter by role
-   * @param {boolean|string} params.isActive - Filter by active status
-   * @param {string} params.search - Search term
-   * @param {string} params.sortBy - Sort field
-   * @param {string} params.sortOrder - Sort direction ('asc' or 'desc')
-   * @returns {Promise<Object>} Users data with pagination
-   */
-  getUsers: async (params = {}) => {
+  // ============ AUTHENTICATION ============
+  async login(email, password) {
     try {
-      const response = await apiClient.get('/admin/users', { params });
-      return response.data;
+      console.log('🔐 Attempting login to:', `${this.baseURL}/admin/auth/login`);
+      
+      const response = await this.axiosInstance.post('/admin/auth/login', {
+        email,
+        password
+      });
+
+      if (response.data.success) {
+        const { token, admin } = response.data.data;
+        
+        console.log('✅ Login successful, storing credentials...');
+        console.log('Token:', token.substring(0, 30) + '...');
+        console.log('Admin:', admin);
+        
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminData', JSON.stringify(admin));
+        
+        const storedToken = localStorage.getItem('adminToken');
+        const storedData = localStorage.getItem('adminData');
+        console.log('✅ Verification - Token stored:', !!storedToken);
+        console.log('✅ Verification - Data stored:', !!storedData);
+        
+        return {
+          success: true,
+          data: response.data.data
+        };
+      }
+
+      return { success: false, message: 'Login failed' };
     } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Get user statistics for dashboard
-   * @returns {Promise<Object>} User statistics
-   */
-  getUserStats: async () => {
-    try {
-      const response = await apiClient.get('/admin/users/stats');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Get user by ID
-   * @param {string} userId - User ID
-   * @returns {Promise<Object>} User data
-   */
-  getUserById: async (userId) => {
-    try {
-      const response = await apiClient.get(`/admin/users/${userId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Create new user
-   * @param {Object} userData - User data
-   * @returns {Promise<Object>} Created user data
-   */
-  createUser: async (userData) => {
-    try {
-      const response = await apiClient.post('/admin/users', userData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Update user
-   * @param {string} userId - User ID
-   * @param {Object} userData - User data to update
-   * @returns {Promise<Object>} Updated user data
-   */
-  updateUser: async (userId, userData) => {
-    try {
-      const response = await apiClient.put(`/admin/users/${userId}`, userData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Toggle user active status
-   * @param {string} userId - User ID
-   * @returns {Promise<Object>} Updated user data
-   */
-  toggleUserStatus: async (userId) => {
-    try {
-      const response = await apiClient.patch(`/admin/users/${userId}/toggle-status`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Delete user
-   * @param {string} userId - User ID
-   * @returns {Promise<Object>} Deleted user data
-   */
-  deleteUser: async (userId) => {
-    try {
-      const response = await apiClient.delete(`/admin/users/${userId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  // ============ APPOINTMENT MANAGEMENT SECTION ============
-  
-  /**
-   * Get appointments with filtering and pagination
-   * @param {Object} params - Query parameters
-   * @param {number} params.page - Page number
-   * @param {number} params.limit - Items per page
-   * @param {string} params.status - Filter by status
-   * @param {string} params.providerId - Filter by provider ID
-   * @param {string} params.patientId - Filter by patient ID
-   * @param {string} params.startDate - Filter by start date
-   * @param {string} params.endDate - Filter by end date
-   * @param {string} params.sortBy - Sort field
-   * @param {string} params.sortOrder - Sort direction ('asc' or 'desc')
-   * @returns {Promise<Object>} Appointments data with pagination
-   */
-  getAppointments: async (params = {}) => {
-    try {
-      const response = await apiClient.get('/admin/appointments', { params });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Reschedule appointment
-   * @param {string} appointmentId - Appointment ID
-   * @param {Object} data - Reschedule data
-   * @param {string} data.newDateTime - New date and time
-   * @param {string} data.reason - Reason for rescheduling
-   * @returns {Promise<Object>} Updated appointment data
-   */
-  rescheduleAppointment: async (appointmentId, data) => {
-    try {
-      const response = await apiClient.put(`/admin/appointments/${appointmentId}/reschedule`, data);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Cancel appointment
-   * @param {string} appointmentId - Appointment ID
-   * @param {Object} data - Cancel data
-   * @param {string} data.reason - Reason for cancellation
-   * @returns {Promise<Object>} Updated appointment data
-   */
-  cancelAppointment: async (appointmentId, data = {}) => {
-    try {
-      const response = await apiClient.patch(`/admin/appointments/${appointmentId}/cancel`, data);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  // ============ DASHBOARD & ANALYTICS SECTION ============
-  
-  /**
-   * Get dashboard statistics
-   * @returns {Promise<Object>} Dashboard statistics
-   */
-  getDashboardStats: async () => {
-    try {
-      const response = await apiClient.get('/admin/dashboard/stats');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Get system metrics
-   * @returns {Promise<Object>} System metrics
-   */
-  getSystemMetrics: async () => {
-    try {
-      const response = await apiClient.get('/admin/system/metrics');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  // ============ FEEDBACK MANAGEMENT SECTION ============
-  
-  /**
-   * Get all feedback
-   * @param {Object} params - Query parameters
-   * @param {number} params.page - Page number
-   * @param {number} params.limit - Items per page
-   * @param {string} params.status - Filter by status
-   * @param {string} params.sortBy - Sort field
-   * @param {string} params.sortOrder - Sort direction ('asc' or 'desc')
-   * @returns {Promise<Object>} Feedback data with pagination
-   */
-  getFeedback: async (params = {}) => {
-    try {
-      const response = await apiClient.get('/admin/feedback', { params });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Get feedback by ID
-   * @param {string} feedbackId - Feedback ID
-   * @returns {Promise<Object>} Feedback data
-   */
-  getFeedbackById: async (feedbackId) => {
-    try {
-      const response = await apiClient.get(`/admin/feedback/${feedbackId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Update feedback status
-   * @param {string} feedbackId - Feedback ID
-   * @param {Object} data - Update data
-   * @param {string} data.status - New status
-   * @param {string} data.adminResponse - Admin response
-   * @returns {Promise<Object>} Updated feedback data
-   */
-  updateFeedbackStatus: async (feedbackId, data) => {
-    try {
-      const response = await apiClient.patch(`/admin/feedback/${feedbackId}/status`, data);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-  
-  /**
-   * Delete feedback
-   * @param {string} feedbackId - Feedback ID
-   * @returns {Promise<Object>} Result of deletion
-   */
-  deleteFeedback: async (feedbackId) => {
-    try {
-      const response = await apiClient.delete(`/admin/feedback/${feedbackId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
+      console.error('❌ Login error:', error.response?.data || error.message);
+      throw error;
     }
   }
-};
 
-export default adminService;
+  async verifyToken() {
+    try {
+      const response = await this.axiosInstance.post('/admin/auth/verify-token');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      return { success: false };
+    }
+  }
+
+  async logout() {
+    console.log('👋 Manual logout initiated');
+    this.isLoggingOut = true;
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminData');
+    setTimeout(() => {
+      window.location.href = '/admin-login';
+      this.isLoggingOut = false;
+    }, 100);
+  }
+
+  // ============ DASHBOARD & ANALYTICS ============
+  async getDashboardStats() {
+    try {
+      console.log('📊 Fetching dashboard stats...');
+      const response = await this.axiosInstance.get('/admin/dashboard/stats');
+      console.log('✅ Dashboard stats response:', response.data);
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('❌ Dashboard stats error:', error.response?.status, error.message);
+      
+      return {
+        success: false,
+        data: {
+          overview: {
+            totalUsers: 0,
+            activeUsers: 0,
+            newUsersThisWeek: 0,
+            totalAppointments: 0,
+            todaysAppointments: 0,
+            thisWeeksAppointments: 0
+          }
+        }
+      };
+    }
+  }
+
+  // ============ USER MANAGEMENT ============
+  async getUsers(params = {}) {
+    try {
+      const response = await this.axiosInstance.get('/admin/users', { params });
+      return { 
+        success: true, 
+        data: response.data.data.users, 
+        pagination: response.data.data.pagination 
+      };
+    } catch (error) {
+      console.error('Get users error:', error);
+      return { success: false, data: [], pagination: {} };
+    }
+  }
+
+  async getUserStats() {
+    try {
+      const response = await this.axiosInstance.get('/admin/users/stats');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get user stats error:', error);
+      return { success: false, data: {} };
+    }
+  }
+
+  async getUserById(userId) {
+    try {
+      const response = await this.axiosInstance.get(`/admin/users/${userId}`);
+      return { success: true, data: response.data.data.user };
+    } catch (error) {
+      console.error('Get user by ID error:', error);
+      throw error;
+    }
+  }
+
+  async createUser(userData) {
+    try {
+      const response = await this.axiosInstance.post('/admin/users', userData);
+      toast.success('User created successfully');
+      return { success: true, data: response.data.data.user };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create user');
+      throw error;
+    }
+  }
+
+  async updateUser(userId, userData) {
+    try {
+      const response = await this.axiosInstance.put(`/admin/users/${userId}`, userData);
+      toast.success('User updated successfully');
+      return { success: true, data: response.data.data.user };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update user');
+      throw error;
+    }
+  }
+
+  async toggleUserStatus(userId) {
+    try {
+      const response = await this.axiosInstance.patch(`/admin/users/${userId}/toggle-status`);
+      toast.success(response.data.message);
+      return { success: true, data: response.data.data.user };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to toggle user status');
+      throw error;
+    }
+  }
+
+  async deleteUser(userId) {
+    try {
+      const response = await this.axiosInstance.delete(`/admin/users/${userId}`);
+      toast.success('User deleted successfully');
+      return { success: true, data: response.data.data.user };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete user');
+      throw error;
+    }
+  }
+
+  // ============ APPOINTMENT MANAGEMENT ============
+  async getAppointments(params = {}) {
+    try {
+      const response = await this.axiosInstance.get('/admin/appointments', { params });
+      return { 
+        success: true, 
+        data: response.data.data.appointments, 
+        pagination: response.data.data.pagination 
+      };
+    } catch (error) {
+      console.error('Get appointments error:', error);
+      return { success: false, data: [], pagination: {} };
+    }
+  }
+
+  async rescheduleAppointment(appointmentId, newDateTime, reason) {
+    try {
+      const response = await this.axiosInstance.put(`/admin/appointments/${appointmentId}/reschedule`, { 
+        newDateTime, 
+        reason 
+      });
+      toast.success('Appointment rescheduled');
+      return { success: true, data: response.data.data.appointment };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to reschedule appointment');
+      throw error;
+    }
+  }
+
+  async cancelAppointment(appointmentId, reason) {
+    try {
+      const response = await this.axiosInstance.patch(`/admin/appointments/${appointmentId}/cancel`, { reason });
+      toast.success('Appointment cancelled');
+      return { success: true, data: response.data.data.appointment };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to cancel appointment');
+      throw error;
+    }
+  }
+
+  async getSystemMetrics() {
+    try {
+      const response = await this.axiosInstance.get('/admin/system/metrics');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get system metrics error:', error);
+      return { success: false, data: {} };
+    }
+  }
+
+  // ============ FEEDBACK MANAGEMENT ============
+  async getAllFeedback(params = {}) {
+    try {
+      const response = await this.axiosInstance.get('/admin/feedback/all', { params });
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get feedback error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  async getFeedbackStats() {
+    try {
+      const response = await this.axiosInstance.get('/admin/feedback/stats');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get feedback stats error:', error);
+      return { success: false, data: {} };
+    }
+  }
+
+  async getAttentionRequiredFeedback() {
+    try {
+      const response = await this.axiosInstance.get('/admin/feedback/attention-required');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get attention required feedback error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  async respondToFeedback(feedbackId, responseText) {
+    try {
+      const response = await this.axiosInstance.post(`/admin/feedback/${feedbackId}/respond`, { 
+        response: responseText 
+      });
+      toast.success('Response sent');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send response');
+      throw error;
+    }
+  }
+
+  async flagFeedback(feedbackId, reason) {
+    try {
+      const response = await this.axiosInstance.patch(`/admin/feedback/${feedbackId}/flag`, { reason });
+      toast.success('Feedback flagged');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to flag feedback');
+      throw error;
+    }
+  }
+
+  // ============ DOCTOR/THERAPIST VERIFICATION ============
+  async getPendingVerifications() {
+    try {
+      const response = await this.axiosInstance.get('/doctors/pending-verification');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get pending verifications error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  async updateDoctorVerification(doctorId, status, notes) {
+    try {
+      const response = await this.axiosInstance.put(`/doctors/${doctorId}/verification`, { 
+        status, 
+        notes 
+      });
+      toast.success('Verification status updated');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update verification');
+      throw error;
+    }
+  }
+
+  // ============ REAL-TIME MONITORING ============
+  async getTrackingDashboard() {
+    try {
+      const response = await this.axiosInstance.get('/realtime/therapy-tracking/dashboard');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get tracking dashboard error:', error);
+      return { success: false, data: {} };
+    }
+  }
+
+  async getUpcomingSessions() {
+    try {
+      const response = await this.axiosInstance.get('/realtime/therapy-tracking/upcoming');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Get upcoming sessions error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  // ============ NOTIFICATIONS ============
+  async sendBulkReminders() {
+    try {
+      const response = await this.axiosInstance.post('/notifications/bulk/reminders');
+      toast.success('Reminders sent');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send reminders');
+      throw error;
+    }
+  }
+
+  async sendBulkHealthTips(message) {
+    try {
+      const response = await this.axiosInstance.post('/notifications/bulk/health-tips', { message });
+      toast.success('Health tips sent');
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send health tips');
+      throw error;
+    }
+  }
+
+  // ============ EXPORT UTILITIES ============
+  
+  // Generic export method (kept for backward compatibility)
+  async exportData(endpoint, filename, filters = {}) {
+    try {
+      const response = await this.axiosInstance.post(endpoint, filters, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export completed');
+      return { success: true };
+    } catch (error) {
+      toast.error('Export failed');
+      return { success: false };
+    }
+  }
+
+  // ✅ Export all users (CSV or Excel)
+  async exportUsers(format = 'csv', filters = {}) {
+    try {
+      console.log('📥 Exporting users:', { format, filters });
+      
+      const params = new URLSearchParams(filters).toString();
+      const endpoint = format === 'excel' ? 'excel' : 'csv';
+      const extension = format === 'excel' ? 'xlsx' : 'csv';
+      const filename = `users_export_${Date.now()}.${extension}`;
+      
+      const response = await this.axiosInstance.get(`/admin/export/users/${endpoint}?${params}`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Users exported successfully (${format.toUpperCase()})`);
+      console.log('✅ Export completed:', filename);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Export failed:', error);
+      toast.error(error.response?.data?.message || 'Export failed');
+      return { success: false };
+    }
+  }
+
+  // ✅ Export patients only
+  async exportPatients(filters = {}) {
+    try {
+      console.log('📥 Exporting patients:', filters);
+      
+      const params = new URLSearchParams(filters).toString();
+      const filename = `patients_export_${Date.now()}.csv`;
+      
+      const response = await this.axiosInstance.get(`/admin/export/patients/csv?${params}`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Patients exported successfully');
+      console.log('✅ Export completed:', filename);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Export failed:', error);
+      toast.error(error.response?.data?.message || 'Export failed');
+      return { success: false };
+    }
+  }
+
+  // ✅ Export doctors/therapists only
+  async exportDoctors(filters = {}) {
+    try {
+      console.log('📥 Exporting doctors:', filters);
+      
+      const params = new URLSearchParams(filters).toString();
+      const filename = `doctors_export_${Date.now()}.csv`;
+      
+      const response = await this.axiosInstance.get(`/admin/export/doctors/csv?${params}`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Doctors exported successfully');
+      console.log('✅ Export completed:', filename);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Export failed:', error);
+      toast.error(error.response?.data?.message || 'Export failed');
+      return { success: false };
+    }
+  }
+
+  // ✅ Export appointments
+  async exportAppointments(filters = {}) {
+    try {
+      console.log('📥 Exporting appointments:', filters);
+      
+      const params = new URLSearchParams(filters).toString();
+      const filename = `appointments_export_${Date.now()}.csv`;
+      
+      const response = await this.axiosInstance.get(`/admin/export/appointments/csv?${params}`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Appointments exported successfully');
+      console.log('✅ Export completed:', filename);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Export failed:', error);
+      toast.error(error.response?.data?.message || 'Export failed');
+      return { success: false };
+    }
+  }
+}
+
+export default new AdminService();

@@ -1,5 +1,7 @@
+// src/middleware/auth.middleware.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Admin = require('../models/Admin'); // ✅ Import Admin model
 const config = require('../config');
 
 const authenticate = async (req, res, next) => {
@@ -26,22 +28,40 @@ const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, config.JWT.SECRET);
     console.log('🔍 Decoded token payload:', decoded);
     
-    // ✅ FIXED: Better user query with explicit field selection
-    console.log('🔍 Looking for user with ID:', decoded.id);
-    const user = await User.findById(decoded.id).select('_id name email phone role isActive emailVerified phoneVerified');
+    // ✅ Check if token is for Admin or Regular User
+    let user = null;
     
-    console.log('🔍 Database query result:');
-    console.log('- User found:', !!user);
-    if (user) {
-      console.log('- User ID:', user._id);
-      console.log('- User name:', user.name);
-      console.log('- User email:', user.email);
-      console.log('- User role:', user.role);
-      console.log('- User isActive:', user.isActive);
+    if (decoded.type === 'admin' || decoded.role === 'super_admin' || decoded.role === 'admin' || decoded.role === 'moderator') {
+      // ✅ Token is for Admin - check Admin collection
+      console.log('🔍 Looking for ADMIN with ID:', decoded.id);
+      user = await Admin.findById(decoded.id).select('_id name email role permissions isActive');
+      
+      if (user) {
+        console.log('✅ Admin found in Admin collection');
+        console.log('- Admin ID:', user._id);
+        console.log('- Admin name:', user.name);
+        console.log('- Admin email:', user.email);
+        console.log('- Admin role:', user.role);
+        console.log('- Admin permissions:', user.permissions);
+        user.type = 'admin'; // ✅ Mark as admin type
+      }
+    } else {
+      // ✅ Token is for regular User - check User collection
+      console.log('🔍 Looking for USER with ID:', decoded.id);
+      user = await User.findById(decoded.id).select('_id name email phone role isActive emailVerified phoneVerified');
+      
+      if (user) {
+        console.log('✅ User found in User collection');
+        console.log('- User ID:', user._id);
+        console.log('- User name:', user.name);
+        console.log('- User email:', user.email);
+        console.log('- User role:', user.role);
+        user.type = 'user'; // ✅ Mark as regular user type
+      }
     }
     
     if (!user) {
-      console.log('❌ User not found in database for ID:', decoded.id);
+      console.log('❌ User/Admin not found in database for ID:', decoded.id);
       return res.status(401).json({ 
         success: false, 
         error: {
@@ -52,17 +72,17 @@ const authenticate = async (req, res, next) => {
     }
 
     if (!user.isActive) {
-      console.log('❌ User account is inactive:', user.email);
+      console.log('❌ Account is inactive:', user.email);
       return res.status(401).json({ 
         success: false, 
         error: {
           code: 'INACTIVE_USER',
-          message: 'User account is inactive.'
+          message: 'Account is inactive.'
         }
       });
     }
 
-    console.log('✅ Authentication successful for user:', user.email);
+    console.log('✅ Authentication successful for:', user.email, '| Type:', user.type);
     req.user = user;
     next();
     

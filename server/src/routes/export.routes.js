@@ -1,70 +1,44 @@
+// src/routes/export.routes.js
 const express = require('express');
-const { Parser } = require('json2csv');
-const Patient = require('../models/Patient');
-const { authenticate } = require('../middleware/auth');
-
 const router = express.Router();
+const exportController = require('../controllers/export.controller');
+const { authenticate } = require('../middleware/auth.middleware');
+const { requireAdmin, requirePermission } = require('../middleware/admin.middleware');
 
-// CSV Export Route
-router.get('/patients/export/csv', authenticate, async (req, res) => {
-  try {
-    // Get authenticated user's ID
-    const userId = req.user.id;
-    
-    // Fetch patient data for this user
-    const patients = await Patient.find({ userId })
-      .select('name email phone age address symptoms diagnosis createdAt')
-      .lean();
+// Apply authentication and admin check
+router.use(authenticate);
+router.use(requireAdmin);
 
-    if (!patients || patients.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No patient data found for export'
-      });
-    }
+// ============ ADMIN EXPORTS ============
 
-    // Define CSV fields
-    const fields = [
-      'name',
-      'email', 
-      'phone',
-      'age',
-      'address.city',
-      'address.state',
-      'symptoms',
-      'diagnosis',
-      'createdAt'
-    ];
+// Export all users (CSV)
+router.get('/users/csv', 
+  requirePermission('user_management'), 
+  exportController.exportAllUsersCSV
+);
 
-    const fieldNames = [
-      'Patient Name',
-      'Email',
-      'Phone',
-      'Age', 
-      'City',
-      'State',
-      'Symptoms',
-      'Diagnosis',
-      'Registration Date'
-    ];
+// Export all users (Excel)
+router.get('/users/excel', 
+  requirePermission('user_management'), 
+  exportController.exportAllUsersExcel
+);
 
-    // Convert to CSV
-    const json2csvParser = new Parser({ fields, fieldNames });
-    const csv = json2csvParser.parse(patients);
+// Export patients only (CSV)
+router.get('/patients/csv', 
+  requirePermission('user_management'), 
+  exportController.exportPatientsCSV
+);
 
-    // Set headers for file download
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=patient_data_export.csv');
-    
-    return res.send(csv);
+// Export doctors only (CSV)
+router.get('/doctors/csv', 
+  requirePermission('user_management'), 
+  exportController.exportDoctorsCSV
+);
 
-  } catch (error) {
-    console.error('CSV Export Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to export patient data'
-    });
-  }
-});
+// Export appointments (CSV)
+router.get('/appointments/csv', 
+  requirePermission('appointment_management'), 
+  exportController.exportAppointmentsCSV
+);
 
 module.exports = router;

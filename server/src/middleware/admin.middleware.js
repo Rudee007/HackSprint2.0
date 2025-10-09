@@ -1,59 +1,59 @@
 // src/middleware/admin.middleware.js
 const { AppError } = require('./error.middleware');
 
-// Check if user is admin
 const requireAdmin = (req, res, next) => {
-    if (!req.user) {
-      throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
+  console.log('🛡️ Admin Check:', {
+    hasUser: !!req.user,
+    userId: req.user?._id,
+    userEmail: req.user?.email,
+    userRole: req.user?.role,
+    userType: req.user?.type
+  });
+
+  if (!req.user) {
+    console.log('❌ No user in request');
+    throw new AppError('Authentication required', 401, 'NO_USER');
+  }
+
+  // ✅ Check if user is admin
+  const isAdmin = 
+    req.user.type === 'admin' || 
+    req.user.role === 'super_admin' || 
+    req.user.role === 'admin' ||
+    req.user.role === 'moderator';
+
+  if (!isAdmin) {
+    console.log('❌ User is not admin:', req.user.role);
+    throw new AppError('Admin access required', 403, 'NOT_ADMIN');
+  }
+
+  console.log('✅ Admin check passed');
+  next();
+};
+
+const requirePermission = (permission) => {
+  return (req, res, next) => {
+    console.log('🔒 Permission Check:', {
+      required: permission,
+      userPermissions: req.user?.permissions,
+      userRole: req.user?.role
+    });
+
+    // ✅ Super admin has all permissions
+    if (req.user.role === 'super_admin') {
+      console.log('✅ Super admin - all permissions granted');
+      return next();
     }
-    
-    if (req.user.role !== 'admin') {
-      throw new AppError('Admin access required', 403, 'FORBIDDEN');
+
+    // Check if user has the required permission
+    if (!req.user.permissions || !req.user.permissions.includes(permission)) {
+      console.log('❌ Permission denied');
+      throw new AppError(`Permission denied: ${permission}`, 403, 'PERMISSION_DENIED');
     }
-    
+
+    console.log('✅ Permission granted');
     next();
   };
-
-// Check specific permission
-const requirePermission = (permission) => {
-    return (req, res, next) => {
-      if (!req.user) {
-        throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
-      }
-      
-      if (req.user.role !== 'admin') {
-        throw new AppError('Admin access required', 403, 'FORBIDDEN');
-      }
-      
-      // Check if admin has specific permission
-      if (!req.user.permissions || !req.user.permissions.includes(permission)) {
-        throw new AppError(`Permission '${permission}' required`, 403, 'INSUFFICIENT_PERMISSIONS');
-      }
-      
-      next();
-    };
-  };
-  
-
-// Check if user can manage other users
-const canManageUser = (req, res, next) => {
-  const targetUserId = req.params.userId || req.body.userId;
-  
-  // Admin can manage anyone
-  if (req.user.isAdmin()) {
-    return next();
-  }
-  
-  // Users can only manage themselves
-  if (req.user._id.toString() === targetUserId) {
-    return next();
-  }
-  
-  throw new AppError('Cannot manage other users', 403, 'FORBIDDEN');
 };
 
-module.exports = {
-  requireAdmin,
-  requirePermission,
-  canManageUser
-};
+module.exports = { requireAdmin, requirePermission };

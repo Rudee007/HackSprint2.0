@@ -44,17 +44,17 @@ api.interceptors.request.use((config) => {
 });
 
 // Handle auth errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
-    }
-    return Promise.reject(error);
-  }
-);
+// api.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     if (error.response?.status === 401) {
+//       localStorage.removeItem("accessToken");
+//       localStorage.removeItem("user");
+//       window.location.href = "/login";
+//     }
+//     return Promise.reject(error);
+//   }
+// );
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
@@ -89,10 +89,10 @@ const PatientDashboard = () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
 
-      if (!token) {
-        navigate("/login");
-        return;
-      }
+      // if (!token) {
+      //   navigate("/patient-login");
+      //   return;
+      // }
 
       // 🔥 Get user profile from auth
       const profileResponse = await api.get("/auth/profile");

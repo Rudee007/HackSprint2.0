@@ -24,6 +24,7 @@ import DoctorDashboard from './pages/DoctorDashboard';
 import TherapistDashboard from './pages/TherapistDashboard';
 import ManagementDashboard from './pages/ManagementDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminLogin from './pages/AdminLogin'; // ✅ NEW: Admin Login
 
 import ProtectedRoute from './components/ProtectedRoute';
 import DoctorProtectedRoute from './components/DoctorProtectedRoute';
@@ -38,7 +39,6 @@ import ConsultationHistory from './components/ConsultationHistory';
 import { I18nProvider } from './utils/i18n.jsx';
 import { AuthProvider } from './context/AuthContext';
 
-// ✅ ONLY ADDITION: Import RealTimeProvider
 import { RealTimeProvider } from './context/RealTimeContext';
 import RealTimeSessionDashboard from './components/realtime/RealTimeSessionDashboard';
 
@@ -46,9 +46,12 @@ import RealTimeSessionDashboard from './components/realtime/RealTimeSessionDashb
 function AppContent() {
   const { pathname } = useLocation();
 
-  // Hide Navbar for any route that starts with /doctor or /therapist
+  // ✅ UPDATED: Hide Navbar for doctor, therapist, and admin routes
   const hideNavbar =
-    pathname.startsWith('/doctor') || pathname.startsWith('/therapist');
+    pathname.startsWith('/doctor') || 
+    pathname.startsWith('/therapist') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/management');
 
   return (
     <div className="min-h-screen">
@@ -88,7 +91,6 @@ function AppContent() {
           }
         />
 
-        {/* ✅ ONLY ADDITION: Real-Time Routes */}
         <Route
           path="/doctor/realtime"
           element={
@@ -99,12 +101,7 @@ function AppContent() {
         />
 
         {/* ---------- Therapist routes (no Navbar) ---------- */}
-        <Route
-          path="/therapist-dashboard"
-          element={
-            <TherapistDashboard />
-          }
-        />
+        <Route path="/therapist-dashboard" element={<TherapistDashboard />} />
         <Route
           path="/therapist/:therapistId"
           element={
@@ -124,8 +121,18 @@ function AppContent() {
           }
         />
 
-        {/* ---------- Admin dashboard (no login screen) ---------- */}
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        {/* ✅ NEW: Admin routes (no Navbar) */}
+        <Route path="/admin-login" element={<AdminLogin />} />
+         <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        
+        ✅ NEW: Admin sub-routes for direct navigation
+        <Route path="/admin/users" element={<AdminDashboard />} />
+        <Route path="/admin/appointments" element={<AdminDashboard />} />
+        <Route path="/admin/feedback" element={<AdminDashboard />} />
+        <Route path="/admin/analytics" element={<AdminDashboard />} />
+        <Route path="/admin/verification" element={<AdminDashboard />} />
+        <Route path="/admin/monitoring" element={<AdminDashboard />} />
+        <Route path="/admin/notifications" element={<AdminDashboard />} /> 
 
         {/* ---------- Misc. routes ---------- */}
         <Route
@@ -148,7 +155,6 @@ export default function App() {
     <Router>
       <I18nProvider>
         <AuthProvider>
-          {/* ✅ ONLY CHANGE: Wrap with RealTimeProvider to fix the error */}
           <RealTimeProvider>
             <AppContent />
           </RealTimeProvider>
