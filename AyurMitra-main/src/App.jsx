@@ -108,9 +108,9 @@ function AppContent() {
         <Route
           path="/therapist/:therapistId"
           element={
-            // <TherapistProtectedRoute>
+            <TherapistProtectedRoute>
               <TherapistDashboard />
-            // </TherapistProtectedRoute>
+            </TherapistProtectedRoute>
           }
         />
 
