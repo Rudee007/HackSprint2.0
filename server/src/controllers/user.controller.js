@@ -82,6 +82,42 @@ const updateProfile = asyncHandler(async (req, res) => {
   }
 });
 
+
+const getUserById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await User.findById(id).select("-passwordHash -__v"); // don’t expose passwordHash
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "USER_NOT_FOUND",
+          message: "User not found."
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error("Failed to fetch user", { userId: id, error: err.message });
+
+    res.status(500).json({
+      success: false,
+      error: {
+        code: "USER_FETCH_FAILED",
+        message: "An error occurred while fetching the user."
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 module.exports = {
-  updateProfile
+  updateProfile,getUserById
 };

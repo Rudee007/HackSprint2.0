@@ -64,28 +64,43 @@ const DoctorLogin = () => {
     setSuccess('');
 
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/login', {
+      const response = await axios.post('http://localhost:3003/api/auth/login', {
         identifier: formData.username.trim(), // Using same API structure
         password: formData.password,
         userType: 'doctor' // Specify this is a doctor login
       });
 
-      if (response.data.success) {
-        // Store authentication data
-        localStorage.setItem('accessToken', response.data.data.accessToken);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-        const userData = response.data.data.user;
-        const token = response.data.data.accessToken;
+    // ✅ FIXED: In DoctorLogin.js handleSubmit
+if (response.data.success) {
+  // Store authentication data
+  localStorage.setItem('accessToken', response.data.data.accessToken);
+  localStorage.setItem('user', JSON.stringify(response.data.data.user));
+  
+  const userData = response.data.data.user;
+  const token = response.data.data.accessToken;
+  
+  login(userData, token);
 
-        login(userData, token);
+  // ✅ Check if doctor profile exists
+  const existingProfile = localStorage.getItem('user');
 
-        setSuccess('Login successful! Redirecting to doctor form...');
-        
-        // Redirect to doctor form
-        setTimeout(() => {
-          navigate('/doctor-form');
-        }, 1500);
-      }
+  console.log(existingProfile);
+  
+  if (existingProfile) {
+    // Profile exists, go to dashboard
+    setSuccess('Login successful! Redirecting to dashboard...');
+    setTimeout(() => {
+      navigate('/doctor-dashboard');
+    }, 1500);
+  } else {
+    // No profile, go to registration form
+    setSuccess('Login successful! Please complete your profile...');
+    setTimeout(() => {
+      navigate('/doctor-form');
+    }, 1500);
+  }
+}
+
     } catch (err) {
       console.error('Doctor login error:', err);
       

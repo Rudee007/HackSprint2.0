@@ -107,7 +107,7 @@ const InitialPatientProfile = () => {
 
         console.log('Fetching profile with token...');
         
-        const response = await axios.get('http://localhost:3000/api/auth/profile', {
+        const response = await axios.get('http://localhost:3003/api/auth/profile', {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -297,7 +297,7 @@ const handleSubmit = async (e) => {
     }
 
     // ✅ Include Authorization header in PUT request
-    const response = await axios.put(`http://localhost:3000/api/users/${user.id}/profile`, {
+    const response = await axios.put(`http://localhost:3003/api/users/${user.id}/profile`, {
       profile: profile
     }, {
       headers: {

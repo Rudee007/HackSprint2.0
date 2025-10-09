@@ -81,7 +81,7 @@ router.post('/therapy/post-care',
 // ============ ENGAGEMENT NOTIFICATIONS ============
 
 // Send health tips
-router.post('/send-health-tips', 
+router.post('/provider/my-feedback/send-health-tips', 
   notificationController.sendHealthTips
 );
 

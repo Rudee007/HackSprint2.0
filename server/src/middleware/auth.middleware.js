@@ -2,16 +2,17 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const config = require('../config');
 
-
 const authenticate = async (req, res, next) => {
   try {
-    // Extract token from Authorization header
     const authHeader = req.header('Authorization');
     const token = authHeader && authHeader.startsWith('Bearer ') 
       ? authHeader.replace('Bearer ', '') 
       : null;
     
+    console.log('🔍 Auth header received:', authHeader ? 'Present' : 'Missing');
+    
     if (!token) {
+      console.log('❌ No token provided');
       return res.status(401).json({ 
         success: false, 
         error: {
@@ -21,13 +22,26 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Verify and decode JWT token
+    console.log('🔍 Token received, verifying...');
     const decoded = jwt.verify(token, config.JWT.SECRET);
+    console.log('🔍 Decoded token payload:', decoded);
     
-    // Find user in database
-    const user = await User.findById(decoded.id).select('-passwordHash');
+    // ✅ FIXED: Better user query with explicit field selection
+    console.log('🔍 Looking for user with ID:', decoded.id);
+    const user = await User.findById(decoded.id).select('_id name email phone role isActive emailVerified phoneVerified');
     
-    if (!user || !user.isActive) {
+    console.log('🔍 Database query result:');
+    console.log('- User found:', !!user);
+    if (user) {
+      console.log('- User ID:', user._id);
+      console.log('- User name:', user.name);
+      console.log('- User email:', user.email);
+      console.log('- User role:', user.role);
+      console.log('- User isActive:', user.isActive);
+    }
+    
+    if (!user) {
+      console.log('❌ User not found in database for ID:', decoded.id);
       return res.status(401).json({ 
         success: false, 
         error: {
@@ -37,12 +51,24 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Attach user to request object
+    if (!user.isActive) {
+      console.log('❌ User account is inactive:', user.email);
+      return res.status(401).json({ 
+        success: false, 
+        error: {
+          code: 'INACTIVE_USER',
+          message: 'User account is inactive.'
+        }
+      });
+    }
+
+    console.log('✅ Authentication successful for user:', user.email);
     req.user = user;
     next();
     
   } catch (error) {
-    // Handle different JWT errors
+    console.error('❌ Authentication error:', error);
+    
     let errorMessage = 'Invalid token.';
     let errorCode = 'INVALID_TOKEN';
     

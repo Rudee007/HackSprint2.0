@@ -31,4 +31,7 @@ router.get('/provider/:providerId/stats', authenticate, consultationController.g
 router.get('/doctor/:doctorId', authenticate, consultationController.getDoctorConsultations);
 router.get('/therapist/:therapistId', authenticate, consultationController.getTherapistConsultations);
 
+
+
+
 module.exports = router;

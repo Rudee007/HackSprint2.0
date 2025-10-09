@@ -141,12 +141,103 @@ async function updateAvailability(req, res) {
     });
   }
 }
+// controllers/therapist.controller.js - Additional methods
 
+// Get assigned treatment plans
+async function getAssignedTreatmentPlans(req, res) {
+  try {
+    const therapistId = req.params.id || req.user.therapistId;
+    const filters = req.query;
+    
+    const treatmentPlans = await therapistService.getAssignedTreatmentPlans(therapistId, filters);
+    
+    res.json({
+      success: true,
+      message: 'Treatment plans retrieved successfully',
+      data: {
+        treatmentPlans,
+        count: treatmentPlans.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+
+// Update treatment progress
+async function updateTreatmentProgress(req, res) {
+  try {
+    const { id } = req.params;
+    const progressData = req.body;
+    
+    const result = await therapistService.updateTreatmentProgress(id, progressData);
+    
+    res.json({
+      success: true,
+      message: 'Treatment progress updated successfully',
+      data: result.treatmentPlan
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+
+// Get therapist statistics
+async function getTherapistStats(req, res) {
+  try {
+    const therapistId = req.params.id || req.user.therapistId;
+    const { period } = req.query;
+    
+    const stats = await therapistService.getTherapistStats(therapistId, period);
+    
+    res.json({
+      success: true,
+      message: 'Statistics retrieved successfully',
+      data: stats
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+
+// Create treatment plan
+async function createTreatmentPlan(req, res) {
+  try {
+    const data = req.body;
+    const result = await therapistService.createTreatmentPlan(data, req.user._id);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Treatment plan created successfully',
+      data: result
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+
+// Export all functions
 module.exports = {
-    registerTherapist,
-    getTherapist, 
-    updateProfile,
-    getMyProfile,
-    searchTherapists,
-    updateAvailability
-  };
+  registerTherapist,
+  getTherapist,
+  updateProfile,
+  getMyProfile,
+  searchTherapists,
+  updateAvailability,
+  getAssignedTreatmentPlans,
+  updateTreatmentProgress,
+  getTherapistStats,
+  createTreatmentPlan
+};

@@ -18,46 +18,36 @@ const { body, param, query } = require('express-validator');
 router.post('/register',
   authenticate,
   [
+    // Basic validation for registration
     body('qualifications.bams.degree')
       .notEmpty()
-      .withMessage('BAMS degree is required'),
+      .withMessage('Degree is required'),
     body('qualifications.bams.university')
       .notEmpty()
-      .withMessage('University name is required'),
+      .withMessage('University is required'),
     body('qualifications.bams.yearOfCompletion')
       .isInt({ min: 1980, max: new Date().getFullYear() })
-      .withMessage('Valid year of completion required'),
-    body('medicalRegistration.registrationNumber')
-      .notEmpty()
-      .withMessage('Medical registration number is required'),
-    body('medicalRegistration.council')
-      .notEmpty()
-      .withMessage('Medical council name is required'),
-    body('medicalRegistration.state')
-      .notEmpty()
-      .withMessage('State of registration is required'),
-    body('specializations')
-      .isArray({ min: 1 })
-      .withMessage('At least one specialization is required'),
+      .withMessage('Valid graduation year required'),
     body('experience.totalYears')
       .isInt({ min: 0, max: 60 })
-      .withMessage('Valid experience years required'),
+      .withMessage('Experience must be between 0-60 years'),
     body('consultationSettings.fees.videoConsultation')
-      .isFloat({ min: 0 })
-      .withMessage('Valid video consultation fee required'),
-    body('consultationSettings.fees.inPersonConsultation')
-      .isFloat({ min: 0 })
-      .withMessage('Valid in-person consultation fee required')
+      .isInt({ min: 0 })
+      .withMessage('Video consultation fee required'),
+    body('consultationSettings.availability.workingDays')
+      .isArray({ min: 1 })
+      .withMessage('At least one working day required'),
+    body('consultationSettings.preferences.languages')
+      .isArray({ min: 1 })
+      .withMessage('At least one language required')
   ],
   doctorController.registerDoctor
 );
-
 /**
  * Get doctor profile
  * GET /api/doctors/profile
  * Auth: Required (Doctor role)
  */
-
 router.get('/profile',
   authenticate,
   doctorController.getDoctorProfile
@@ -68,7 +58,6 @@ router.get('/profile',
  * PUT /api/doctors/profile
  * Auth: Required (Doctor role)
  */
-
 
 router.put('/profile',
   authenticate,
@@ -92,6 +81,41 @@ router.put('/profile',
   doctorController.updateDoctorProfile
 );
 
+
+/**
+ * Add new patient
+ * POST /api/doctors/patients/add
+ * Auth: Required (Doctor role)
+ */
+router.post('/patients/add',
+  authenticate,
+  [
+    body('name')
+      .notEmpty()
+      .withMessage('Patient name is required')
+      .isLength({ max: 100 })
+      .withMessage('Name cannot exceed 100 characters'),
+    body('email')
+      .optional()
+      .isEmail()
+      .withMessage('Valid email required'),
+    body('phone')
+      .notEmpty()
+      .withMessage('Phone number is required')
+      .matches(/^[\+]?[1-9][\d]{0,15}$/)
+      .withMessage('Valid phone number required'),
+    body('dateOfBirth')
+      .optional()
+      .isISO8601()
+      .withMessage('Valid date of birth required'),
+    body('gender')
+      .optional()
+      .isIn(['male', 'female', 'other'])
+      .withMessage('Gender must be male, female, or other')
+  ],
+  doctorController.addPatient
+);
+
 /**
  * ═══════════════════════════════════════════════════════════
  * 2. CONSULTATION ROUTES
@@ -99,11 +123,11 @@ router.put('/profile',
  */
 
 /**
- * Get doctor's patients
- * GET /api/doctors/patients
+ * Get doctor's consultations (UPDATED METHOD NAME)
+ * GET /api/doctors/consultations
  * Auth: Required (Doctor role)
  */
-router.get('/patients',
+router.get('/consultations', // ✅ Changed from '/patients' to '/consultations'
   authenticate,
   [
     query('page')
@@ -118,13 +142,16 @@ router.get('/patients',
       .optional()
       .isIn(['scheduled', 'completed', 'cancelled', 'in_progress'])
       .withMessage('Invalid status value'),
-    query('search')
+    query('startDate')
       .optional()
-      .isString()
-      .isLength({ min: 2, max: 50 })
-      .withMessage('Search term must be between 2-50 characters')
+      .isISO8601()
+      .withMessage('Valid start date required'),
+    query('endDate')
+      .optional()
+      .isISO8601()
+      .withMessage('Valid end date required')
   ],
-  doctorController.getDoctorPatients
+  doctorController.getDoctorConsultations // ✅ Changed from getDoctorPatients
 );
 
 /**
@@ -156,91 +183,14 @@ router.post('/consultations/book',
       .optional()
       .isString()
       .isLength({ max: 500 })
-      .withMessage('Notes cannot exceed 500 characters'),
-    body('aiAnalysis')
-      .optional()
-      .isObject()
-      .withMessage('AI analysis must be an object')
+      .withMessage('Notes cannot exceed 500 characters')
   ],
   doctorController.bookConsultation
 );
 
 /**
  * ═══════════════════════════════════════════════════════════
- * 3. TREATMENT PLAN ROUTES
- * ═══════════════════════════════════════════════════════════
- */
-
-/**
- * Create treatment plan
- * POST /api/treatment-plans/create
- * Auth: Required (Doctor role)
- */
-router.post('/treatment-plans/create',
-  authenticate,
-  [
-    body('patientId')
-      .isMongoId()
-      .withMessage('Valid patient ID is required'),
-    body('consultationId')
-      .optional()
-      .isMongoId()
-      .withMessage('Valid consultation ID required'),
-    body('treatments')
-      .isArray({ min: 1 })
-      .withMessage('At least one treatment is required'),
-    body('treatments.*.type')
-      .isIn([
-        'Vamana', 'Virechana', 'Basti', 'Nasya', 'Raktamokshana',
-        'Abhyanga', 'Shirodhara', 'Shirobasti', 'Udvartana', 'Pizhichil'
-      ])
-      .withMessage('Invalid treatment type'),
-    body('treatments.*.sessions')
-      .isInt({ min: 1, max: 50 })
-      .withMessage('Sessions must be between 1 and 50'),
-    body('treatments.*.sessionDuration')
-      .optional()
-      .isInt({ min: 15, max: 180 })
-      .withMessage('Session duration must be between 15-180 minutes'),
-    body('notes')
-      .optional()
-      .isString()
-      .isLength({ max: 1000 })
-      .withMessage('Notes cannot exceed 1000 characters')
-  ],
-  doctorController.createTreatmentPlan
-);
-
-/**
- * Validate AI treatment plan
- * PUT /api/treatment-plans/:planId/validate
- * Auth: Required (Doctor role)
- */
-router.put('/treatment-plans/:planId/validate',
-  authenticate,
-  [
-    param('planId')
-      .isMongoId()
-      .withMessage('Valid plan ID is required'),
-    body('approved')
-      .isBoolean()
-      .withMessage('Approved status must be boolean'),
-    body('modifications')
-      .optional()
-      .isArray()
-      .withMessage('Modifications must be an array'),
-    body('notes')
-      .optional()
-      .isString()
-      .isLength({ max: 1000 })
-      .withMessage('Notes cannot exceed 1000 characters')
-  ],
-  doctorController.validateTreatmentPlan
-);
-
-/**
- * ═══════════════════════════════════════════════════════════
- * 4. AVAILABILITY ROUTES
+ * 3. AVAILABILITY ROUTES
  * ═══════════════════════════════════════════════════════════
  */
 
@@ -304,85 +254,87 @@ router.get('/:doctorId/availability/:date',
 
 /**
  * ═══════════════════════════════════════════════════════════
- * 5. SEARCH & DISCOVERY ROUTES
+ * 4. SEARCH & DISCOVERY ROUTES
  * ═══════════════════════════════════════════════════════════
  */
 
 /**
  * Search doctors by specialization
- * GET /api/doctors/search
+ * GET /api/doctors/search/specialization
  * Auth: Public
  */
-router.get('/search',
+router.get('/search/specialization', // ✅ Updated route path
   [
     query('specialization')
       .notEmpty()
       .withMessage('Specialization is required'),
-    query('latitude')
+    query('page')
       .optional()
-      .isFloat({ min: -90, max: 90 })
-      .withMessage('Valid latitude required'),
-    query('longitude')
-      .optional()
-      .isFloat({ min: -180, max: 180 })
-      .withMessage('Valid longitude required'),
-    query('maxDistance')
-      .optional()
-      .isInt({ min: 1000, max: 100000 })
-      .withMessage('Max distance must be between 1-100 km'),
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer'),
     query('limit')
       .optional()
       .isInt({ min: 1, max: 20 })
       .withMessage('Limit must be between 1-20'),
     query('sortBy')
       .optional()
-      .isIn(['rating', 'experience', 'distance', 'fees'])
+      .isIn(['createdAt', 'experience'])
       .withMessage('Invalid sort option')
+  ],
+  doctorController.searchBySpecialization // ✅ Updated method name
+);
+
+/**
+ * Search doctors with multiple criteria
+ * POST /api/doctors/search
+ * Auth: Public
+ */
+router.post('/search', // ✅ Changed to POST
+  [
+    body('specializations')
+      .optional()
+      .isArray()
+      .withMessage('Specializations must be an array'),
+    body('experience')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('Experience must be a non-negative integer'),
+    body('languages')
+      .optional()
+      .isArray()
+      .withMessage('Languages must be an array'),
+    body('consultationType')
+      .optional()
+      .isIn(['video', 'inPerson', 'followUp'])
+      .withMessage('Invalid consultation type'),
+    body('maxFee')
+      .optional()
+      .isFloat({ min: 0 })
+      .withMessage('Max fee must be non-negative'),
+    body('page')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer'),
+    body('limit')
+      .optional()
+      .isInt({ min: 1, max: 20 })
+      .withMessage('Limit must be between 1-20')
   ],
   doctorController.searchDoctors
 );
 
 /**
- * Get AI-recommended doctors
- * POST /api/doctors/recommend
- * Auth: Required (Patient role)
- */
-router.post('/recommend',
-  authenticate,
-  [
-    body('aiAnalysis')
-      .isObject()
-      .withMessage('AI analysis data is required'),
-    body('aiAnalysis.primaryDosha')
-      .isIn(['vata', 'pitta', 'kapha'])
-      .withMessage('Valid primary dosha is required'),
-    body('aiAnalysis.recommendedTreatments')
-      .isArray({ min: 1 })
-      .withMessage('At least one recommended treatment is required'),
-    body('patientLocation')
-      .optional()
-      .isObject()
-      .withMessage('Patient location must be an object'),
-    body('patientLocation.coordinates')
-      .optional()
-      .isArray({ min: 2, max: 2 })
-      .withMessage('Coordinates must be [longitude, latitude]')
-  ],
-  doctorController.getRecommendedDoctors
-);
-
-/**
  * ═══════════════════════════════════════════════════════════
- * 6. ANALYTICS ROUTES
+ * 5. ANALYTICS ROUTES
  * ═══════════════════════════════════════════════════════════
  */
 
 /**
- * Get doctor analytics
- * GET /api/doctors/analytics
+ * Get doctor statistics (UPDATED METHOD NAME)
+ * GET /api/doctors/stats
  * Auth: Required (Doctor role)
  */
-router.get('/analytics',
+router.get('/stats', // ✅ Changed from '/analytics' to '/stats'
   authenticate,
   [
     query('period')
@@ -390,55 +342,173 @@ router.get('/analytics',
       .isIn(['7d', '30d', '90d', '1y'])
       .withMessage('Period must be 7d, 30d, 90d, or 1y')
   ],
-  doctorController.getDoctorAnalytics
+  doctorController.getDoctorStats // ✅ Changed from getDoctorAnalytics
 );
 
 /**
  * ═══════════════════════════════════════════════════════════
- * 7. ADMIN ROUTES
+ * 6. VERIFICATION ROUTES (UPDATED)
  * ═══════════════════════════════════════════════════════════
  */
 
 /**
- * Approve doctor profile (Admin only)
- * PUT /api/doctors/:doctorId/approve
+ * Update doctor verification status (Admin only)
+ * PUT /api/doctors/:doctorId/verification
  * Auth: Required (Admin role)
  */
-router.put('/:doctorId/approve',
+router.put('/:doctorId/verification', // ✅ Changed from '/approve' to '/verification'
   authenticate,
   // TODO: Add role check middleware for admin
   [
     param('doctorId')
       .isMongoId()
       .withMessage('Valid doctor ID is required'),
-    body('approved')
-      .isBoolean()
-      .withMessage('Approved status must be boolean'),
-    body('rejectionReason')
+    body('status')
+      .isIn(['pending', 'under_review', 'approved', 'rejected'])
+      .withMessage('Invalid verification status'),
+    body('notes')
       .optional()
       .isString()
       .isLength({ max: 500 })
-      .withMessage('Rejection reason cannot exceed 500 characters')
+      .withMessage('Notes cannot exceed 500 characters')
   ],
-  doctorController.approveDoctorProfile
+  doctorController.updateVerificationStatus // ✅ Changed from approveDoctorProfile
+);
+
+/**
+ * Get doctors pending verification (Admin only)
+ * GET /api/doctors/pending-verification
+ * Auth: Required (Admin role)
+ */
+router.get('/pending-verification', // ✅ New route
+  authenticate,
+  // TODO: Add role check middleware for admin
+  doctorController.getPendingVerifications
+);
+// Add these routes to your existing doctor.routes.js
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ * TREATMENT PLAN ROUTES
+ * ═══════════════════════════════════════════════════════════
+ */
+
+/**
+ * Create treatment plan
+ * POST /api/doctors/treatment-plans
+ */
+router.post('/treatment-plans',
+  authenticate,
+  [
+    body('patientId')
+      .isMongoId()
+      .withMessage('Valid patient ID is required'),
+    body('consultationId')
+      .isMongoId()
+      .withMessage('Valid consultation ID is required'),
+    body('treatmentType')
+      .notEmpty()
+      .withMessage('Treatment type is required'),
+    body('treatmentPlan')
+      .isLength({ min: 10, max: 2000 })
+      .withMessage('Treatment plan must be between 10-2000 characters'),
+    body('duration')
+      .notEmpty()
+      .withMessage('Treatment duration is required'),
+    body('preInstructions')
+      .optional()
+      .isLength({ max: 1000 })
+      .withMessage('Pre-instructions cannot exceed 1000 characters'),
+    body('postInstructions')
+      .optional()
+      .isLength({ max: 1000 })
+      .withMessage('Post-instructions cannot exceed 1000 characters'),
+    body('notes')
+      .optional()
+      .isLength({ max: 500 })
+      .withMessage('Notes cannot exceed 500 characters')
+  ],
+  doctorController.createTreatmentPlan
+);
+
+/**
+ * Get treatment plans
+ * GET /api/doctors/treatment-plans
+ */
+router.get('/treatment-plans',
+  authenticate,
+  [
+    query('page')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Page must be a positive integer'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Limit must be between 1 and 100'),
+    query('status')
+      .optional()
+      .isIn(['active', 'completed', 'paused', 'cancelled'])
+      .withMessage('Invalid status value')
+  ],[
+    body('patientId').isMongoId().withMessage('Valid patient ID is required'),
+    body('consultationId').isMongoId().withMessage('Valid consultation ID is required'),
+    body('treatmentType').notEmpty().withMessage('Treatment type is required'),
+    body('treatmentPlan').isLength({ min: 10, max: 2000 }).withMessage('Treatment plan must be between 10-2000 characters'),
+    body('duration').notEmpty().withMessage('Treatment duration is required')
+  ],
+  doctorController.getDoctorTreatmentPlans
+);
+
+/**
+ * Get treatment plan details
+ * GET /api/doctors/treatment-plans/:id
+ */
+router.get('/treatment-plans/:id',
+  authenticate,
+  [
+    param('id')
+      .isMongoId()
+      .withMessage('Valid treatment plan ID is required')
+  ],
+  doctorController.getTreatmentPlanDetails
+);
+
+/**
+ * Update treatment plan
+ * PUT /api/doctors/treatment-plans/:id
+ */
+router.put('/treatment-plans/:id',
+  authenticate,
+  [
+    param('id')
+      .isMongoId()
+      .withMessage('Valid treatment plan ID is required')
+  ],
+  doctorController.updateTreatmentPlan
+);
+
+/**
+ * Delete treatment plan
+ * DELETE /api/doctors/treatment-plans/:id
+ */
+router.delete('/treatment-plans/:id',
+  authenticate,
+  [
+    param('id')
+      .isMongoId()
+      .withMessage('Valid treatment plan ID is required')
+  ],
+  doctorController.deleteTreatmentPlan
 );
 
 /**
  * ═══════════════════════════════════════════════════════════
- * 8. ERROR HANDLING MIDDLEWARE
+ * 7. ERROR HANDLING MIDDLEWARE
  * ═══════════════════════════════════════════════════════════
  */
 
 // Handle 404 for undefined routes
-router.use('/*splat', (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: 'ROUTE_NOT_FOUND',
-      message: `Route ${req.method} ${req.originalUrl} not found`
-    },
-    timestamp: new Date().toISOString()
-  });
-});
+
 
 module.exports = router;

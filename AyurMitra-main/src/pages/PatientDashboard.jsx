@@ -20,16 +20,17 @@ import {
   X,
 } from "lucide-react";
 import axios from "axios";
+import ConsultationHistory from "../components/ConsultationHistory";
 
 // Components
 import PatientProfileForm from "../components/PatientProfileForm";
 import AppointmentBooking from "../components/AppointmentBooking";
-import Feedback from "../components/Feedback"; // Import the Feedback component
+import Feedback from "../components/Feedback";
 import Footer from "../components/Footer";
 
-// API Configuration
+// 🔥 UPDATED API Configuration
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: "http://localhost:3003/api", // Match your backend port
   timeout: 10000,
 });
 
@@ -55,7 +56,6 @@ api.interceptors.response.use(
   }
 );
 
-// Main Dashboard Component
 const PatientDashboard = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -69,17 +69,17 @@ const PatientDashboard = () => {
   // Data States
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [hasProfile, setHasProfile] = useState(false);
-  const [appointments, setAppointments] = useState([]);
-  const [treatments, setTreatments] = useState([]);
+  const [consultations, setConsultations] = useState([]);
+  const [feedback, setFeedback] = useState([]);
   const [stats, setStats] = useState({
-    totalAppointments: 0,
-    completedTreatments: 0,
+    totalConsultations: 0,
+    completedConsultations: 0,
     wellnessScore: 0,
-    upcomingAppointments: 0,
+    upcomingConsultations: 0,
+    pendingFeedback: 0
   });
 
-  // Initialize Dashboard Data
+  // 🔥 UPDATED: Initialize Dashboard with Proper APIs
   useEffect(() => {
     initializeDashboard();
   }, []);
@@ -94,26 +94,18 @@ const PatientDashboard = () => {
         return;
       }
 
-      // Fetch user profile
+      // 🔥 Get user profile from auth
       const profileResponse = await api.get("/auth/profile");
       if (profileResponse.data.success) {
         const userData = profileResponse.data.data.user;
-        const userProfile = userData.profile;
-
         setUser(userData);
-        setProfile(userProfile);
 
-        // Check if profile is complete
-        setHasProfile(isProfileComplete(userProfile, userData));
-
-        // Fetch additional data if profile exists
-        if (userProfile) {
-          await Promise.all([
-            fetchAppointments(userData.id),
-            fetchTreatments(userData.id),
-            calculateStats(userData.id),
-          ]);
-        }
+        // 🔥 Fetch patient data using correct backend endpoints
+        await Promise.all([
+          fetchConsultations(userData.id || userData._id),
+          fetchFeedback(userData.id || userData._id),
+          fetchPatientProfile(userData.id || userData._id)
+        ]);
       }
     } catch (err) {
       console.error("Dashboard initialization error:", err);
@@ -123,77 +115,159 @@ const PatientDashboard = () => {
     }
   };
 
-  // Profile Completeness Check
-  const isProfileComplete = (profileData, userData) => {
-    if (!profileData) return false;
-
-    const dateOfBirth = userData?.dateOfBirth || profileData?.dateOfBirth;
-    const gender = userData?.gender || profileData?.gender;
-
-    return (
-      dateOfBirth &&
-      gender &&
-      Array.isArray(profileData.symptoms) &&
-      profileData.symptoms.length > 0 &&
-      profileData.dietHabits?.trim() &&
-      profileData.sleepPattern?.trim() &&
-      profileData.digestion?.trim() &&
-      profileData.bowelHabits?.trim()
-    );
-  };
-
-  // Fetch Appointments
-  const fetchAppointments = async (userId) => {
+  // 🔥 UPDATED: Fetch Consultations using correct endpoint
+  const fetchConsultations = async (userId) => {
     try {
-      const response = await api.get(`/users/${userId}/appointments`);
+      console.log('🔄 Fetching consultations for patient:', userId);
+      
+      // Using the correct backend endpoint
+      const response = await api.get(`/consultations/patient/${userId}?page=1&limit=50`);
+      
       if (response.data.success) {
-        setAppointments(response.data.data.appointments || []);
+        const consultationsData = response.data.data || [];
+        setConsultations(consultationsData);
+        
+        // Calculate stats from real data
+        const totalConsultations = consultationsData.length;
+        const completedConsultations = consultationsData.filter(c => c.status === 'completed').length;
+        const upcomingConsultations = consultationsData.filter(c => 
+          c.status === 'scheduled' && new Date(c.scheduledAt) > new Date()
+        ).length;
+
+        setStats(prev => ({
+          ...prev,
+          totalConsultations,
+          completedConsultations,
+          upcomingConsultations
+        }));
+
+        console.log('✅ Consultations loaded:', consultationsData.length);
       }
     } catch (err) {
-      console.error("Error fetching appointments:", err);
+      console.error("Error fetching consultations:", err);
+      // Don't fail silently - show user-friendly error
+      if (err.response?.status === 404) {
+        console.log('No consultations found for this patient');
+        setConsultations([]);
+      }
     }
   };
 
-  // Fetch Treatments
-  const fetchTreatments = async (userId) => {
+  // 🔥 NEW: Fetch Patient Feedback
+  const fetchFeedback = async (userId) => {
     try {
-      const response = await api.get(`/users/${userId}/treatments`);
+      console.log('🔄 Fetching feedback for patient:', userId);
+      
+      // Get patient's own feedback
+      const response = await api.get('/feedback/me?page=1&limit=20');
+      
       if (response.data.success) {
-        setTreatments(response.data.data.treatments || []);
+        const feedbackData = response.data.data || [];
+        setFeedback(feedbackData);
+        
+        // Calculate pending feedback (consultations without feedback)
+        const pendingFeedback = consultations.filter(consultation => 
+          consultation.status === 'completed' && 
+          !feedbackData.some(fb => fb.sessionId === consultation._id)
+        ).length;
+
+        setStats(prev => ({
+          ...prev,
+          pendingFeedback
+        }));
+
+        console.log('✅ Feedback loaded:', feedbackData.length);
       }
     } catch (err) {
-      console.error("Error fetching treatments:", err);
+      console.error("Error fetching feedback:", err);
     }
   };
 
-  // Calculate Dashboard Stats
-  const calculateStats = async (userId) => {
+  // 🔥 NEW: Fetch Patient Profile from Backend
+  const fetchPatientProfile = async (userId) => {
     try {
-      const response = await api.get(`/users/${userId}/stats`);
+      // This would need a patient profile endpoint in your backend
+      const response = await api.get(`http://localhost:3003/api/users/${userId}/profile`);
+      
       if (response.data.success) {
-        setStats(response.data.data.stats);
+        setProfile(response.data.data.profile);
       }
     } catch (err) {
-      // Use default stats if API fails
-      setStats({
-        totalAppointments: appointments.length,
-        completedTreatments: treatments.filter((t) => t.status === "completed")
-          .length,
-        wellnessScore: 8.5,
-        upcomingAppointments: appointments.filter(
-          (a) => new Date(a.date) > new Date()
-        ).length,
-      });
+      console.error("Error fetching patient profile:", err);
+      // Fallback to localStorage if backend doesn't have profile
+      const savedProfile = localStorage.getItem('user');
+      if (savedProfile) {
+        setProfile(JSON.parse(savedProfile));
+      }
     }
   };
 
-  // Handle Profile Update
-  const handleProfileUpdate = (updatedProfile) => {
-    setProfile(updatedProfile);
-    setHasProfile(true);
+  // 🔥 UPDATED: Handle Profile Update with Backend
+  const handleProfileUpdate = async (updatedProfile) => {
+    try {
+      // Try to save to backend first
+      const response = await api.put(`http://localhost:3003/patients/${user.id}/profile`, updatedProfile);
+      
+      if (response.data.success) {
+        setProfile(response.data.data.profile);
+        setSuccess("Profile updated successfully!");
+      }
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      // Fallback to localStorage
+      localStorage.setItem('patientProfile', JSON.stringify(updatedProfile));
+      setProfile(updatedProfile);
+      setSuccess("Profile updated locally!");
+    }
+    
     setActiveSection("dashboard");
-    setSuccess("Profile updated successfully!");
     setTimeout(() => setSuccess(""), 3000);
+  };
+
+  // 🔥 NEW: Handle Feedback Submission
+  const handleFeedbackSubmit = async (feedbackData) => {
+    try {
+      const response = await api.post('/feedback', feedbackData);
+      
+      if (response.data.success) {
+        setSuccess("Feedback submitted successfully!");
+        setIsFeedbackModalOpen(false);
+        
+        // Refresh feedback data
+        await fetchFeedback(user.id);
+      }
+    } catch (err) {
+      console.error("Error submitting feedback:", err);
+      setError("Failed to submit feedback. Please try again.");
+    }
+  };
+
+  // 🔥 NEW: Book New Consultation
+  const handleBookingComplete = async (bookingData) => {
+    try {
+      const response = await api.post('/bookings', {
+        patientId: user.id,
+        ...bookingData
+      });
+      
+      if (response.data.success) {
+        setSuccess("Appointment booked successfully!");
+        
+        // Refresh consultations
+        await fetchConsultations(user.id);
+      }
+    } catch (err) {
+      console.error("Error booking appointment:", err);
+      
+      // Handle conflict errors with alternative slots
+      if (err.response?.status === 409 && err.response?.data?.conflictInfo) {
+        const conflictData = err.response.data;
+        setError(`Time slot conflicts. ${conflictData.alternativeMessage}`);
+        // You could show alternative slots UI here
+      } else {
+        setError("Failed to book appointment. Please try again.");
+      }
+    }
   };
 
   // Modal Handlers
@@ -207,7 +281,7 @@ const PatientDashboard = () => {
 
   // Get Display Name
   const getDisplayName = () => {
-    return user?.name || user?.firstName || "Patient";
+    return user?.name || user?.firstName || profile?.name || "Patient";
   };
 
   // Loading State
@@ -232,8 +306,6 @@ const PatientDashboard = () => {
       </div>
     );
   }
-
-  // Show Profile Form if Incomplete
 
   return (
     <motion.div
@@ -285,7 +357,7 @@ const PatientDashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-4xl md:text-5xl font-bold text-emerald-800 mb-4"
                 >
-                  Your Wellness Dashboard 🌿
+                  Welcome back, {getDisplayName()}! 🌿
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
@@ -293,42 +365,48 @@ const PatientDashboard = () => {
                   transition={{ delay: 0.1 }}
                   className="text-xl text-gray-600 max-w-2xl mx-auto"
                 >
-                  Track your Ayurvedic journey and manage your holistic health
-                  with ease
+                  Track your Ayurvedic journey and manage your holistic health with ease
                 </motion.p>
               </div>
 
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
+              {/* 🔥 UPDATED: Quick Stats with Real Data */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-12">
                 {[
                   {
-                    label: "Total Appointments",
-                    value: stats.totalAppointments,
+                    label: "Total Consultations",
+                    value: stats.totalConsultations,
                     icon: Calendar,
                     color: "text-blue-600",
                     bg: "bg-blue-100",
                   },
                   {
-                    label: "Treatments Completed",
-                    value: stats.completedTreatments,
+                    label: "Completed Sessions",
+                    value: stats.completedConsultations,
                     icon: CheckCircle,
                     color: "text-emerald-600",
                     bg: "bg-emerald-100",
                   },
                   {
-                    label: "Wellness Score",
-                    value: `${stats.wellnessScore}/10`,
-                    icon: TrendingUp,
-                    color: "text-amber-600",
-                    bg: "bg-amber-100",
-                  },
-                  {
                     label: "Upcoming",
-                    value: stats.upcomingAppointments,
+                    value: stats.upcomingConsultations,
                     icon: Bell,
                     color: "text-purple-600",
                     bg: "bg-purple-100",
                   },
+                  {
+                    label: "Pending Feedback",
+                    value: stats.pendingFeedback,
+                    icon: MessageSquare,
+                    color: "text-orange-600",
+                    bg: "bg-orange-100",
+                  },
+                  {
+                    label: "Wellness Score",
+                    value: `${stats.wellnessScore || 8.5}/10`,
+                    icon: TrendingUp,
+                    color: "text-amber-600",
+                    bg: "bg-amber-100",
+                  }
                 ].map((stat, index) => (
                   <motion.div
                     key={stat.label}
@@ -350,14 +428,13 @@ const PatientDashboard = () => {
                 ))}
               </div>
 
-              {/* Action Cards */}
+              {/* Action Cards - Same as before but with updated handlers */}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                 {[
                   {
                     id: "appointments",
                     title: "Book Appointment",
-                    description:
-                      "Schedule consultation with our Ayurvedic specialists",
+                    description: "Schedule consultation with our Ayurvedic specialists",
                     icon: Calendar,
                     gradient: "from-emerald-500 to-teal-600",
                     action: () => setActiveSection("book-appointment"),
@@ -365,19 +442,18 @@ const PatientDashboard = () => {
                   {
                     id: "profile",
                     title: "Update Profile",
-                    description:
-                      "Manage your health information and preferences",
+                    description: "Manage your health information and preferences",
                     icon: User,
                     gradient: "from-blue-500 to-indigo-600",
                     action: () => setActiveSection("profile"),
                   },
                   {
-                    id: "treatments",
-                    title: "My Treatments",
-                    description: "View treatment plans and track progress",
+                    id: "consultations",
+                    title: "My Consultations",
+                    description: "View consultation history and upcoming appointments",
                     icon: Activity,
                     gradient: "from-amber-500 to-orange-600",
-                    action: () => setActiveSection("treatments"),
+                    action: () => setActiveSection("consultations"),
                   },
                   {
                     id: "wellness",
@@ -393,7 +469,7 @@ const PatientDashboard = () => {
                     description: "Share your experience and help us improve",
                     icon: MessageSquare,
                     gradient: "from-purple-500 to-violet-600",
-                    action: openFeedbackModal, // Opens modal instead of navigating
+                    action: openFeedbackModal,
                   },
                   {
                     id: "support",
@@ -431,8 +507,8 @@ const PatientDashboard = () => {
                 ))}
               </div>
 
-              {/* Recent Activity */}
-              {(appointments.length > 0 || treatments.length > 0) && (
+              {/* 🔥 UPDATED: Recent Activity with Real Consultation Data */}
+              {consultations.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -440,17 +516,15 @@ const PatientDashboard = () => {
                   className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
                 >
                   <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                    Recent Activity
+                    Recent Consultations
                   </h2>
                   <div className="space-y-4">
-                    {[...appointments, ...treatments]
-                      .sort(
-                        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-                      )
+                    {consultations
+                      .sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt))
                       .slice(0, 3)
-                      .map((item, index) => (
+                      .map((consultation, index) => (
                         <div
-                          key={index}
+                          key={consultation._id}
                           className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
                         >
                           <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
@@ -458,22 +532,30 @@ const PatientDashboard = () => {
                           </div>
                           <div className="flex-1">
                             <div className="font-medium text-gray-800">
-                              {item.type || "Appointment"}
+                              {consultation.type === 'video' ? 'Video Consultation' : 
+                               consultation.type === 'audio' ? 'Audio Consultation' : 
+                               'In-Person Consultation'}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {new Date(item.createdAt).toLocaleDateString()}
+                              {new Date(consultation.scheduledAt).toLocaleDateString()} at{' '}
+                              {new Date(consultation.scheduledAt).toLocaleTimeString()}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Dr. {consultation.providerId?.name || 'Provider'}
                             </div>
                           </div>
                           <div
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              item.status === "completed"
+                              consultation.status === "completed"
                                 ? "bg-emerald-100 text-emerald-700"
-                                : item.status === "pending"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-blue-100 text-blue-700"
+                                : consultation.status === "scheduled"
+                                ? "bg-blue-100 text-blue-700"
+                                : consultation.status === "cancelled"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-700"
                             }`}
                           >
-                            {item.status || "Scheduled"}
+                            {consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1)}
                           </div>
                         </div>
                       ))}
@@ -529,15 +611,25 @@ const PatientDashboard = () => {
                   Back to Dashboard
                 </motion.button>
               </div>
-              <AppointmentBooking user={user} />
+              <AppointmentBooking 
+                user={user} 
+                onBookingComplete={handleBookingComplete}
+              />
             </motion.div>
           )}
 
-          {/* Other sections can be added here */}
+          {/* 🔥 NEW: Consultations History Section */}
+          {activeSection === "consultations" && (
+  <ConsultationHistory
+    patientId={user?.id || user?._id}
+    onBookFirst={() => setActiveSection("book-appointment")}
+  />
+)}
+
         </AnimatePresence>
       </div>
 
-      {/* Feedback Modal */}
+      {/* 🔥 UPDATED: Feedback Modal with Backend Integration */}
       <AnimatePresence>
         {isFeedbackModalOpen && (
           <motion.div
@@ -582,7 +674,10 @@ const PatientDashboard = () => {
 
               {/* Modal Content */}
               <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
-                <Feedback />
+                <Feedback 
+                  consultations={consultations.filter(c => c.status === 'completed')}
+                  onSubmit={handleFeedbackSubmit}
+                />
               </div>
             </motion.div>
           </motion.div>

@@ -5,3 +5,14 @@ dist/
 npm-debug.log*
 yarn-error.log*
 .vscode/
+
+# Python virtual env
+.venv/
+__pycache__/
+*.pyc
+
+# Node dependencies
+node_modules/
+
+# Environment files
+.env

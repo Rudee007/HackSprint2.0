@@ -191,7 +191,7 @@ const Signup = () => {
         address: formData.address
       };
 
-      const response = await axios.post('http://localhost:3000/api/auth/register', signupData);
+      const response = await axios.post('http://localhost:3003/api/auth/register', signupData);
 
       if (response.data.success) {
         setSuccess('Account created successfully! Please verify your email and phone number.');

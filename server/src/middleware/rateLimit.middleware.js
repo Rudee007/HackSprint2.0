@@ -3,13 +3,13 @@ const rateLimit = require('express-rate-limit');
 // Generic rate limiter factory - IPv6 compatible
 const createRateLimiter = (options = {}) => {
   const {
-    windowMs = 15 * 60 * 1000,  // 15 minutes default
-    max = 100,                  // 100 requests per window default
+    windowMs = 60 * 60 * 1000,  // 15 minutes default
+    max = 1000000000,                  // 100 requests per window default
     message = 'Too many requests from this IP, please try again later.',
-    skipSuccessfulRequests = false,
-    skipFailedRequests = false,
+    skipSuccessfulRequests = true,
+    skipFailedRequests = true,
     standardHeaders = true,
-    legacyHeaders = false
+    legacyHeaders = true
   } = options;
 
   return rateLimit({

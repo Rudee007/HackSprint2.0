@@ -210,7 +210,12 @@ ConsultationSchema.virtual('isActiveSession').get(function() {
 });
 
 // Get current active participant count
+// ✅ FIXED: Safe handling of undefined activeParticipants
 ConsultationSchema.virtual('activeParticipantCount').get(function() {
+  // Add null/undefined check
+  if (!this.activeParticipants || !Array.isArray(this.activeParticipants)) {
+    return 0;
+  }
   return this.activeParticipants.filter(p => p.isActive && !p.leftAt).length;
 });
 

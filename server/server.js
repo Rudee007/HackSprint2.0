@@ -9,36 +9,49 @@ const { generalLimiter } = require('./src/middleware/rateLimit.middleware');
 
 const http = require('http');
 const WebSocketService = require('./src/services/websocket.service');
-
 require('dotenv').config();
 
 const app = express();
+
+// ✅ Connect Database
 connectDB();
 
+// ✅ Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: true, credentials: true })); // allow frontend
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(generalLimiter);
 
+// ✅ API Routes
 app.use('/api', routes);
 
-const server = http.createServer(app);
-
-const wsService = new WebSocketService(server);
-
-app.set('wsService', wsService);
-
-// Central/last error handler
+// ✅ Error Handler (last)
 app.use(errorHandler);
 
+// ✅ HTTP + WebSocket Server
+const server = http.createServer(app);
+const wsService = new WebSocketService(server);
+app.set('wsService', wsService);
+
+
+
+wsService.emitTherapyTrackingUpdate = function(eventType, data) {
+  console.log('📡 Broadcasting therapy tracking update:', eventType);
+  this.io.to('therapy_tracking').emit('therapy_tracking_update', {
+    type: eventType,
+    data,
+    timestamp: new Date().toISOString()
+  });
+};
+
+// ✅ Configurable Port (default: 3003)
 const PORT = process.env.PORT || 3003;
 
-// ✅ FIXED: Listen on server, not app
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🔗 WebSocket server ready for real-time connections`);
 });
 
-module.exports = { app, server, wsService }; // Export all three
+module.exports = { app, server, wsService };

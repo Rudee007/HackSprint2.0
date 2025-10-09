@@ -1,8 +1,9 @@
 const Doctor = require('../models/Doctor');
 const User = require('../models/User');
-const TherapyCenter = require('../models/TherapyCenter');
 const logger = require('../config/logger');
 const mongoose = require('mongoose');
+const TreatmentPlan = require('../models/TreatmentPlan'); // ✅ Add this line
+// At the top of your doctor.service.js
 
 class DoctorService {
   
@@ -17,43 +18,30 @@ class DoctorService {
    */
   async registerDoctor(userId, doctorData) {
     try {
-      // Validate that user exists and has doctor role
+      // Check if user exists and is a doctor
       const user = await User.findById(userId);
-      if (!user) {
-        throw new Error('User not found');
-      }
-      
-      if (user.role !== 'doctor') {
+      if (!user || user.role !== 'doctor') {
         throw new Error('User must have doctor role to create doctor profile');
       }
 
-      // Check if doctor profile already exists
-      const existingDoctor = await Doctor.findOne({ userId });
-      if (existingDoctor) {
+      // Prevent duplicate doctor profile
+      const existing = await Doctor.findOne({ userId });
+      if (existing) {
         throw new Error('Doctor profile already exists for this user');
       }
 
-      // Create doctor profile
       const doctor = new Doctor({
         userId,
-        ...doctorData,
-        verificationStatus: {
-          status: 'pending',
-          documentsUploaded: !!doctorData.qualifications
-        }
+        ...doctorData
       });
 
       await doctor.save();
-      
-      // Populate user data
-      await doctor.populate('userId', 'name email phone location');
-      
-      logger.info(`Doctor profile created for user ${userId}`, { doctorId: doctor._id });
+      logger.info(`Doctor registered: ${doctor._id}`, { userId });
       
       return doctor;
       
     } catch (error) {
-      logger.error('Doctor registration error:', error);
+      logger.error('Register doctor error:', error);
       throw error;
     }
   }
@@ -64,8 +52,7 @@ class DoctorService {
   async getDoctorProfile(doctorId) {
     try {
       const doctor = await Doctor.findById(doctorId)
-        .populate('userId', 'name email phone location address')
-        .populate('associatedCenters.centerId', 'name location contact');
+        .populate('userId', 'name email phone location address');
       
       if (!doctor) {
         throw new Error('Doctor not found');
@@ -85,8 +72,7 @@ class DoctorService {
   async getDoctorByUserId(userId) {
     try {
       const doctor = await Doctor.findOne({ userId })
-        .populate('userId', 'name email phone location')
-        .populate('associatedCenters.centerId', 'name location');
+        .populate('userId', 'name email phone location');
       
       return doctor;
       
@@ -99,35 +85,69 @@ class DoctorService {
   /**
    * Update doctor profile
    */
+  // Update your doctor.service.js updateDoctorProfile method
   async updateDoctorProfile(doctorId, updateData) {
     try {
-      const doctor = await Doctor.findById(doctorId);
-      if (!doctor) {
-        throw new Error('Doctor not found');
+      console.log('=== SERVICE LAYER DEBUG ===');
+      console.log('Doctor ID:', doctorId);
+      console.log('Update Data Received:', JSON.stringify(updateData, null, 2));
+  
+      // 🛡️ TRIPLE CHECK: Remove verificationStatus
+      if (updateData.verificationStatus) {
+        console.log('❌ STILL FOUND verificationStatus in service - REMOVING');
+        delete updateData.verificationStatus;
       }
-
-      // Handle nested object updates
+  
+      // 🛡️ Remove any field that starts with 'verification'
       Object.keys(updateData).forEach(key => {
-        if (typeof updateData[key] === 'object' && !Array.isArray(updateData[key])) {
-          doctor[key] = { ...doctor[key]?.toObject(), ...updateData[key] };
+        if (key.toLowerCase().includes('verification')) {
+          console.log(`🗑️ REMOVING verification-related field: ${key}`);
+          delete updateData[key];
+        }
+      });
+  
+      console.log('Final Update Data:', JSON.stringify(updateData, null, 2));
+  
+      const doctor = await Doctor.findById(doctorId);
+      if (!doctor) throw new Error('Doctor not found');
+  
+      // Safe merge that NEVER touches verificationStatus
+      Object.keys(updateData).forEach((key) => {
+        if (key === 'verificationStatus') {
+          console.log('🔒 SKIPPING verificationStatus field entirely');
+          return;
+        }
+        
+        if (typeof updateData[key] === 'object' && !Array.isArray(updateData[key]) && updateData[key] !== null) {
+          const existingValue = doctor[key];
+          let currentValue = {};
+          
+          if (existingValue) {
+            if (typeof existingValue.toObject === 'function') {
+              currentValue = existingValue.toObject();
+            } else if (typeof existingValue === 'object') {
+              currentValue = { ...existingValue };
+            }
+          }
+          
+          doctor[key] = { ...currentValue, ...updateData[key] };
         } else {
           doctor[key] = updateData[key];
         }
       });
-
+  
+      console.log('About to save doctor with verification status:', doctor.verificationStatus?.status);
+      console.log('=== END SERVICE DEBUG ===');
+      
       await doctor.save();
       await doctor.populate('userId', 'name email phone location');
-      
-      logger.info(`Doctor profile updated: ${doctorId}`);
-      
       return doctor;
-      
-    } catch (error) {
-      logger.error('Update doctor profile error:', error);
-      throw error;
+    } catch (err) {
+      console.error('❌ SERVICE ERROR:', err);
+      throw err;
     }
   }
-
+    
   /**
    * ═══════════════════════════════════════════════════════════
    * 2. CONSULTATION MANAGEMENT
@@ -135,62 +155,51 @@ class DoctorService {
    */
 
   /**
-   * Get doctor's patient list
+   * Get doctor's consultation history
    */
-  async getDoctorPatients(doctorId, options = {}) {
+  async getDoctorConsultations(req, options = {}) {
     try {
-      const { page = 1, limit = 20, status, search } = options;
+      // ✅ Extract user ID from authentication token
+      const userId = req.user._id; // This is the doctor's User ID from token
       
-      // First find consultations for this doctor
+      const { page = 1, limit = 20, status, startDate, endDate } = options;
+      
       const Consultation = mongoose.model('Consultation');
       
-      let query = { doctorId };
+      // ✅ Use userId from token as providerId in query
+      let query = { providerId: userId };
+      
       if (status) query.status = status;
+      if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = new Date(startDate);
+        if (endDate) query.createdAt.$lte = new Date(endDate);
+      }
       
       const consultations = await Consultation.find(query)
-        .populate('patientId', 'name email phone profile.dateOfBirth profile.gender')
+        .populate('patientId', 'name email phone')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit);
-
-      // Extract unique patients
-      const patientsMap = new Map();
-      consultations.forEach(consultation => {
-        const patient = consultation.patientId;
-        if (patient && !patientsMap.has(patient._id.toString())) {
-          patientsMap.set(patient._id.toString(), {
-            ...patient.toObject(),
-            lastConsultation: consultation.createdAt,
-            consultationStatus: consultation.status
-          });
-        }
-      });
-
-      const patients = Array.from(patientsMap.values());
-      
-      // Apply search filter if provided
-      const filteredPatients = search 
-        ? patients.filter(patient => 
-            patient.name.toLowerCase().includes(search.toLowerCase()) ||
-            patient.email.toLowerCase().includes(search.toLowerCase())
-          )
-        : patients;
-
+  
+      const total = await Consultation.countDocuments(query);
+  
       return {
-        patients: filteredPatients,
+        consultations,
         pagination: {
           page,
           limit,
-          total: filteredPatients.length
+          total,
+          pages: Math.ceil(total / limit)
         }
       };
       
     } catch (error) {
-      logger.error('Get doctor patients error:', error);
+      logger.error('Get doctor consultations error:', error);
       throw error;
     }
   }
-
+  
   /**
    * Book consultation with doctor
    */
@@ -198,14 +207,15 @@ class DoctorService {
     try {
       const { doctorId, patientId, type, scheduledFor, notes } = consultationData;
       
-      // Validate doctor exists and is available
+      // Validate doctor exists
       const doctor = await Doctor.findById(doctorId);
       if (!doctor) {
         throw new Error('Doctor not found');
       }
 
-      if (!doctor.isAvailableForConsultation(new Date(scheduledFor))) {
-        throw new Error('Doctor is not available at the requested time');
+      // Check if doctor is active
+      if (!doctor.isActive) {
+        throw new Error('Doctor is currently inactive');
       }
 
       // Create consultation record
@@ -213,18 +223,14 @@ class DoctorService {
       const consultation = new Consultation({
         doctorId,
         patientId,
-        type, // 'video', 'in_person', 'follow_up'
+        type,
         scheduledFor: new Date(scheduledFor),
         status: 'scheduled',
-        fees: doctor.consultationSettings.fees[`${type}Consultation`],
-        notes,
-        aiAnalysis: consultationData.aiAnalysis // If AI recommendations available
+        fees: doctor.consultationSettings?.fees?.[`${type}Consultation`] || 0,
+        notes
       });
 
       await consultation.save();
-      
-      // Update doctor metrics
-      await this.updateDoctorMetrics(doctorId, { totalConsultations: 1 });
       
       logger.info(`Consultation booked: ${consultation._id}`, { doctorId, patientId });
       
@@ -238,93 +244,7 @@ class DoctorService {
 
   /**
    * ═══════════════════════════════════════════════════════════
-   * 3. TREATMENT PLAN CREATION & APPROVAL
-   * ═══════════════════════════════════════════════════════════
-   */
-
-  /**
-   * Create treatment plan
-   */
-  async createTreatmentPlan(planData) {
-    try {
-      const { doctorId, patientId, consultationId, treatments, aiRecommendations } = planData;
-      
-      const TreatmentPlan = mongoose.model('TreatmentPlan');
-      
-      const treatmentPlan = new TreatmentPlan({
-        doctorId,
-        patientId,
-        consultationId,
-        treatments: treatments.map(treatment => ({
-          ...treatment,
-          approvedBy: doctorId,
-          approvedAt: new Date()
-        })),
-        aiRecommendations,
-        status: 'approved', // Doctor created = auto approved
-        totalSessions: treatments.reduce((sum, t) => sum + (t.sessions || 1), 0),
-        estimatedDuration: this.calculateTreatmentDuration(treatments),
-        notes: planData.notes
-      });
-
-      await treatmentPlan.save();
-      
-      logger.info(`Treatment plan created: ${treatmentPlan._id}`, { doctorId, patientId });
-      
-      return treatmentPlan;
-      
-    } catch (error) {
-      logger.error('Create treatment plan error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Validate and approve AI-generated treatment plan
-   */
-  async validateAITreatmentPlan(doctorId, planId, validation) {
-    try {
-      const { approved, modifications, notes } = validation;
-      
-      const TreatmentPlan = mongoose.model('TreatmentPlan');
-      const plan = await TreatmentPlan.findById(planId);
-      
-      if (!plan) {
-        throw new Error('Treatment plan not found');
-      }
-
-      if (approved) {
-        plan.status = 'approved';
-        plan.approvedBy = doctorId;
-        plan.approvedAt = new Date();
-        
-        if (modifications) {
-          plan.treatments = modifications;
-          plan.modifiedBy = doctorId;
-          plan.modifiedAt = new Date();
-        }
-      } else {
-        plan.status = 'rejected';
-        plan.rejectedBy = doctorId;
-        plan.rejectedAt = new Date();
-      }
-      
-      plan.doctorNotes = notes;
-      await plan.save();
-      
-      logger.info(`Treatment plan ${approved ? 'approved' : 'rejected'}: ${planId}`, { doctorId });
-      
-      return plan;
-      
-    } catch (error) {
-      logger.error('Validate treatment plan error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * ═══════════════════════════════════════════════════════════
-   * 4. AVAILABILITY & SCHEDULING
+   * 3. AVAILABILITY & SCHEDULING
    * ═══════════════════════════════════════════════════════════
    */
 
@@ -336,6 +256,11 @@ class DoctorService {
       const doctor = await Doctor.findById(doctorId);
       if (!doctor) {
         throw new Error('Doctor not found');
+      }
+
+      // Ensure consultationSettings exists
+      if (!doctor.consultationSettings) {
+        doctor.consultationSettings = {};
       }
 
       doctor.consultationSettings.availability = {
@@ -365,28 +290,42 @@ class DoctorService {
         throw new Error('Doctor not found');
       }
 
+      if (!doctor.consultationSettings?.availability) {
+        return [];
+      }
+
       const requestedDate = new Date(date);
       const dayOfWeek = requestedDate.toLocaleDateString('en', {weekday: 'long'}).toLowerCase();
       
       // Check if doctor works on this day
-      if (!doctor.consultationSettings.availability.workingDays.includes(dayOfWeek)) {
+      const workingDays = doctor.consultationSettings.availability.workingDays || [];
+      if (!workingDays.includes(dayOfWeek)) {
         return [];
       }
 
       // Get working hours
-      const { start, end } = doctor.consultationSettings.availability.workingHours;
-      const duration = doctor.consultationSettings.availability.consultationDuration;
+      const workingHours = doctor.consultationSettings.availability.workingHours;
+      if (!workingHours?.start || !workingHours?.end) {
+        return [];
+      }
+
+      const duration = doctor.consultationSettings.availability.consultationDuration || 30;
       
       // Generate time slots
-      const slots = this.generateTimeSlots(start, end, duration);
+      const slots = this.generateTimeSlots(workingHours.start, workingHours.end, duration);
       
       // Filter out booked slots
       const Consultation = mongoose.model('Consultation');
+      const startOfDay = new Date(requestedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(requestedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
       const bookedSlots = await Consultation.find({
         doctorId,
         scheduledFor: {
-          $gte: new Date(requestedDate.setHours(0, 0, 0, 0)),
-          $lt: new Date(requestedDate.setHours(23, 59, 59, 999))
+          $gte: startOfDay,
+          $lte: endOfDay
         },
         status: { $in: ['scheduled', 'in_progress'] }
       }).select('scheduledFor');
@@ -407,78 +346,165 @@ class DoctorService {
 
   /**
    * ═══════════════════════════════════════════════════════════
-   * 5. DOCTOR SEARCH & DISCOVERY
+   * 4. DOCTOR SEARCH & DISCOVERY
    * ═══════════════════════════════════════════════════════════
    */
 
   /**
    * Find doctors by specialization
-   */async findDoctorsBySpecialization(specialization, options = {}) {
-  try {
-    const { location, maxDistance = 50000, limit = 10, sortBy = 'rating' } = options;
-    
-    let doctors;
-    
-    if (location && location.coordinates) {
-      // 🔥 Use aggregation-based location search
-      doctors = await Doctor.findNearby(location.coordinates, maxDistance, {
-        limit,
-        specialization,
-        sortBy
-      });
-    } else {
-      // Non-location based search
-      doctors = await Doctor.findBySpecialization(specialization, { 
-        limit, 
-        sortBy: sortBy === 'rating' ? { 'metrics.averageRating': -1 } : { createdAt: -1 }
-      });
-    }
-
-    return doctors;
-    
-  } catch (error) {
-    logger.error('Find doctors by specialization error:', error);
-    throw error;
-  }
-}
-
-
-  /**
-   * Get recommended doctors for AI analysis
    */
-  async getRecommendedDoctors(aiAnalysis, patientLocation) {
+  async findDoctorsBySpecialization(specialization, options = {}) {
     try {
-      const { primaryDosha, recommendedTreatments, severityLevel } = aiAnalysis;
+      const { limit = 10, page = 1, sortBy = 'createdAt' } = options;
       
-      // Map dosha to specialization
-      const specializationMap = {
-        'vata': 'Vata Disorders',
-        'pitta': 'Pitta Disorders', 
-        'kapha': 'Kapha Disorders'
+      const query = {
+        specializations: specialization,
+        isActive: true,
+        'verificationStatus.status': 'approved'
+      };
+
+      const sortOptions = {};
+      if (sortBy === 'experience') {
+        sortOptions['experience.totalYears'] = -1;
+      } else {
+        sortOptions[sortBy] = -1;
+      }
+
+      const doctors = await Doctor.find(query)
+        .populate('userId', 'name email phone location')
+        .sort(sortOptions)
+        .skip((page - 1) * limit)
+        .limit(limit);
+
+      const total = await Doctor.countDocuments(query);
+
+      return {
+        doctors,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
       };
       
-      const primarySpecialization = specializationMap[primaryDosha.toLowerCase()] || 'Panchakarma';
-      
-      // Find doctors with relevant specialization
-      const doctors = await this.findDoctorsBySpecialization(primarySpecialization, {
-        location: patientLocation,
-        limit: 5
-      });
+    } catch (error) {
+      logger.error('Find doctors by specialization error:', error);
+      throw error;
+    }
+  }
 
-      // Score doctors based on AI analysis
-      const scoredDoctors = doctors.map(doctor => ({
-        ...doctor,
-        matchScore: this.calculateDoctorMatchScore(doctor, aiAnalysis),
-        estimatedFee: doctor.consultationSettings?.fees?.videoConsultation || 0
-      }));
+  /**
+   * Search doctors by multiple criteria
+   */
+  async searchDoctors(searchCriteria) {
+    try {
+      const { 
+        specializations, 
+        experience, 
+        languages, 
+        consultationType,
+        maxFee,
+        page = 1, 
+        limit = 10 
+      } = searchCriteria;
 
-      // Sort by match score
-      scoredDoctors.sort((a, b) => b.matchScore - a.matchScore);
-      
-      return scoredDoctors.slice(0, 5);
+      let query = {
+        isActive: true,
+        'verificationStatus.status': 'approved'
+      };
+
+      // Add search filters
+      if (specializations && specializations.length > 0) {
+        query.specializations = { $in: specializations };
+      }
+
+      if (experience) {
+        query['experience.totalYears'] = { $gte: experience };
+      }
+
+      if (languages && languages.length > 0) {
+        query['consultationSettings.preferences.languages'] = { $in: languages };
+      }
+
+      if (consultationType && maxFee) {
+        query[`consultationSettings.fees.${consultationType}Consultation`] = { $lte: maxFee };
+      }
+
+      const doctors = await Doctor.find(query)
+        .populate('userId', 'name email phone location')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit);
+
+      const total = await Doctor.countDocuments(query);
+
+      return {
+        doctors,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      };
       
     } catch (error) {
-      logger.error('Get recommended doctors error:', error);
+      logger.error('Search doctors error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════
+   * 5. VERIFICATION & STATUS MANAGEMENT
+   * ═══════════════════════════════════════════════════════════
+   */
+
+  /**
+   * Update doctor verification status
+   */
+  async updateVerificationStatus(doctorId, status, notes = '') {
+    try {
+      const doctor = await Doctor.findById(doctorId);
+      if (!doctor) {
+        throw new Error('Doctor not found');
+      }
+
+      doctor.verificationStatus.status = status;
+      
+      if (status === 'approved') {
+        doctor.verificationStatus.profileReviewed = true;
+        doctor.verificationStatus.documentsVerified = true;
+      }
+
+      await doctor.save();
+      
+      logger.info(`Doctor verification status updated: ${doctorId} -> ${status}`);
+      
+      return doctor;
+      
+    } catch (error) {
+      logger.error('Update verification status error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get doctors pending verification
+   */
+  async getPendingVerifications() {
+    try {
+      const doctors = await Doctor.find({
+        'verificationStatus.status': { $in: ['pending', 'under_review'] }
+      })
+      .populate('userId', 'name email phone')
+      .sort({ createdAt: 1 });
+
+      return doctors;
+      
+    } catch (error) {
+      logger.error('Get pending verifications error:', error);
       throw error;
     }
   }
@@ -490,20 +516,14 @@ class DoctorService {
    */
 
   /**
-   * Get doctor analytics
+   * Get doctor statistics
    */
-  async getDoctorAnalytics(doctorId, period = '30d') {
+  async getDoctorStats(doctorId, period = '30d') {
     try {
-      const doctor = await Doctor.findById(doctorId);
-      if (!doctor) {
-        throw new Error('Doctor not found');
-      }
-
       const startDate = this.getDateFromPeriod(period);
       
       const Consultation = mongoose.model('Consultation');
       
-      // Get consultation statistics
       const consultationStats = await Consultation.aggregate([
         {
           $match: {
@@ -521,7 +541,6 @@ class DoctorService {
             cancelledConsultations: {
               $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] }
             },
-            averageRating: { $avg: '$rating' },
             totalRevenue: { $sum: '$fees' }
           }
         }
@@ -531,48 +550,21 @@ class DoctorService {
         totalConsultations: 0,
         completedConsultations: 0,
         cancelledConsultations: 0,
-        averageRating: 0,
         totalRevenue: 0
       };
 
+      const completionRate = stats.totalConsultations > 0 
+        ? (stats.completedConsultations / stats.totalConsultations) * 100 
+        : 0;
+
       return {
         period,
-        consultations: stats,
-        metrics: doctor.metrics,
-        verificationStatus: doctor.verificationStatus,
-        performanceScore: this.calculatePerformanceScore(stats)
+        ...stats,
+        completionRate: Math.round(completionRate)
       };
       
     } catch (error) {
-      logger.error('Get doctor analytics error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update doctor metrics
-   */
-  async updateDoctorMetrics(doctorId, updates) {
-    try {
-      const doctor = await Doctor.findById(doctorId);
-      if (!doctor) {
-        throw new Error('Doctor not found');
-      }
-
-      Object.keys(updates).forEach(key => {
-        if (typeof updates[key] === 'number') {
-          doctor.metrics[key] = (doctor.metrics[key] || 0) + updates[key];
-        } else {
-          doctor.metrics[key] = updates[key];
-        }
-      });
-
-      await doctor.save();
-      
-      return doctor.metrics;
-      
-    } catch (error) {
-      logger.error('Update doctor metrics error:', error);
+      logger.error('Get doctor stats error:', error);
       throw error;
     }
   }
@@ -617,64 +609,6 @@ class DoctorService {
   }
 
   /**
-   * Calculate treatment duration
-   */
-  calculateTreatmentDuration(treatments) {
-    return treatments.reduce((total, treatment) => {
-      const sessionDuration = treatment.sessionDuration || 60; // default 60 minutes
-      const sessions = treatment.sessions || 1;
-      return total + (sessionDuration * sessions);
-    }, 0);
-  }
-
-  /**
-   * Calculate doctor match score for AI recommendations
-   */
-  calculateDoctorMatchScore(doctor, aiAnalysis) {
-    let score = 0;
-    
-    // Base score from rating
-    score += doctor.metrics.averageRating * 20;
-    
-    // Experience bonus
-    score += Math.min(doctor.experience.totalYears * 2, 20);
-    
-    // Specialization match
-    if (doctor.specializations.some(spec => 
-        aiAnalysis.recommendedTreatments.includes(spec)
-    )) {
-      score += 30;
-    }
-    
-    // Panchakarma expertise bonus
-    if (doctor.panchakarmaExpertise.length > 0) {
-      score += 15;
-    }
-    
-    return Math.min(score, 100);
-  }
-
-  /**
-   * Calculate performance score
-   */
-  calculatePerformanceScore(stats) {
-    const completionRate = stats.totalConsultations > 0 
-      ? (stats.completedConsultations / stats.totalConsultations) * 100 
-      : 0;
-    
-    const cancellationRate = stats.totalConsultations > 0
-      ? (stats.cancelledConsultations / stats.totalConsultations) * 100
-      : 0;
-    
-    return {
-      completionRate: Math.round(completionRate),
-      cancellationRate: Math.round(cancellationRate),
-      averageRating: stats.averageRating || 0,
-      overallScore: Math.round((completionRate + (stats.averageRating * 20) - cancellationRate) / 2)
-    };
-  }
-
-  /**
    * Get date from period string
    */
   getDateFromPeriod(period) {
@@ -682,6 +616,309 @@ class DoctorService {
     const days = parseInt(period.replace('d', '')) || 30;
     return new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
   }
+
+
+  // Add these methods to your existing DoctorService class (around line 613)
+
+/**
+ * ═══════════════════════════════════════════════════════════
+ * 8. TREATMENT PLAN MANAGEMENT  
+ * ═══════════════════════════════════════════════════════════
+ */
+
+/**
+ * Create treatment plan with notifications
+ */
+
+async createTreatmentPlan(treatmentData) {
+  try {
+    const {
+      doctorId,
+      patientId,
+      consultationId,
+      treatmentType,
+      treatmentPlan,
+      duration,
+      scheduledDate,
+      scheduledTime,
+      preInstructions,
+      postInstructions,
+      notes
+    } = treatmentData;
+
+    // Validate doctor exists
+     const doctor = await User.findById(doctorId);
+    if(!doctorId){
+      throw new Error('ee laudee doctor id dee');
+    }
+    if (!doctor) {
+      throw new Error('Doctor not found');
+    }
+
+    // Validate patient exists
+    const patient = await User.findById(patientId);
+    if (!patient) {
+      throw new Error('Patient not found');
+    }
+
+    // Create scheduled datetime
+    let scheduledFor = null;
+    if (scheduledDate && scheduledTime) {
+      scheduledFor = new Date(`${scheduledDate}T${scheduledTime}`);
+    }
+
+    // Create treatment plan document
+    const TreatmentPlan = mongoose.model('TreatmentPlan');
+    const newTreatmentPlan = new TreatmentPlan({
+      doctorId,
+      patientId,
+      consultationId,
+      treatmentType,
+      treatmentPlan,
+      duration,
+      scheduledFor,
+      preInstructions,
+      postInstructions,
+      notes,
+      status: 'active'
+    });
+
+    await newTreatmentPlan.save();
+    logger.info(`Treatment plan created: ${newTreatmentPlan._id}`, { doctorId, patientId });
+
+    // Track notification results
+    const notificationResults = {
+      preInstructionsSent: false,
+      postInstructionsSent: false,
+      errors: []
+    };
+
+    // Send pre-treatment notifications if enabled
+    if (preInstructions && preInstructions.trim()) {
+      try {
+        const NotificationService = require('./notification.service');
+        await NotificationService.sendPreTherapyInstructions({
+          patientEmail: patient.email,
+          patientName: patient.name,
+          therapyType: treatmentType,
+          scheduledAt: scheduledFor
+        });
+        notificationResults.preInstructionsSent = true;
+        logger.info(`Pre-therapy instructions sent for plan: ${newTreatmentPlan._id}`);
+      } catch (notifyError) {
+        logger.error('Failed to send pre-therapy instructions:', notifyError);
+        notificationResults.errors.push('Failed to send pre-therapy instructions');
+      }
+    }
+
+    // Send post-treatment notifications if enabled  
+    if (postInstructions && postInstructions.trim()) {
+      try {
+        const NotificationService = require('./notification.service');
+        await NotificationService.sendPostTherapyCare({
+          patientEmail: patient.email,
+          patientName: patient.name,
+          therapyType: treatmentType
+        });
+        notificationResults.postInstructionsSent = true;
+        logger.info(`Post-therapy instructions sent for plan: ${newTreatmentPlan._id}`);
+      } catch (notifyError) {
+        logger.error('Failed to send post-therapy care instructions:', notifyError);
+        notificationResults.errors.push('Failed to send post-therapy care instructions');
+      }
+    }
+
+    return {
+      treatmentPlan: newTreatmentPlan,
+      notifications: notificationResults
+    };
+
+  } catch (error) {
+    logger.error('Create treatment plan error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get doctor's treatment plans
+ */
+async getDoctorTreatmentPlans(doctorId, options = {}) {
+  try {
+    const { page = 1, limit = 20, status, patientId } = options;
+    
+    const TreatmentPlan = mongoose.model('TreatmentPlan');
+    
+    let query = { doctorId };
+    if (status) query.status = status;
+    if (patientId) query.patientId = patientId;
+    
+    const treatmentPlans = await TreatmentPlan.find(query)
+      .populate('patientId', 'name email phone')
+      .populate('consultationId', 'type scheduledFor')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    const total = await TreatmentPlan.countDocuments(query);
+
+    return {
+      treatmentPlans,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    };
+    
+  } catch (error) {
+    logger.error('Get doctor treatment plans error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update treatment plan
+ */
+async updateTreatmentPlan(treatmentPlanId, doctorId, updateData) {
+  try {
+    const TreatmentPlan = mongoose.model('TreatmentPlan');
+    
+    const treatmentPlan = await TreatmentPlan.findOne({ 
+      _id: treatmentPlanId, 
+      doctorId 
+    });
+
+    if (!treatmentPlan) {
+      throw new Error('Treatment plan not found or unauthorized');
+    }
+
+    // Update allowed fields only
+    const allowedUpdates = [
+      'treatmentPlan', 'duration', 'scheduledFor', 
+      'preInstructions', 'postInstructions', 'notes', 'status'
+    ];
+
+    allowedUpdates.forEach(field => {
+      if (updateData[field] !== undefined) {
+        treatmentPlan[field] = updateData[field];
+      }
+    });
+
+    treatmentPlan.updatedAt = new Date();
+    await treatmentPlan.save();
+
+    logger.info(`Treatment plan updated: ${treatmentPlanId}`, { doctorId });
+    
+    return treatmentPlan;
+    
+  } catch (error) {
+    logger.error('Update treatment plan error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get treatment plan details
+ */
+async getTreatmentPlanDetails(treatmentPlanId, doctorId) {
+  try {
+    const TreatmentPlan = mongoose.model('TreatmentPlan');
+    
+    const treatmentPlan = await TreatmentPlan.findOne({ 
+      _id: treatmentPlanId, 
+      doctorId 
+    })
+    .populate('patientId', 'name email phone dateOfBirth gender')
+    .populate('consultationId', 'type scheduledFor status notes')
+    .populate('doctorId', 'userId');
+
+    if (!treatmentPlan) {
+      throw new Error('Treatment plan not found or unauthorized');
+    }
+
+    return treatmentPlan;
+    
+  } catch (error) {
+    logger.error('Get treatment plan details error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete treatment plan (soft delete)
+ */
+async deleteTreatmentPlan(treatmentPlanId, doctorId) {
+  try {
+    const TreatmentPlan = mongoose.model('TreatmentPlan');
+    
+    const treatmentPlan = await TreatmentPlan.findOne({ 
+      _id: treatmentPlanId, 
+      doctorId 
+    });
+
+    if (!treatmentPlan) {
+      throw new Error('Treatment plan not found or unauthorized');
+    }
+
+    // Soft delete by setting status
+    treatmentPlan.status = 'deleted';
+    treatmentPlan.deletedAt = new Date();
+    await treatmentPlan.save();
+
+    logger.info(`Treatment plan deleted: ${treatmentPlanId}`, { doctorId });
+    
+    return { success: true, message: 'Treatment plan deleted successfully' };
+    
+  } catch (error) {
+    logger.error('Delete treatment plan error:', error);
+    throw error;
+  }
+}
+
+// Add this method to your existing helper methods section
+/**
+ * Add patient (existing method, ensure it exists)
+ */
+async addPatient(doctorId, patientData) {
+  try {
+    const { name, email, phone, dateOfBirth, gender, medicalHistory, allergies, symptoms } = patientData;
+
+    // Generate temporary password
+    const tempPassword = Math.random().toString(36).slice(-8);
+
+    // Create user account for patient
+    const user = new User({
+      name,
+      email: email || `${phone}@temp.com`, // Use phone as fallback email
+      phone,
+      password: tempPassword, // You should hash this
+      role: 'patient',
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      gender,
+      isEmailVerified: false,
+      medicalHistory,
+      allergies,
+      symptoms
+    });
+
+    await user.save();
+    logger.info(`Patient added by doctor: ${doctorId}`, { patientId: user._id });
+
+    return {
+      patient: user,
+      tempPassword
+    };
+
+  } catch (error) {
+    logger.error('Add patient error:', error);
+    throw error;
+  }
+}
+
+
+
+  
 }
 
 module.exports = new DoctorService();

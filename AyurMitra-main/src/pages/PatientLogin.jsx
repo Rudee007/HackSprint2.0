@@ -83,7 +83,7 @@ const PatientLogin = () => {
     setSuccess('');
 
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/login', {
+      const response = await axios.post('http://localhost:3003/api/auth/login', {
         identifier: formData.identifier.trim(),
         password: formData.password,
         rememberMe: formData.rememberMe
