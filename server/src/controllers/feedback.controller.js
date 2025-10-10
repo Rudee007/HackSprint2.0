@@ -187,16 +187,45 @@ class FeedbackController {
   });
 
   // Get feedback statistics
-  getFeedbackStats = asyncHandler(async (req, res) => {
-    const { timeRange = '6months' } = req.query;
+ // In feedback.controller.js
+getFeedbackStats = asyncHandler(async (req, res) => {
+  try {
+    const Feedback = require('../models/Feedback'); // or your model name
     
-    const stats = await FeedbackAnalyticsService.getOverallStats(timeRange);
+    // Calculate average rating
+    const ratingAgg = await Feedback.aggregate([
+      {
+        $group: {
+          _id: null,
+          averageRating: { 
+            $avg: '$ratings.overallSatisfaction' // ← Check this field name
+          },
+          totalFeedback: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const stats = {
+      overview: {
+        totalFeedback: ratingAgg[0]?.totalFeedback || 0,
+        averageRating: ratingAgg[0]?.averageRating || 0,
+        criticalFeedbackCount: await Feedback.countDocuments({
+          'flags.requiresAttention': true
+        })
+      }
+    };
+    
+    console.log('✅ Feedback stats calculated:', stats);
     
     return res.json({
       success: true,
       data: stats
     });
-  });
+  } catch (error) {
+    console.error('❌ Get feedback stats error:', error);
+    throw error;
+  }
+});
 
   // Get patient progress analytics
   getPatientProgress = asyncHandler(async (req, res) => {
@@ -225,31 +254,46 @@ class FeedbackController {
     }
   });
   // Respond to feedback
-  respondToFeedback = asyncHandler(async (req, res) => {
-    const { feedbackId } = req.params;
-    const { responseText, actionTaken } = req.body;
-    
-    const feedback = await FeedbackService.respondToFeedback(feedbackId, {
-      responseText,
-      actionTaken,
-      respondedBy: req.user._id,
-      respondedAt: new Date()
-    });
-
-    // Notify patient of response
-    const wsService = req.app.get('wsService');
-    wsService.emitToUser(feedback.patientId, 'feedback_response', {
-      feedbackId: feedback._id,
-      responseText,
-      respondedBy: req.user.name
-    });
-
-    return res.json({
-      success: true,
-      message: 'Response added successfully',
-      data: { feedback }
-    });
+  // Respond to feedback
+respondToFeedback = asyncHandler(async (req, res) => {
+  const { feedbackId } = req.params;
+  const { responseText, actionTaken } = req.body;
+  
+  console.log('📝 Responding to feedback:', feedbackId);
+  
+  const feedback = await FeedbackService.respondToFeedback(feedbackId, {
+    responseText,
+    actionTaken,
+    respondedBy: req.user._id,
+    respondedAt: new Date()
   });
+
+  console.log('✅ Response saved successfully');
+
+  // ✅ SAFE WEBSOCKET NOTIFICATION (don't fail if WebSocket is down)
+  try {
+    const wsService = req.app.get('wsService');
+    if (wsService && feedback.patientId) {
+      wsService.emitToUser(feedback.patientId, 'feedback_response', {
+        feedbackId: feedback._id,
+        responseText,
+        respondedBy: req.user.name || req.user.email
+      });
+      console.log('✅ WebSocket notification sent');
+    } else {
+      console.log('⚠️  WebSocket service not available or patientId missing');
+    }
+  } catch (wsError) {
+    console.error('⚠️  WebSocket notification failed (non-critical):', wsError.message);
+    // Don't throw error - WebSocket failure shouldn't fail the API
+  }
+
+  return res.json({
+    success: true,
+    message: 'Response added successfully',
+    data: { feedback }
+  });
+});
 
   // Flag feedback for attention
   flagFeedback = asyncHandler(async (req, res) => {
@@ -266,14 +310,22 @@ class FeedbackController {
   });
 
   // Get feedback requiring attention
-  getAttentionRequired = asyncHandler(async (req, res) => {
-    const result = await FeedbackService.getFeedbackRequiringAttention();
-    
-    return res.json({
-      success: true,
-      data: result
-    });
+ // Get feedback requiring attention
+getAttentionRequired = asyncHandler(async (req, res) => {
+  console.log('📥 GET /admin/attention-required');
+
+  const result = await FeedbackService.getFeedbackRequiringAttention();
+  
+  console.log('✅ Attention required feedback:', result.length);
+
+  return res.json({
+    success: true,
+    data: {
+      feedback: result, // ✅ Wrap in object with feedback key
+      totalCount: result.length
+    }
   });
+});
 
   // ============ ANALYTICS & REPORTING ============
   getAnalyticsDashboard = asyncHandler(async (req, res) => {

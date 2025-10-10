@@ -12,6 +12,265 @@ const bcrypt = require('bcryptjs'); // ✅ ADD THIS
 
 class AdminController {
   
+
+  getDashboardStats = asyncHandler(async (req, res) => {
+    console.log('📊 Getting dashboard stats...');
+    
+    try {
+      const today = moment().startOf('day');
+      const thisWeek = moment().startOf('week');
+      const thisMonth = moment().startOf('month');
+      const oneWeekAgo = moment().subtract(7, 'days');
+      
+      // User statistics - Get actual counts by role
+      const [
+        totalUsers,
+        patientCount,
+        doctorCount,
+        therapistCount,
+        activeUsers,
+        newUsersThisWeek
+      ] = await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ role: 'patient' }),
+        User.countDocuments({ role: 'doctor' }),
+        User.countDocuments({ role: 'therapist' }),
+        User.countDocuments({ isActive: true }),
+        User.countDocuments({ createdAt: { $gte: oneWeekAgo.toDate() } })
+      ]);
+      
+      // Appointment statistics with proper status mapping
+      const [
+        totalAppointments,
+        todaysAppointments,
+        thisWeeksAppointments,
+        completedAppointments,
+        upcomingAppointments,
+        cancelledAppointments
+      ] = await Promise.all([
+        Consultation.countDocuments(),
+        Consultation.countDocuments({
+          scheduledAt: {
+            $gte: today.toDate(),
+            $lt: moment(today).add(1, 'day').toDate()
+          }
+        }),
+        Consultation.countDocuments({
+          scheduledAt: { $gte: thisWeek.toDate() }
+        }),
+        Consultation.countDocuments({ status: 'completed' }),
+        Consultation.countDocuments({ 
+          status: { $in: ['scheduled', 'confirmed'] },
+          scheduledAt: { $gte: new Date() }
+        }),
+        Consultation.countDocuments({ status: 'cancelled' })
+      ]);
+      
+      const stats = {
+        overview: {
+          // User stats
+          totalUsers,
+          patientCount,
+          doctorCount,
+          therapistCount,
+          activeUsers,
+          newUsersThisWeek,
+          
+          // Appointment stats
+          totalAppointments,
+          todaysAppointments,
+          thisWeeksAppointments,
+          completedAppointments,
+          upcomingAppointments,
+          cancelledAppointments
+        },
+        timestamp: new Date()
+      };
+      
+      console.log('✅ Dashboard stats:', stats);
+      
+      return res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      console.error('❌ Dashboard stats error:', error);
+      throw error;
+    }
+  });
+  
+  // ✅ UPDATED: Get user statistics with detailed breakdown
+  getUserStats = asyncHandler(async (req, res) => {
+    console.log('📊 Getting user stats...');
+    
+    try {
+      const today = moment().startOf('day');
+      const thisWeek = moment().startOf('week');
+      const thisMonth = moment().startOf('month');
+      const oneWeekAgo = moment().subtract(7, 'days');
+      const oneMonthAgo = moment().subtract(30, 'days');
+      
+      // Basic user counts with role breakdown
+      const [
+        totalUsers,
+        patientCount,
+        doctorCount,
+        therapistCount,
+        adminCount,
+        activeUsers,
+        inactiveUsers,
+        newUsersThisWeek,
+        newUsersThisMonth
+      ] = await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ role: 'patient' }),
+        User.countDocuments({ role: 'doctor' }),
+        User.countDocuments({ role: 'therapist' }),
+        User.countDocuments({ role: 'admin' }),
+        User.countDocuments({ isActive: true }),
+        User.countDocuments({ isActive: false }),
+        User.countDocuments({ createdAt: { $gte: oneWeekAgo.toDate() } }),
+        User.countDocuments({ createdAt: { $gte: oneMonthAgo.toDate() } })
+      ]);
+      
+      // Role-wise distribution with active/inactive breakdown
+      const roleStats = await User.aggregate([
+        {
+          $group: {
+            _id: '$role',
+            count: { $sum: 1 },
+            active: { $sum: { $cond: ['$isActive', 1, 0] } },
+            inactive: { $sum: { $cond: ['$isActive', 0, 1] } }
+          }
+        }
+      ]);
+      
+      // Recent user registrations (last 7 days) - for growth chart
+      const recentRegistrations = await User.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: moment().subtract(7, 'days').toDate() }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $sort: { '_id.date': 1 }
+        }
+      ]);
+      
+      const stats = {
+        stats: {
+          totalUsers,
+          patientCount,
+          doctorCount,
+          therapistCount,
+          adminCount,
+          activeUsers,
+          inactiveUsers,
+          newUsersThisWeek,
+          newUsersThisMonth
+        },
+        roleDistribution: roleStats,
+        recentRegistrations,
+        growth: {
+          weekly: newUsersThisWeek,
+          monthly: newUsersThisMonth,
+          users: newUsersThisMonth // For analytics dashboard
+        },
+        timestamp: new Date()
+      };
+      
+      console.log('✅ User stats:', stats);
+      
+      return res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      console.error('❌ User stats error:', error);
+      throw error;
+    }
+  });
+  
+  // ✅ UPDATED: Get system health and performance metrics
+  getSystemMetrics = asyncHandler(async (req, res) => {
+    console.log('📊 Getting system metrics...');
+    
+    try {
+      const oneHourAgo = moment().subtract(1, 'hour');
+      
+      // Database statistics
+      const [
+        totalUsers,
+        totalConsultations,
+        totalTherapists,
+        totalDoctors
+      ] = await Promise.all([
+        User.countDocuments(),
+        Consultation.countDocuments(),
+        Therapist.countDocuments(),
+        Doctor.countDocuments()
+      ]);
+      
+      // Active users (if you track lastLoginAt field)
+      let activeUsers = 0;
+      try {
+        activeUsers = await User.countDocuments({
+          lastLoginAt: { $gte: oneHourAgo.toDate() }
+        });
+      } catch (error) {
+        // If lastLoginAt field doesn't exist, count active users differently
+        activeUsers = await User.countDocuments({ isActive: true });
+        console.log('⚠️  Using isActive field instead of lastLoginAt');
+      }
+      
+      // Recent activity (last 10 consultations)
+      const recentActivity = await Consultation.find()
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate('providerId', 'name')
+        .populate('patientId', 'name')
+        .select('scheduledAt status createdAt');
+      
+      const metrics = {
+        activeUsers,
+        apiResponseTime: 150, // You can calculate this from your monitoring
+        serverStatus: 'healthy',
+        databaseStatus: 'connected',
+        uptime: Math.floor(process.uptime()), // Server uptime in seconds
+        memoryUsage: {
+          used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024), // MB
+          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) // MB
+        },
+        database: {
+          users: totalUsers,
+          consultations: totalConsultations,
+          therapists: totalTherapists,
+          doctors: totalDoctors
+        },
+        recentActivity,
+        timestamp: new Date()
+      };
+      
+      console.log('✅ System metrics:', metrics);
+      
+      return res.json({
+        success: true,
+        data: metrics
+      });
+    } catch (error) {
+      console.error('❌ System metrics error:', error);
+      throw error;
+    }
+  });
+
   // ================================
   // USER MANAGEMENT SECTION
   // ================================

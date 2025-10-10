@@ -176,29 +176,35 @@ class FeedbackService {
 
     return feedback;
   }
-
   async getFeedbackRequiringAttention() {
-    const criticalFeedback = await Feedback.find({
-      $or: [
-        { 'flags.requiresAttention': true },
-        { 'flags.criticalFeedback': true },
-        { 'ratings.overallSatisfaction': { $lte: 2 } },
-        { recommendationScore: { $lte: 3 } }
-      ],
-      status: { $in: ['submitted', 'reviewed'] }
-    })
-    .populate('patientId', 'name email')
-    .populate('providerId', 'name email role')
-    .populate('sessionId', 'scheduledAt therapyType')
-    .sort({ createdAt: -1 })
-    .limit(50);
-
-    return {
-      criticalFeedback,
-      totalCount: criticalFeedback.length
-    };
+    try {
+      console.log('🔍 Getting attention-required feedback...');
+  
+      const criticalFeedback = await Feedback.find({
+        $or: [
+          { 'flags.requiresAttention': true },
+          { 'flags.criticalFeedback': true },
+          { 'flags.hasComplaint': true },
+          { status: 'pending' }
+        ]
+      })
+        .populate('patientId', 'name email phone')
+        .populate('providerId', 'name email role')
+        .populate('sessionId', 'sessionType startTime')
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean();
+  
+      console.log('✅ Found critical feedback:', criticalFeedback.length);
+  
+      // ✅ Return as array directly
+      return criticalFeedback;
+    } catch (error) {
+      console.error('❌ Error getting attention-required feedback:', error);
+      throw error;
+    }
   }
-
+  
   // ============ DATA EXPORT ============
   
   async exportFeedbackData(options = {}) {
