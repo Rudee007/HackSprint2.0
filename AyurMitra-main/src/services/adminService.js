@@ -263,6 +263,220 @@ class AdminService {
     }
   }
 
+  // ============ APPOINTMENT CREATION & BOOKING ============
+  
+  // ✅ Create new appointment with conflict detection (uses BookingController)
+  // Replace the createAppointment method in your adminService.js with this:
+
+// ============ APPOINTMENT CREATION & BOOKING ============
+
+// ✅ Create new appointment with conflict detection (uses BookingController)
+async createAppointment(appointmentData) {
+  try {
+    console.log('📅 Original appointment data:', appointmentData);
+    
+    // ✅ Transform data to match BookingController expectations
+    const bookingPayload = {
+      patientId: appointmentData.patientId,
+      providerId: appointmentData.providerId,
+      providerType: appointmentData.providerType,
+      type: appointmentData.type,
+      startTime: appointmentData.scheduledAt || appointmentData.startTime, // ✅ Key fix
+      duration: parseInt(appointmentData.duration) || 30,
+      fee: parseFloat(appointmentData.fee),
+      sessionType: appointmentData.sessionType || 'consultation',
+      meetingLink: appointmentData.type === 'video' ? appointmentData.meetingLink : undefined,
+      notes: appointmentData.notes || ''
+    };
+
+    // ✅ Remove undefined fields
+    Object.keys(bookingPayload).forEach(key => {
+      if (bookingPayload[key] === undefined) {
+        delete bookingPayload[key];
+      }
+    });
+
+    console.log('📤 Transformed payload for BookingController:', bookingPayload);
+    
+    const response = await this.axiosInstance.post('/admin/appointments', bookingPayload);
+    
+    console.log('✅ Appointment created:', response.data);
+    toast.success('Appointment created successfully');
+    return { success: true, data: response.data.data };
+  } catch (error) {
+    console.error('❌ Create appointment error:', error);
+    console.error('❌ Error response:', error.response?.data);
+    console.error('❌ Error status:', error.response?.status);
+    
+    // Handle conflict error with alternatives
+    if (error.response?.status === 409) {
+      const conflictData = error.response?.data?.error;
+      console.log('⚠️ Conflict detected:', conflictData);
+      toast.error('Time slot conflict detected! Check alternatives.');
+      return { 
+        success: false, 
+        conflict: true,
+        data: conflictData 
+      };
+    }
+    
+    // Handle validation errors
+    if (error.response?.status === 400) {
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Invalid data';
+      toast.error(`Validation error: ${errorMsg}`);
+      return { success: false, error: errorMsg };
+    }
+    
+    toast.error(error.response?.data?.message || 'Failed to create appointment');
+    throw error;
+  }
+}
+
+  // ✅ Check slot availability before booking
+  async checkSlotAvailability(providerId, startTime, duration = 30) {
+    try {
+      console.log('🔍 Checking slot availability:', { providerId, startTime, duration });
+      
+      const response = await this.axiosInstance.post('/admin/appointments/check-availability', {
+        providerId,
+        startTime,
+        duration
+      });
+      
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('❌ Check availability error:', error);
+      return { success: false, available: false };
+    }
+  }
+
+  // ✅ Get alternative slots if booking conflicts
+  async getAlternativeSlots(providerId, requestedDateTime, duration = 60, therapyType = 'consultation') {
+    try {
+      console.log('🔄 Getting alternative slots:', { providerId, requestedDateTime });
+      
+      const response = await this.axiosInstance.post('/admin/appointments/alternative-slots', {
+        providerId,
+        requestedDateTime,
+        duration,
+        therapyType
+      });
+      
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('❌ Get alternatives error:', error);
+      return { success: false, data: { alternatives: [] } };
+    }
+  }
+
+  // ✅ Get provider's bookings for a specific date
+  async getProviderBookings(providerId, date) {
+    try {
+      console.log('📆 Getting provider bookings:', { providerId, date });
+      
+      const response = await this.axiosInstance.get(`/admin/appointments/provider/${providerId}/bookings`, {
+        params: { date }
+      });
+      
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('❌ Get provider bookings error:', error);
+      return { success: false, data: { bookings: [] } };
+    }
+  }
+
+  // ============ PROVIDER ASSIGNMENT ============
+  
+  // ✅ Assign/reassign provider to appointment
+  async assignProvider(appointmentId, providerId, providerType, reason) {
+    try {
+      console.log('👨‍⚕️ Assigning provider:', { appointmentId, providerId, providerType });
+      
+      const response = await this.axiosInstance.patch(
+        `/admin/appointments/${appointmentId}/assign-provider`,
+        { providerId, providerType, reason }
+      );
+      toast.success('Provider assigned successfully');
+      return { success: true, data: response.data.data.appointment };
+    } catch (error) {
+      console.error('❌ Assign provider error:', error);
+      toast.error(error.response?.data?.message || 'Failed to assign provider');
+      throw error;
+    }
+  }
+
+  // ✅ Get available providers for assignment
+  async getAvailableProviders(providerType, date) {
+    try {
+      console.log('🔍 Getting available providers:', { providerType, date });
+      
+      const params = { providerType };
+      if (date) params.date = date;
+      
+      const response = await this.axiosInstance.get('/admin/appointments/available-providers', { params });
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('❌ Get available providers error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  // ============ USER LISTS FOR DROPDOWNS ============
+  
+  // ✅ Get doctors list (for dropdown)
+  async getDoctorsList(params = {}) {
+    try {
+      const response = await this.axiosInstance.get('/admin/users', { 
+        params: { role: 'doctor', isActive: true, limit: 100, ...params } 
+      });
+      return { success: true, data: response.data.data.users };
+    } catch (error) {
+      console.error('❌ Get doctors error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  // ✅ Get therapists list (for dropdown)
+  async getTherapistsList(params = {}) {
+    try {
+      const response = await this.axiosInstance.get('/admin/users', { 
+        params: { role: 'therapist', isActive: true, limit: 100, ...params } 
+      });
+      return { success: true, data: response.data.data.users };
+    } catch (error) {
+      console.error('❌ Get therapists error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  // ✅ Get patients list (for dropdown)
+  async getPatientsList(params = {}) {
+    try {
+      const response = await this.axiosInstance.get('/admin/users', { 
+        params: { role: 'patient', isActive: true, limit: 100, ...params } 
+      });
+      return { success: true, data: response.data.data.users };
+    } catch (error) {
+      console.error('❌ Get patients error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  // ✅ Search users (for typeahead/autocomplete)
+  async searchUsers(searchTerm, role = null) {
+    try {
+      const params = { search: searchTerm, limit: 20 };
+      if (role) params.role = role;
+      
+      const response = await this.axiosInstance.get('/admin/users', { params });
+      return { success: true, data: response.data.data.users };
+    } catch (error) {
+      console.error('❌ Search users error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  // ============ SYSTEM METRICS ============
   async getSystemMetrics() {
     try {
       const response = await this.axiosInstance.get('/admin/system/metrics');

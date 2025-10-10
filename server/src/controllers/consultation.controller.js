@@ -444,8 +444,96 @@ class ConsultationController {
   canAccessProviderData(user, providerId) {
     return user.role === 'admin' || 
            ((user.role === 'doctor' || user.role === 'therapist') && user.id === providerId);
+
+           
   }
+
+  // Add this to your ConsultationController class in consultation.controller.js
+
+adminAssignProvider = async (req, res) => {
+  try {
+    console.log('🔍 Assign Provider Request:', {
+      params: req.params,
+      body: req.body,
+      user: { role: req.user?.role, type: req.user?.type }
+    });
+
+    // Check admin permission
+    if (!['admin', 'super_admin', 'moderator'].includes(req.user?.role) && req.user?.type !== 'admin') {
+      console.log('❌ Access denied - not admin');
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      });
+    }
+
+    const { id } = req.params;
+    const { providerId, providerType, reason } = req.body;
+
+    // Validation
+    if (!providerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provider ID is required'
+      });
+    }
+
+    if (!providerType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provider type is required'
+      });
+    }
+
+    if (!['doctor', 'therapist'].includes(providerType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provider type must be either doctor or therapist'
+      });
+    }
+
+    console.log('🔍 Fetching appointment:', id);
+    const consultation = await consultationService.getConsultationById(id);
+    
+    if (!consultation) {
+      console.log('❌ Appointment not found:', id);
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    console.log('✅ Current appointment found');
+    console.log('👨‍⚕️ Assigning new provider:', { providerId, providerType });
+
+    const updateData = {
+      providerId,
+      providerType,
+      notes: consultation.notes 
+        ? `${consultation.notes}\n\n[Admin Reassigned Provider - ${new Date().toISOString()}]\n${reason || 'Provider changed by admin'}`
+        : `[Admin Assigned Provider - ${new Date().toISOString()}]\n${reason || 'Provider assigned by admin'}`
+    };
+
+    console.log('📝 Updating with data:', updateData);
+
+    const updatedConsultation = await consultationService.updateConsultation(id, updateData);
+    
+    console.log('✅ Provider assigned successfully');
+
+    return res.json({
+      success: true,
+      message: 'Provider assigned successfully',
+      data: { appointment: updatedConsultation }
+    });
+
+  } catch (error) {
+    console.error('❌ Assign provider error:', error);
+    return handleError(res, error);
+  }
+};
+
 }
+
 
 // ✅ EXPORT INSTANCE
 module.exports = new ConsultationController();

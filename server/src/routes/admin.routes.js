@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
+const consultationController = require('../controllers/consultation.controller');
+const bookingController = require('../controllers/booking.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin, requirePermission } = require('../middleware/admin.middleware');
 
@@ -23,17 +25,64 @@ router.put('/users/:userId', requirePermission('user_management'), adminControll
 router.patch('/users/:userId/toggle-status', requirePermission('user_management'), adminController.toggleUserStatus);
 router.delete('/users/:userId', requirePermission('user_management'), adminController.deleteUser);
 
-// ============ APPOINTMENT MANAGEMENT ROUTES ============
-router.get('/appointments', requirePermission('appointment_management'), adminController.getAppointments);
-router.put('/appointments/:appointmentId/reschedule', requirePermission('appointment_management'), adminController.rescheduleAppointment);
-router.patch('/appointments/:appointmentId/cancel', requirePermission('appointment_management'), adminController.cancelAppointment);
+// ============ APPOINTMENT/CONSULTATION MANAGEMENT ROUTES ============
+
+// ✅ GET appointments - Use adminController if available, otherwise use consultationController
+router.get('/appointments', 
+  requirePermission('appointment_management'), 
+  adminController.getAppointments  // This should already exist in your adminController
+);
+
+// ✅ CREATE appointment - Using BookingController (has conflict detection)
+router.post('/appointments', 
+  requirePermission('appointment_management'), 
+  bookingController.createBooking
+);
+
+// ✅ Check slot availability before booking
+router.post('/appointments/check-availability', 
+  requirePermission('appointment_management'), 
+  bookingController.checkSlotAvailability
+);
+
+// ✅ Get alternative slots if booking conflicts
+router.post('/appointments/alternative-slots', 
+  requirePermission('appointment_management'), 
+  bookingController.getAlternativeSlots
+);
+
+// ✅ Get provider's bookings for a date
+router.get('/appointments/provider/:providerId/bookings', 
+  requirePermission('appointment_management'), 
+  bookingController.getProviderBookings
+);
+
+// ✅ RESCHEDULE appointment - Use adminController
+router.put('/appointments/:appointmentId/reschedule', 
+  requirePermission('appointment_management'), 
+  adminController.rescheduleAppointment
+);
+
+// ✅ CANCEL appointment - Use adminController
+router.patch('/appointments/:appointmentId/cancel', 
+  requirePermission('appointment_management'), 
+  adminController.cancelAppointment
+);
+
+// Make sure this line exists in your admin.routes.js
+
+// ✅ Assign/reassign provider to appointment
+router.patch('/appointments/:id/assign-provider', 
+    requirePermission('appointment_management'), 
+    consultationController.adminAssignProvider  // ✅ This method must exist
+  );
+  
 
 // ============ DASHBOARD & ANALYTICS ROUTES ============
 router.get('/dashboard/stats', adminController.getDashboardStats);
 router.get('/system/metrics', adminController.getSystemMetrics);
 
 // ============ EXPORT ROUTES ============
-// ✅ ADD THIS LINE - This registers the export routes
 router.use('/export', require('./export.routes'));
 
 // ============ FEEDBACK MANAGEMENT ROUTES ============
