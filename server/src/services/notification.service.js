@@ -8,6 +8,8 @@ const config = require('../config');
 class NotificationService {
   constructor() {
     // Email transporter
+
+    
     this.emailTransporter = nodemailer.createTransport({
       host: config.SMTP.HOST,
       port: config.SMTP.PORT,
@@ -24,6 +26,309 @@ class NotificationService {
       this.twilioClient = twilio(config.TWILIO.ACCOUNT_SID, config.TWILIO.AUTH_TOKEN);
     }
   }
+
+
+  // ============ ADMIN-SPECIFIC NOTIFICATIONS ============
+
+// 🔴 HIGH PRIORITY: New Patient Registration
+async sendNewPatientAlert(patientData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const emailData = {
+    alertType: 'new_patient',
+    patientName: patientData.name,
+    patientEmail: patientData.email,
+    patientPhone: patientData.phone,
+    registrationDate: new Date().toLocaleString('en-IN'),
+    patientId: patientData._id,
+    dashboardUrl: `${config.FRONTEND_URL}/admin/patients/${patientData._id}`,
+    totalPatients: patientData.totalPatients || 'N/A'
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `🎯 New Patient Registered - ${patientData.name}`,
+      'adminNewPatient',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🔴 HIGH PRIORITY: New Appointment Booked
+async sendNewAppointmentAlert(appointmentData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const emailData = {
+    alertType: 'new_booking',
+    patientName: appointmentData.patientName,
+    therapyType: appointmentData.therapyType,
+    scheduledDate: new Date(appointmentData.scheduledAt).toLocaleDateString('en-IN'),
+    scheduledTime: new Date(appointmentData.scheduledAt).toLocaleTimeString('en-IN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    therapistName: appointmentData.therapistName || 'Not assigned',
+    appointmentId: appointmentData._id,
+    fee: `₹${appointmentData.fee}`,
+    dashboardUrl: `${config.FRONTEND_URL}/admin/appointments/${appointmentData._id}`,
+    timestamp: new Date().toLocaleString('en-IN')
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `📅 New Appointment: ${appointmentData.therapyType} - ${emailData.scheduledDate}`,
+      'adminNewAppointment',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🔴 HIGH PRIORITY: Session Status Updates
+async sendSessionStatusAlert(sessionData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const statusEmojis = {
+    'started': '▶️',
+    'in_progress': '🔄',
+    'completed': '✅',
+    'cancelled': '❌',
+    'paused': '⏸️'
+  };
+
+  const emailData = {
+    alertType: 'session_status',
+    emoji: statusEmojis[sessionData.status] || '📋',
+    status: sessionData.status.toUpperCase(),
+    patientName: sessionData.patientName,
+    therapyType: sessionData.therapyType,
+    therapistName: sessionData.therapistName,
+    sessionId: sessionData._id,
+    startTime: sessionData.sessionStartTime ? 
+      new Date(sessionData.sessionStartTime).toLocaleTimeString('en-IN') : 'N/A',
+    endTime: sessionData.sessionEndTime ? 
+      new Date(sessionData.sessionEndTime).toLocaleTimeString('en-IN') : 'Ongoing',
+    duration: sessionData.actualDuration || sessionData.estimatedDuration || 'N/A',
+    dashboardUrl: `${config.FRONTEND_URL}/admin/monitoring`,
+    timestamp: new Date().toLocaleString('en-IN')
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `${emailData.emoji} Session ${emailData.status}: ${sessionData.patientName}`,
+      'adminSessionStatus',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🔴 HIGH PRIORITY: Critical Feedback Alert (Enhanced)
+async sendCriticalFeedbackAlertV2(feedbackData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const urgencyLevel = feedbackData.rating <= 2 ? 'URGENT' : 'HIGH';
+  
+  const emailData = {
+    urgencyLevel,
+    alertType: 'critical_feedback',
+    patientName: feedbackData.patientName,
+    therapyType: feedbackData.therapyType,
+    therapistName: feedbackData.therapistName,
+    rating: feedbackData.rating,
+    ratingStars: '⭐'.repeat(feedbackData.rating) + '☆'.repeat(5 - feedbackData.rating),
+    concerns: feedbackData.concerns || feedbackData.textFeedback?.concernsOrIssues || 'No specific concerns mentioned',
+    recommendations: feedbackData.recommendations || 'None',
+    sessionDate: new Date(feedbackData.sessionDate).toLocaleDateString('en-IN'),
+    feedbackId: feedbackData._id,
+    dashboardUrl: `${config.FRONTEND_URL}/admin/feedback/${feedbackData._id}`,
+    timestamp: new Date().toLocaleString('en-IN')
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `🚨 ${urgencyLevel}: Critical Feedback - ${feedbackData.patientName}`,
+      'adminCriticalFeedback',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🟡 MEDIUM PRIORITY: Daily Summary Report
+async sendDailySummary(summaryData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const emailData = {
+    reportType: 'daily_summary',
+    reportDate: summaryData.date || new Date().toLocaleDateString('en-IN'),
+    newPatients: summaryData.newPatients || 0,
+    totalAppointments: summaryData.totalAppointments || 0,
+    completedSessions: summaryData.completedSessions || 0,
+    cancelledSessions: summaryData.cancelledSessions || 0,
+    revenue: `₹${summaryData.revenue?.toLocaleString('en-IN') || 0}`,
+    averageRating: summaryData.averageRating || 'N/A',
+    topTherapy: summaryData.topTherapy || 'Abhyanga',
+    pendingFeedback: summaryData.pendingFeedback || 0,
+    upcomingTomorrow: summaryData.upcomingTomorrow || 0,
+    dashboardUrl: `${config.FRONTEND_URL}/admin/dashboard`,
+    timestamp: new Date().toLocaleString('en-IN')
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `📊 Daily Summary Report - ${emailData.reportDate}`,
+      'adminDailySummary',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🟡 MEDIUM PRIORITY: Payment Notification
+async sendPaymentNotification(paymentData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const emailData = {
+    alertType: 'payment_received',
+    patientName: paymentData.patientName,
+    amount: `₹${paymentData.amount}`,
+    paymentMethod: paymentData.paymentMethod,
+    transactionId: paymentData.transactionId,
+    appointmentId: paymentData.appointmentId,
+    therapyType: paymentData.therapyType,
+    paymentDate: new Date(paymentData.paymentDate).toLocaleString('en-IN'),
+    status: paymentData.status,
+    dashboardUrl: `${config.FRONTEND_URL}/admin/payments`,
+    timestamp: new Date().toLocaleString('en-IN')
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `💰 Payment Received - ₹${paymentData.amount} from ${paymentData.patientName}`,
+      'adminPayment',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🟡 MEDIUM PRIORITY: Appointment Cancellation Alert
+async sendCancellationAlert(cancellationData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const emailData = {
+    alertType: 'appointment_cancelled',
+    patientName: cancellationData.patientName,
+    therapyType: cancellationData.therapyType,
+    scheduledDate: new Date(cancellationData.scheduledAt).toLocaleDateString('en-IN'),
+    scheduledTime: new Date(cancellationData.scheduledAt).toLocaleTimeString('en-IN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    reason: cancellationData.reason || 'No reason provided',
+    cancelledBy: cancellationData.cancelledBy || 'Patient',
+    refundAmount: cancellationData.refundAmount ? `₹${cancellationData.refundAmount}` : 'No refund',
+    appointmentId: cancellationData._id,
+    dashboardUrl: `${config.FRONTEND_URL}/admin/appointments`,
+    timestamp: new Date().toLocaleString('en-IN')
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `⚠️ Appointment Cancelled - ${cancellationData.patientName}`,
+      'adminCancellation',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🟢 LOW PRIORITY: Weekly Analytics Report
+async sendWeeklyReport(weekData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  
+  const emailData = {
+    reportType: 'weekly_analytics',
+    weekStart: weekData.weekStart,
+    weekEnd: weekData.weekEnd,
+    totalPatients: weekData.totalPatients || 0,
+    newPatients: weekData.newPatients || 0,
+    totalRevenue: `₹${weekData.totalRevenue?.toLocaleString('en-IN') || 0}`,
+    totalSessions: weekData.totalSessions || 0,
+    completionRate: `${weekData.completionRate || 0}%`,
+    averageRating: weekData.averageRating || 'N/A',
+    topPerformingTherapist: weekData.topPerformingTherapist || 'N/A',
+    mostBookedTherapy: weekData.mostBookedTherapy || 'Abhyanga',
+    patientSatisfaction: `${weekData.patientSatisfaction || 0}%`,
+    dashboardUrl: `${config.FRONTEND_URL}/admin/analytics`,
+    timestamp: new Date().toLocaleString('en-IN')
+  };
+
+  const promises = adminEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `📈 Weekly Analytics Report - ${weekData.weekStart} to ${weekData.weekEnd}`,
+      'adminWeeklyReport',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
+
+// 🟢 LOW PRIORITY: System Alert
+async sendSystemAlert(alertData) {
+  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
+  const superAdminEmails = process.env.SUPER_ADMIN_EMAILS?.split(',') || [];
+  
+  const allEmails = [...new Set([...adminEmails, ...superAdminEmails])];
+  
+  const severityColors = {
+    'critical': '#f44336',
+    'warning': '#ff9800',
+    'info': '#2196f3',
+    'success': '#4caf50'
+  };
+
+  const emailData = {
+    alertType: 'system_alert',
+    severity: alertData.severity || 'info',
+    severityColor: severityColors[alertData.severity] || '#2196f3',
+    title: alertData.title,
+    message: alertData.message,
+    component: alertData.component || 'System',
+    timestamp: new Date().toLocaleString('en-IN'),
+    actionRequired: alertData.actionRequired || 'Review system logs',
+    dashboardUrl: `${config.FRONTEND_URL}/admin/system`
+  };
+
+  const promises = allEmails.map(email =>
+    this.sendEmail(
+      email.trim(),
+      `🖥️ System Alert: ${alertData.title}`,
+      'adminSystemAlert',
+      emailData
+    )
+  );
+
+  return await Promise.allSettled(promises);
+}
 
   // ============ EXISTING METHODS (PRESERVED FOR AUTH) ============
 
@@ -90,6 +395,30 @@ class NotificationService {
       throw new Error('Failed to send OTP');
     }
   }
+
+  // ============ THERAPIST ASSIGNMENT NOTIFICATION ============
+async sendTherapistAssignment(assignmentData) {
+  const { therapistEmail, therapistName, patientName, therapyType, scheduledAt } = assignmentData;
+  
+  const emailData = {
+    therapistName,
+    patientName,
+    therapyType,
+    appointmentDate: new Date(scheduledAt).toLocaleDateString('en-IN'),
+    appointmentTime: new Date(scheduledAt).toLocaleTimeString('en-IN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    dashboardUrl: `${config.FRONTEND_URL}/therapist/dashboard`
+  };
+
+  return await this.sendEmail(
+    therapistEmail,
+    `📋 New Appointment Assigned - ${therapyType}`,
+    'therapistAssignment',
+    emailData
+  );
+}
 
   // Send welcome email
   async sendWelcomeEmail(email, userName) {
@@ -315,7 +644,7 @@ class NotificationService {
       therapyType: feedbackData.therapyType,
       rating: feedbackData.averageRating,
       concerns: feedbackData.textFeedback?.concernsOrIssues,
-      feedbackUrl: `${config.FRONTEND_URL || 'http://localhost:3000'}/admin/feedback/${feedbackData._id}`,
+      feedbackUrl: `${config.FRONTEND_URL || 'http://localhost:3003'}/admin/feedback/${feedbackData._id}`,
       timestamp: new Date().toLocaleString('en-IN')
     };
 

@@ -1,3 +1,4 @@
+// context/RealTimeContext.jsx (FIXED)
 import React, {
   createContext,
   useContext,
@@ -31,11 +32,33 @@ export const RealTimeProvider = ({ children }) => {
 
   const { user, isAuthenticated, token } = useAuth();
 
-  // ✅ FIXED: Check WebSocket status immediately on mount
+  // ✅ FIXED: Get token with admin support
+  const getAuthToken = useCallback(() => {
+    const accessToken = localStorage.getItem('accessToken');
+    const adminToken = localStorage.getItem('adminToken');
+    const authToken = accessToken || adminToken || token;
+    
+    console.log('🔍 Getting auth token:', {
+      accessToken: !!accessToken,
+      adminToken: !!adminToken,
+      contextToken: !!token,
+      final: !!authToken
+    });
+    
+    return authToken;
+  }, [token]);
+
+  // ✅ Check WebSocket status immediately on mount
   useEffect(() => {
     const checkInitialConnection = () => {
       const currentStatus = websocketService.getConnectionStatus();
-      console.log("🔍 Initial WebSocket status check:", currentStatus);
+      const authToken = getAuthToken();
+      
+      console.log("🔍 Initial WebSocket status check:", {
+        ...currentStatus,
+        hasToken: !!authToken,
+        isAuthenticated
+      });
 
       if (currentStatus.connected) {
         console.log("✅ WebSocket already connected, updating UI");
@@ -45,36 +68,43 @@ export const RealTimeProvider = ({ children }) => {
 
     checkInitialConnection();
 
-    // Also check periodically
+    // Check periodically
     const interval = setInterval(checkInitialConnection, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [getAuthToken, isAuthenticated]);
 
-  // ✅ Auto-connect when user is authenticated
+  // ✅ FIXED: Auto-connect when user is authenticated
   useEffect(() => {
-    if (
-      isAuthenticated &&
-      (token || user?.token) &&
-      !connectionStatus.connected
-    ) {
-      const authToken = localStorage.getItem("accessToken");
+    if (isAuthenticated && !connectionStatus.connected) {
+      const authToken = getAuthToken();
+      
+      console.log('🔄 Auto-connect check:', {
+        isAuthenticated,
+        hasToken: !!authToken,
+        connected: connectionStatus.connected
+      });
+      
       if (authToken) {
         console.log("🔄 Initializing WebSocket from useEffect...");
         initializeWebSocket(authToken);
+      } else {
+        console.warn('⚠️ User authenticated but no token found');
       }
     }
 
     return () => {
       if (connectionStatus.connected) {
+        console.log('🧹 Cleaning up WebSocket connection');
         websocketService.disconnect();
       }
     };
-  }, [isAuthenticated, token, user, connectionStatus.connected]);
+  }, [isAuthenticated, connectionStatus.connected, getAuthToken]);
 
   // ✅ Handle token refresh
   useEffect(() => {
     if (isAuthenticated && token && connectionStatus.connected) {
+      console.log('🔄 Token changed, refreshing WebSocket connection');
       websocketService.refreshConnection?.();
     }
   }, [token, isAuthenticated, connectionStatus.connected]);
@@ -83,6 +113,8 @@ export const RealTimeProvider = ({ children }) => {
   const initializeWebSocket = useCallback(async (authToken) => {
     try {
       console.log("🔄 RealTimeContext: Initializing WebSocket...");
+      console.log("🔑 Using token:", authToken ? `${authToken.substring(0, 20)}...` : 'NONE');
+      
       await websocketService.connect(authToken);
       setupEventHandlers();
 
@@ -98,20 +130,17 @@ export const RealTimeProvider = ({ children }) => {
     }
   }, []);
 
-  // ✅ FIXED: Setup event handlers with proper listener names
+  // Setup event handlers
   const setupEventHandlers = useCallback(() => {
     console.log("🔧 RealTimeContext: Setting up event handlers...");
 
-    // ✅ Listen for connection status updates
+    // Listen for connection status updates
     websocketService.addEventListener("connection_status", (status) => {
-      console.log(
-        "📡 RealTimeContext: Connection status event received:",
-        status
-      );
+      console.log("📡 RealTimeContext: Connection status event received:", status);
       setConnectionStatus(status);
     });
 
-    // ✅ CRITICAL: Listen to native Socket.IO events
+    // Listen to native Socket.IO events
     const socket = websocketService.socket;
     if (socket) {
       socket.on("connect", () => {
@@ -137,42 +166,24 @@ export const RealTimeProvider = ({ children }) => {
     websocketService.addEventListener("auth_error", handleAuthError);
 
     // Session event handlers
-    websocketService.addEventListener(
-      "session_status_update",
-      handleSessionUpdate
-    );
+    websocketService.addEventListener("session_status_update", handleSessionUpdate);
     websocketService.addEventListener("user_joined_session", handleUserJoined);
     websocketService.addEventListener("user_left_session", handleUserLeft);
 
     // Provider event handlers
-    websocketService.addEventListener(
-      "provider_status_updated",
-      handleProviderStatusUpdate
-    );
-    websocketService.addEventListener(
-      "provider_availability_update",
-      handleProviderAvailability
-    );
+    websocketService.addEventListener("provider_status_updated", handleProviderStatusUpdate);
+    websocketService.addEventListener("provider_availability_update", handleProviderAvailability);
 
     // System event handlers
     websocketService.addEventListener("system_alert", handleSystemAlert);
-    websocketService.addEventListener(
-      "appointment_update",
-      handleAppointmentUpdate
-    );
-    websocketService.addEventListener(
-      "feedback_submitted",
-      handleFeedbackUpdate
-    );
-    websocketService.addEventListener(
-      "critical_feedback_alert",
-      handleCriticalFeedback
-    );
+    websocketService.addEventListener("appointment_update", handleAppointmentUpdate);
+    websocketService.addEventListener("feedback_submitted", handleFeedbackUpdate);
+    websocketService.addEventListener("critical_feedback_alert", handleCriticalFeedback);
 
     console.log("✅ RealTimeContext: Event handlers setup complete");
   }, []);
 
-  // ✅ Handle authentication errors
+  // Handle authentication errors
   const handleAuthError = useCallback((error) => {
     console.log("🔐 Authentication error:", error);
     addNotification("Session expired. Please login again.", "error");
@@ -332,7 +343,7 @@ export const RealTimeProvider = ({ children }) => {
     []
   );
 
-  // ✅ ENHANCED Context value
+  // Context value
   const contextValue = {
     // Connection status
     connectionStatus,
@@ -341,6 +352,7 @@ export const RealTimeProvider = ({ children }) => {
     // User information
     currentUser: user,
     isAuthenticated,
+    token: getAuthToken(), // ✅ Use function to get latest token
 
     // Notifications
     notifications,
@@ -364,13 +376,6 @@ export const RealTimeProvider = ({ children }) => {
 
     // WebSocket service reference
     websocketService,
-
-    // ✅ FORCE REFRESH FUNCTION
-    // forceRefresh: () => {
-    //   const status = websocketService.getConnectionStatus();
-    //   console.log('🔄 Force refresh connection status:', status);
-    //   setConnectionStatus({ connected: status.connected });
-    // }
   };
 
   return (

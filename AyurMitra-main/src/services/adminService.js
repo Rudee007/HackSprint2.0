@@ -698,36 +698,36 @@ class AdminService {
   }
 
   // ============ DOCTOR/THERAPIST VERIFICATION ============
-  async getPendingVerifications() {
-    try {
-      const response = await this.axiosInstance.get(
-        "/doctors/pending-verification"
-      );
-      return { success: true, data: response.data.data };
-    } catch (error) {
-      console.error("Get pending verifications error:", error);
-      return { success: false, data: [] };
-    }
-  }
+// Add to adminService.js
 
-  async updateDoctorVerification(doctorId, status, notes) {
-    try {
-      const response = await this.axiosInstance.put(
-        `/doctors/${doctorId}/verification`,
-        {
-          status,
-          notes,
-        }
-      );
-      toast.success("Verification status updated");
-      return { success: true, data: response.data.data };
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Failed to update verification"
-      );
-      throw error;
-    }
+// ============ PROVIDER VERIFICATION ============
+
+async getPendingVerifications() {
+  try {
+    console.log('🔍 Fetching pending verifications...');
+    const response = await this.axiosInstance.get('/doctors/pending-verification');
+    return { success: true, data: response.data.data.doctors };
+  } catch (error) {
+    console.error('❌ Get pending verifications error:', error);
+    return { success: false, data: [] };
   }
+}
+
+async updateDoctorVerification(doctorId, status, notes) {
+  try {
+    console.log('✅ Updating doctor verification:', { doctorId, status, notes });
+    const response = await this.axiosInstance.put(
+      `/doctors/${doctorId}/verification`,
+      { status, notes }
+    );
+    toast.success('Verification status updated');
+    return { success: true, data: response.data.data };
+  } catch (error) {
+    console.error('❌ Update verification error:', error);
+    toast.error(error.response?.data?.message || 'Failed to update verification');
+    throw error;
+  }
+}
 
   // ============ REAL-TIME MONITORING ============
   async getTrackingDashboard() {

@@ -17,7 +17,7 @@ class SchedulingService {
             providerId: providerId,
             status: { $nin: ['cancelled', 'completed', 'no_show'] },
             $or: [
-              // Case 1: Existing session starts before requested ends AND ends after requested starts
+              // rea 1: Existing session starts before requested ends AND ends after requested starts
               {
                 scheduledAt: { $lt: endTime.toDate() },
                 $expr: {

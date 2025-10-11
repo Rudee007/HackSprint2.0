@@ -1,4 +1,7 @@
+// backend/src/controllers/consultation.controller.js
+
 const consultationService = require('../services/consultation.service');
+const notificationService = require('../services/notification.service');
 
 // ✅ EXTERNAL ERROR HANDLER (Prevents binding issues)
 const handleError = (res, error) => {
@@ -77,6 +80,59 @@ class ConsultationController {
       
       const consultation = await consultationService.createConsultation(consultationData);
       
+      // ✅ POPULATE FIELDS FOR NOTIFICATIONS
+      const populatedConsultation = await consultationService.getConsultationById(consultation._id);
+      
+      // ✅ TRIGGER ADMIN NOTIFICATION: New Appointment Booked
+      try {
+        console.log('📧 Sending new appointment notification to admin...');
+        await notificationService.sendNewAppointmentAlert({
+          _id: populatedConsultation._id,
+          patientName: populatedConsultation.patientId?.name || 'Unknown Patient',
+          therapyType: populatedConsultation.sessionType || populatedConsultation.type || 'General Consultation',
+          scheduledAt: populatedConsultation.scheduledAt,
+          therapistName: populatedConsultation.providerId?.name || 'Not assigned yet',
+          fee: populatedConsultation.fee
+        });
+        console.log('✅ Admin notification sent successfully');
+      } catch (notifError) {
+        console.error('⚠️ Admin notification failed:', notifError.message);
+        // Don't fail the request if notification fails
+      }
+
+      // ✅ TRIGGER PATIENT CONFIRMATION EMAIL
+      try {
+        console.log('📧 Sending appointment confirmation to patient...');
+        await notificationService.sendAppointmentConfirmation({
+          patientEmail: populatedConsultation.patientId?.email,
+          patientName: populatedConsultation.patientId?.name,
+          therapyType: populatedConsultation.sessionType || populatedConsultation.type,
+          scheduledAt: populatedConsultation.scheduledAt,
+          centerName: 'AyurSutra Wellness Center'
+        });
+        console.log('✅ Patient confirmation sent successfully');
+      } catch (notifError) {
+        console.error('⚠️ Patient confirmation failed:', notifError.message);
+      }
+
+      // ✅ TRIGGER WEBSOCKET NOTIFICATION (if available)
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          io.to('admin-room').emit('new_appointment_booked', {
+            appointmentId: populatedConsultation._id,
+            patientName: populatedConsultation.patientId?.name,
+            therapyType: populatedConsultation.sessionType || populatedConsultation.type,
+            scheduledAt: populatedConsultation.scheduledAt,
+            fee: populatedConsultation.fee,
+            timestamp: new Date()
+          });
+          console.log('✅ WebSocket notification sent to admins');
+        }
+      } catch (wsError) {
+        console.error('⚠️ WebSocket notification failed:', wsError.message);
+      }
+      
       return res.status(201).json({
         success: true,
         message: 'Consultation booked successfully',
@@ -109,20 +165,6 @@ class ConsultationController {
           message: 'Consultation not found'
         });
       }
-  
-      // 🔍 DEBUG LOGGING - ADD THIS
-      console.log('====== AUTHORIZATION DEBUG ======');
-      console.log('req.user:', req.user);
-      console.log('User ID from token:', req.user?.id);
-      console.log('User role from token:', req.user?.role);
-      console.log('Consultation patientId:', consultation.patientId);
-      console.log('Consultation patientId (string):', consultation.patientId?.toString());
-      console.log('Consultation providerId:', consultation.providerId);
-      console.log('Consultation providerId (string):', consultation.providerId?.toString());
-      console.log('ID comparison (patient):', req.user?.id === consultation.patientId?.toString());
-      console.log('ID comparison (provider):', req.user?.id === consultation.providerId?.toString());
-      console.log('canAccessConsultation result:', this.canAccessConsultation(req.user, consultation));
-      console.log('==================================');
   
       // Authorization check
       if (!this.canAccessConsultation(req.user, consultation)) {
@@ -301,6 +343,77 @@ class ConsultationController {
 
       const updatedConsultation = await consultationService.updateConsultation(id, updateData);
       
+      // ✅ TRIGGER ADMIN NOTIFICATION: Session Status Update
+      if (updateData.status || updateData.sessionStatus) {
+        try {
+          const newStatus = updateData.status || updateData.sessionStatus;
+          console.log(`📧 Sending session status notification: ${newStatus}`);
+          
+          await notificationService.sendSessionStatusAlert({
+            _id: updatedConsultation._id,
+            status: newStatus,
+            patientName: updatedConsultation.patientId?.name || 'Unknown Patient',
+            therapyType: updatedConsultation.sessionType || updatedConsultation.type || 'General',
+            therapistName: updatedConsultation.providerId?.name || 'Unassigned',
+            sessionStartTime: updatedConsultation.sessionStartTime,
+            sessionEndTime: updatedConsultation.sessionEndTime,
+            actualDuration: updatedConsultation.actualDuration,
+            estimatedDuration: updatedConsultation.estimatedDuration
+          });
+          console.log('✅ Status update notification sent');
+        } catch (notifError) {
+          console.error('⚠️ Status notification failed:', notifError.message);
+        }
+
+        // ✅ WEBSOCKET NOTIFICATION
+        try {
+          const io = req.app.get('io');
+          if (io) {
+            io.to('admin-room').emit('session_status_update', {
+              sessionId: updatedConsultation._id,
+              status: updateData.status || updateData.sessionStatus,
+              patientName: updatedConsultation.patientId?.name,
+              therapyType: updatedConsultation.sessionType || updatedConsultation.type,
+              timestamp: new Date()
+            });
+            console.log('✅ WebSocket status update sent');
+          }
+        } catch (wsError) {
+          console.error('⚠️ WebSocket notification failed:', wsError.message);
+        }
+      }
+
+      // ✅ TRIGGER POST-THERAPY CARE EMAIL (when session completed)
+      if ((updateData.status === 'completed' || updateData.sessionStatus === 'completed') && 
+          consultation.status !== 'completed') {
+        try {
+          console.log('📧 Sending post-therapy care instructions...');
+          await notificationService.sendPostTherapyCare({
+            patientEmail: updatedConsultation.patientId?.email,
+            patientName: updatedConsultation.patientId?.name,
+            therapyType: updatedConsultation.sessionType || updatedConsultation.type
+          });
+          console.log('✅ Post-therapy care sent');
+        } catch (notifError) {
+          console.error('⚠️ Post-therapy care notification failed:', notifError.message);
+        }
+
+        // ✅ TRIGGER FEEDBACK REQUEST
+        try {
+          console.log('📧 Sending feedback request...');
+          await notificationService.sendFeedbackRequest({
+            patientEmail: updatedConsultation.patientId?.email,
+            patientName: updatedConsultation.patientId?.name,
+            therapyType: updatedConsultation.sessionType || updatedConsultation.type,
+            sessionId: updatedConsultation._id,
+            centerName: 'AyurSutra Wellness Center'
+          });
+          console.log('✅ Feedback request sent');
+        } catch (notifError) {
+          console.error('⚠️ Feedback request failed:', notifError.message);
+        }
+      }
+      
       return res.json({
         success: true,
         message: 'Consultation updated successfully',
@@ -343,6 +456,55 @@ class ConsultationController {
       console.log('❌ Cancelling consultation:', id);
 
       const cancelledConsultation = await consultationService.cancelConsultation(id, reason);
+      
+      // ✅ TRIGGER ADMIN NOTIFICATION: Appointment Cancelled
+      try {
+        console.log('📧 Sending cancellation notification to admin...');
+        await notificationService.sendCancellationAlert({
+          _id: cancelledConsultation._id,
+          patientName: cancelledConsultation.patientId?.name || 'Unknown Patient',
+          therapyType: cancelledConsultation.sessionType || cancelledConsultation.type || 'General',
+          scheduledAt: cancelledConsultation.scheduledAt,
+          reason: reason || 'No reason provided',
+          cancelledBy: req.user.role === 'admin' ? 'Admin' : req.user.role === 'patient' ? 'Patient' : 'Provider',
+          refundAmount: cancelledConsultation.fee * 0.8 // 80% refund policy (example)
+        });
+        console.log('✅ Cancellation notification sent');
+      } catch (notifError) {
+        console.error('⚠️ Cancellation notification failed:', notifError.message);
+      }
+
+      // ✅ TRIGGER PATIENT CANCELLATION EMAIL
+      try {
+        console.log('📧 Sending cancellation email to patient...');
+        await notificationService.sendAppointmentCancellation({
+          patientEmail: cancelledConsultation.patientId?.email,
+          patientName: cancelledConsultation.patientId?.name,
+          therapyType: cancelledConsultation.sessionType || cancelledConsultation.type,
+          scheduledAt: cancelledConsultation.scheduledAt,
+          reason: reason || 'unavoidable circumstances'
+        });
+        console.log('✅ Patient cancellation email sent');
+      } catch (notifError) {
+        console.error('⚠️ Patient cancellation email failed:', notifError.message);
+      }
+
+      // ✅ WEBSOCKET NOTIFICATION
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          io.to('admin-room').emit('appointment_cancelled', {
+            appointmentId: cancelledConsultation._id,
+            patientName: cancelledConsultation.patientId?.name,
+            therapyType: cancelledConsultation.sessionType || cancelledConsultation.type,
+            reason: reason,
+            timestamp: new Date()
+          });
+          console.log('✅ WebSocket cancellation notification sent');
+        }
+      } catch (wsError) {
+        console.error('⚠️ WebSocket notification failed:', wsError.message);
+      }
       
       return res.json({
         success: true,
@@ -392,17 +554,115 @@ class ConsultationController {
     return this.getProviderConsultations(req, res);
   };
 
-  // ✅ AUTHORIZATION HELPER METHODS (As regular methods - they don't need 'this' binding)
+  // ✅ ADMIN: ASSIGN PROVIDER
+  adminAssignProvider = async (req, res) => {
+    try {
+      console.log('🔍 Assign Provider Request:', {
+        params: req.params,
+        body: req.body,
+        user: { role: req.user?.role, type: req.user?.type }
+      });
+
+      // Check admin permission
+      if (!['admin', 'super_admin', 'moderator'].includes(req.user?.role) && req.user?.type !== 'admin') {
+        console.log('❌ Access denied - not admin');
+        return res.status(403).json({
+          success: false,
+          message: 'Admin access required'
+        });
+      }
+
+      const { id } = req.params;
+      const { providerId, providerType, reason } = req.body;
+
+      // Validation
+      if (!providerId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Provider ID is required'
+        });
+      }
+
+      if (!providerType) {
+        return res.status(400).json({
+          success: false,
+          message: 'Provider type is required'
+        });
+      }
+
+      if (!['doctor', 'therapist'].includes(providerType)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Provider type must be either doctor or therapist'
+        });
+      }
+
+      console.log('🔍 Fetching appointment:', id);
+      const consultation = await consultationService.getConsultationById(id);
+      
+      if (!consultation) {
+        console.log('❌ Appointment not found:', id);
+        return res.status(404).json({
+          success: false,
+          message: 'Appointment not found'
+        });
+      }
+
+      console.log('✅ Current appointment found');
+      console.log('👨‍⚕️ Assigning new provider:', { providerId, providerType });
+
+      const updateData = {
+        providerId,
+        providerType,
+        notes: consultation.notes 
+          ? `${consultation.notes}\n\n[Admin Reassigned Provider - ${new Date().toISOString()}]\n${reason || 'Provider changed by admin'}`
+          : `[Admin Assigned Provider - ${new Date().toISOString()}]\n${reason || 'Provider assigned by admin'}`
+      };
+
+      console.log('📝 Updating with data:', updateData);
+
+      const updatedConsultation = await consultationService.updateConsultation(id, updateData);
+      
+      console.log('✅ Provider assigned successfully');
+
+      // ✅ TRIGGER THERAPIST ASSIGNMENT NOTIFICATION
+      try {
+        console.log('📧 Sending therapist assignment notification...');
+        await notificationService.sendTherapistAssignment({
+          therapistEmail: updatedConsultation.providerId?.email,
+          therapistName: updatedConsultation.providerId?.name,
+          patientName: updatedConsultation.patientId?.name,
+          therapyType: updatedConsultation.sessionType || updatedConsultation.type,
+          scheduledAt: updatedConsultation.scheduledAt
+        });
+        console.log('✅ Therapist assignment notification sent');
+      } catch (notifError) {
+        console.error('⚠️ Therapist assignment notification failed:', notifError.message);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Provider assigned successfully',
+        data: { appointment: updatedConsultation }
+      });
+
+    } catch (error) {
+      console.error('❌ Assign provider error:', error);
+      return handleError(res, error);
+    }
+  };
+
+  // ✅ AUTHORIZATION HELPER METHODS
   canAccessConsultation(user, consultation) {
     if (!user || !consultation) return false;
   
     // Handle admin access
-    if (user.role === 'admin') return true;
+    if (user.role === 'admin' || user.role === 'super_admin') return true;
   
     // Extract user ID safely
     const userId = user._id ? user._id.toString() : user.id;
   
-    // ✅ FIXED: Extract IDs from populated objects
+    // Extract IDs from populated objects
     const patientId = consultation.patientId && consultation.patientId._id ? 
       consultation.patientId._id.toString() : 
       consultation.patientId ? consultation.patientId.toString() : null;
@@ -411,129 +671,44 @@ class ConsultationController {
       consultation.providerId._id.toString() : 
       consultation.providerId ? consultation.providerId.toString() : null;
   
-    // Debug logging (remove after testing)
-    console.log('=== FIXED AUTHORIZATION ===');
-    console.log('User ID:', userId);
-    console.log('Patient ID:', patientId);
-    console.log('Provider ID:', providerId);
-    console.log('Is Patient:', userId === patientId);
-    console.log('Is Provider:', userId === providerId);
-    console.log('===========================');
-  
     // Check if user matches patient or provider
     return userId === patientId || userId === providerId;
   }
   
-  
   canModifyConsultation(user, consultation) {
-    return user.role === 'admin' || 
-           user.id === consultation.providerId.toString();
+    if (user.role === 'admin' || user.role === 'super_admin') return true;
+    
+    const providerId = consultation.providerId && consultation.providerId._id ?
+      consultation.providerId._id.toString() :
+      consultation.providerId ? consultation.providerId.toString() : null;
+    
+    return user.id === providerId;
   }
 
   canCancelConsultation(user, consultation) {
-    return user.role === 'admin' || 
-           user.id === consultation.patientId.toString() || 
-           user.id === consultation.providerId.toString();
+    if (user.role === 'admin' || user.role === 'super_admin') return true;
+    
+    const patientId = consultation.patientId && consultation.patientId._id ?
+      consultation.patientId._id.toString() :
+      consultation.patientId ? consultation.patientId.toString() : null;
+      
+    const providerId = consultation.providerId && consultation.providerId._id ?
+      consultation.providerId._id.toString() :
+      consultation.providerId ? consultation.providerId.toString() : null;
+    
+    return user.id === patientId || user.id === providerId;
   }
 
   canAccessPatientData(user, patientId) {
-    return user.role === 'admin' || 
+    return user.role === 'admin' || user.role === 'super_admin' ||
            (user.role === 'patient' && user.id === patientId);
   }
 
   canAccessProviderData(user, providerId) {
-    return user.role === 'admin' || 
+    return user.role === 'admin' || user.role === 'super_admin' ||
            ((user.role === 'doctor' || user.role === 'therapist') && user.id === providerId);
-
-           
   }
-
-  // Add this to your ConsultationController class in consultation.controller.js
-
-adminAssignProvider = async (req, res) => {
-  try {
-    console.log('🔍 Assign Provider Request:', {
-      params: req.params,
-      body: req.body,
-      user: { role: req.user?.role, type: req.user?.type }
-    });
-
-    // Check admin permission
-    if (!['admin', 'super_admin', 'moderator'].includes(req.user?.role) && req.user?.type !== 'admin') {
-      console.log('❌ Access denied - not admin');
-      return res.status(403).json({
-        success: false,
-        message: 'Admin access required'
-      });
-    }
-
-    const { id } = req.params;
-    const { providerId, providerType, reason } = req.body;
-
-    // Validation
-    if (!providerId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Provider ID is required'
-      });
-    }
-
-    if (!providerType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Provider type is required'
-      });
-    }
-
-    if (!['doctor', 'therapist'].includes(providerType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Provider type must be either doctor or therapist'
-      });
-    }
-
-    console.log('🔍 Fetching appointment:', id);
-    const consultation = await consultationService.getConsultationById(id);
-    
-    if (!consultation) {
-      console.log('❌ Appointment not found:', id);
-      return res.status(404).json({
-        success: false,
-        message: 'Appointment not found'
-      });
-    }
-
-    console.log('✅ Current appointment found');
-    console.log('👨‍⚕️ Assigning new provider:', { providerId, providerType });
-
-    const updateData = {
-      providerId,
-      providerType,
-      notes: consultation.notes 
-        ? `${consultation.notes}\n\n[Admin Reassigned Provider - ${new Date().toISOString()}]\n${reason || 'Provider changed by admin'}`
-        : `[Admin Assigned Provider - ${new Date().toISOString()}]\n${reason || 'Provider assigned by admin'}`
-    };
-
-    console.log('📝 Updating with data:', updateData);
-
-    const updatedConsultation = await consultationService.updateConsultation(id, updateData);
-    
-    console.log('✅ Provider assigned successfully');
-
-    return res.json({
-      success: true,
-      message: 'Provider assigned successfully',
-      data: { appointment: updatedConsultation }
-    });
-
-  } catch (error) {
-    console.error('❌ Assign provider error:', error);
-    return handleError(res, error);
-  }
-};
-
 }
-
 
 // ✅ EXPORT INSTANCE
 module.exports = new ConsultationController();

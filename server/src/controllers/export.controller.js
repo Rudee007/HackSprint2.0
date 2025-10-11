@@ -2,7 +2,6 @@
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const User = require('../models/User');
-const Patient = require('../models/Patient');
 const Doctor = require('../models/Doctor');
 const Therapist = require('../models/Therapist');
 const Consultation = require('../models/Consultation');

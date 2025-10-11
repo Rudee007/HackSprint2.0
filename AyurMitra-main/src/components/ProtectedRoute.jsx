@@ -1,51 +1,66 @@
-import { useUser } from '@clerk/clerk-react';
-import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+// src/components/ProtectedRoute.jsx (NEW)
+import React from 'react';
+import { Navigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ children }) => {
-  const { isSignedIn, user } = useUser();
-  const navigate = useNavigate();
-  const location = useLocation();
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const getAuthData = () => {
+    try {
+      const token = localStorage.getItem('accessToken') || 
+                    localStorage.getItem('token');
+      
+      if (!token) return null;
 
-  useEffect(() => {
-    if (isSignedIn && user) {
-      const currentPath = location.pathname;
+      // Get user data
+      const userKeys = ['loggedInUser', 'loggedInAdmin', 'loggedInDoctor', 'loggedInTherapist'];
       
-      // Don't redirect if already on a dashboard
-      if (currentPath.includes('dashboard')) return;
-      
-      // Get user role from metadata or email domain
-      const userRole = user.publicMetadata?.role || getUserRoleFromEmail(user.primaryEmailAddress?.emailAddress);
-      
-      // Redirect based on role
-      switch (userRole) {
-        case 'patient':
-          navigate('/patient-dashboard');
-          break;
-        case 'doctor':
-          navigate('/doctor-dashboard');
-          break;
-        case 'management':
-          navigate('/management-dashboard');
-          break;
-        default:
-          // Default to patient dashboard if no role specified
-          navigate('/patient-dashboard');
+      for (const key of userKeys) {
+        const userStr = localStorage.getItem(key);
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          return {
+            token,
+            user,
+            role: user.role || user.userType || 'user'
+          };
+        }
       }
+      
+      return { token, user: null, role: null };
+    } catch (error) {
+      console.error('Error getting auth data:', error);
+      return null;
     }
-  }, [isSignedIn, user, navigate, location]);
-
-  // Helper function to determine role from email or other criteria
-  const getUserRoleFromEmail = (email) => {
-    if (!email) return 'patient';
-    
-    // You can customize this logic based on your needs
-    if (email.includes('doctor') || email.includes('dr.')) return 'doctor';
-    if (email.includes('admin') || email.includes('management')) return 'management';
-    return 'patient';
   };
 
+  const getLoginRoute = (role) => {
+    const loginRoutes = {
+      'admin': '/admin-login',
+      'doctor': '/doctor-login',
+      'therapist': '/therapist-login',
+      'patient': '/patient-login'
+    };
+    return loginRoutes[role] || '/login';
+  };
+
+  const authData = getAuthData();
+
+  // Not authenticated - redirect to appropriate login
+  if (!authData || !authData.token) {
+    console.log('❌ Not authenticated, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check role-based access
+  if (allowedRoles.length > 0 && authData.role) {
+    if (!allowedRoles.includes(authData.role)) {
+      console.log(`❌ Access denied for role: ${authData.role}`);
+      return <Navigate to="/unauthorized" replace />;
+    }
+  }
+
+  // Authenticated and authorized
   return children;
 };
 
 export default ProtectedRoute;
+//protected route is cahnged

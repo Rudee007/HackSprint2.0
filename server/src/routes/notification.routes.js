@@ -116,5 +116,61 @@ router.get('/preferences',
 router.put('/preferences', 
   notificationController.updateNotificationPreferences
 );
+// ============ ADMIN NOTIFICATION ENDPOINTS ============
+
+// Send new patient alert
+router.post('/admin/new-patient-alert', 
+  requireAdmin,
+  notificationController.sendNewPatientAlert
+);
+
+// Send new appointment alert
+router.post('/admin/appointment/:consultationId/alert', 
+  requireAdmin,
+  notificationController.sendNewAppointmentAlert
+);
+
+// Send session status alert
+router.post('/admin/session/:consultationId/status-alert', 
+  requireAdmin,
+  notificationController.sendSessionStatusAlert
+);
+
+// Send daily summary report
+router.post('/admin/daily-summary', 
+  requireAdmin,
+  notificationController.sendDailySummary
+);
+
+// Send payment notification
+router.post('/admin/payment-notification', 
+  requireAdmin,
+  notificationController.sendPaymentNotification
+);
+
+// Send cancellation alert
+router.post('/admin/appointment/:consultationId/cancellation-alert', 
+  requireAdmin,
+  notificationController.sendCancellationAlert
+);
+
+// Send weekly report
+router.post('/admin/weekly-report', 
+  requireAdmin,
+  notificationController.sendWeeklyReport
+);
+
+// Send system alert
+router.post('/admin/system-alert', 
+  requireAdmin,
+  notificationController.sendSystemAlert
+);
+
+// Send therapist assignment notification
+router.post('/admin/appointment/:consultationId/assign-therapist', 
+  requireAdmin,
+  notificationController.sendTherapistAssignment
+);
+
 
 module.exports = router;

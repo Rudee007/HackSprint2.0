@@ -1,7 +1,7 @@
-// src/middleware/auth.middleware.js
+// src/middleware/auth.middleware.js (UPDATED - MINIMAL CHANGES)
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Admin = require('../models/Admin'); // ✅ Import Admin model
+const Admin = require('../models/Admin');
 const config = require('../config');
 
 const authenticate = async (req, res, next) => {
@@ -43,7 +43,7 @@ const authenticate = async (req, res, next) => {
         console.log('- Admin email:', user.email);
         console.log('- Admin role:', user.role);
         console.log('- Admin permissions:', user.permissions);
-        user.type = 'admin'; // ✅ Mark as admin type
+        user.type = 'admin';
       }
     } else {
       // ✅ Token is for regular User - check User collection
@@ -56,7 +56,7 @@ const authenticate = async (req, res, next) => {
         console.log('- User name:', user.name);
         console.log('- User email:', user.email);
         console.log('- User role:', user.role);
-        user.type = 'user'; // ✅ Mark as regular user type
+        user.type = 'user';
       }
     }
     
@@ -110,4 +110,48 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate };
+// ✅ NEW: Authorization middleware (doesn't affect existing code)
+const authorize = (...allowedRoles) => {
+  return (req, res, next) => {
+    // If no roles specified, allow all authenticated users
+    if (!allowedRoles || allowedRoles.length === 0) {
+      console.log('✅ No role restriction - access granted');
+      return next();
+    }
+
+    if (!req.user) {
+      console.error('❌ authorize: User not authenticated');
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'NOT_AUTHENTICATED',
+          message: 'Authentication required'
+        }
+      });
+    }
+
+    // Get user's role (works for both Admin and User models)
+    const userRole = req.user.role?.toLowerCase();
+    const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase());
+
+    console.log(`🔐 Checking authorization: User role="${userRole}", Allowed roles=[${normalizedAllowedRoles.join(', ')}]`);
+
+    // Check if user's role is in allowed roles
+    if (!normalizedAllowedRoles.includes(userRole)) {
+      console.error(`❌ Access denied for role: ${userRole}`);
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: `Access denied. Required role: ${allowedRoles.join(' or ')}`
+        }
+      });
+    }
+
+    console.log(`✅ Authorization successful for role: ${userRole}`);
+    next();
+  };
+};
+
+// ✅ Export both functions
+module.exports = { authenticate, authorize };

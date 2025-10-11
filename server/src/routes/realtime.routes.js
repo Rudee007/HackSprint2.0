@@ -1,23 +1,73 @@
-// src/routes/realtime.routes.js
+// src/routes/realtime.routes.js (UPDATED)
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth.middleware');
-const realtimeSessionController = require('../controllers/realtime/session.controller');
+const { authenticate, authorize } = require('../middleware/auth.middleware'); // ✅ Import authorize
+const sessionController = require('../controllers/realtime/session.controller');
 const therapyTrackingController = require('../controllers/realtime/TherapyTrackingController');
 
-// All real-time routes require authentication
-router.use(authenticate);
+// ✅ Session Management - Allow admin, doctor, therapist
+router.put(
+  '/sessions/:sessionId/status', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  sessionController.updateSessionStatus
+);
 
-// Session management
-router.get('/session/:sessionId', realtimeSessionController.getSessionDetails);
-router.put('/session/:sessionId/status', realtimeSessionController.updateSessionStatus);
-router.post('/session/:sessionId/join', realtimeSessionController.joinSession);
-router.post('/session/:sessionId/start', realtimeSessionController.startSession);
+router.get(
+  '/sessions/:sessionId/details', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  sessionController.getSessionDetails
+);
 
-// ✅ NEW: Therapy tracking routes
-router.get('/therapy-tracking/dashboard', therapyTrackingController.getTrackingDashboard);
-router.get('/therapy-tracking/upcoming', therapyTrackingController.getUpcomingSessions);
-router.get('/therapy-tracking/milestones/:patientId', therapyTrackingController.getPatientMilestones);
-router.put('/therapy-tracking/milestones/:patientId', therapyTrackingController.updateMilestone);
+router.post(
+  '/sessions/:sessionId/join', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  sessionController.joinSession
+);
+
+router.post(
+  '/sessions/:sessionId/leave', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  sessionController.leaveSession
+);
+
+router.post(
+  '/sessions/:sessionId/start', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  sessionController.startSession
+);
+
+// ✅ Therapy Tracking - Allow admin, doctor, therapist
+router.get(
+  '/tracking/dashboard', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  therapyTrackingController.getTrackingDashboard
+);
+
+router.get(
+  '/tracking/sessions/upcoming', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  therapyTrackingController.getUpcomingSessions
+);
+
+router.get(
+  '/tracking/patients/:patientId/milestones', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  therapyTrackingController.getPatientMilestones
+);
+
+router.post(
+  '/tracking/patients/:patientId/milestones', 
+  authenticate, 
+  authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
+  therapyTrackingController.updateMilestone
+);
 
 module.exports = router;

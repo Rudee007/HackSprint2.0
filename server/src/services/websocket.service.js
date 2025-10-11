@@ -1,4 +1,4 @@
-// src/services/websocket.service.js (Updated)
+// src/services/websocket.service.js (PRODUCTION-READY)
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 
@@ -9,7 +9,7 @@ class WebSocketService {
     this.io = new Server(server, {
       cors: {
         origin: [
-          'http://localhost:3000',
+          'http://localhost:3003',
           'http://localhost:5173', 
           'http://localhost:5000'
         ],
@@ -17,16 +17,21 @@ class WebSocketService {
         credentials: true,
         allowedHeaders: ['Authorization']
       },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      pingTimeout: 60000,
+      pingInterval: 25000
     });
 
-    // ✅ Track connected users and active sessions
+    // ✅ Enhanced tracking with Maps
     this.connectedUsers = new Map(); // userId -> socket info
     this.activeSessions = new Map(); // sessionId -> session data
+    this.sessionCountdowns = new Map(); // sessionId -> interval ID
     this.userSessions = new Map(); // userId -> sessionIds[]
+    this.heartbeatIntervals = new Map(); // userId -> interval ID
     
     this.setupMiddleware();
     this.setupEventHandlers();
+    this.startHeartbeatMonitor();
     
     console.log('✅ Enhanced WebSocket Service initialized successfully');
   }
@@ -64,73 +69,89 @@ class WebSocketService {
     this.io.on('connection', (socket) => {
       console.log('✅ === THERAPY TRACKER CLIENT CONNECTED ===');
       console.log('✅ Socket ID:', socket.id);
-      console.log('✅ User:', socket.user?.id);
+      console.log('✅ User:', socket.user?.id, socket.user?.name);
 
-      // ✅ Track connected user
+      // ✅ Track connected user with socket reference
       this.connectedUsers.set(socket.user.id, {
         socketId: socket.id,
+        socket: socket, // Store socket reference
         userId: socket.user.id,
         name: socket.user.name,
         role: socket.user.role,
         connectedAt: new Date(),
         isActive: true,
         currentActivity: null,
-        currentPatient: null
+        currentPatient: null,
+        lastSeen: new Date()
       });
 
       // Send initial connection data
       socket.emit('therapy_tracking_connected', {
         message: 'Connected to Therapy Tracking System',
         socketId: socket.id,
-        connectedUsers: Array.from(this.connectedUsers.values()),
+        userId: socket.user.id,
+        connectedUsers: Array.from(this.connectedUsers.values()).map(u => ({
+          userId: u.userId,
+          name: u.name,
+          role: u.role,
+          isActive: u.isActive,
+          currentActivity: u.currentActivity
+        })),
         activeSessions: Array.from(this.activeSessions.values()),
         timestamp: new Date().toISOString()
       });
 
-      // ✅ NEW: Subscribe to therapy tracking updates
+      // ✅ Subscribe to therapy tracking
       socket.on('subscribe_therapy_tracking', (data) => {
         console.log('📡 User subscribed to therapy tracking:', socket.user.id);
         socket.join('therapy_tracking');
         
-        // Send current system state
         socket.emit('therapy_tracking_state', {
-          connectedUsers: Array.from(this.connectedUsers.values()),
+          connectedUsers: Array.from(this.connectedUsers.values()).map(u => ({
+            userId: u.userId,
+            name: u.name,
+            role: u.role,
+            currentActivity: u.currentActivity,
+            isActive: u.isActive
+          })),
           activeSessions: Array.from(this.activeSessions.values()),
-          upcomingSessions: [], // Will be populated from database
-          milestones: {} // Will be populated from database
+          activeCountdowns: this.sessionCountdowns.size
         });
       });
 
-      // ✅ NEW: Join specific session room
+      // ✅ Join session room
       socket.on('join_session', (sessionId) => {
-        console.log('🏠 User joined session room:', sessionId, 'User:', socket.user.id);
+        console.log('🏠 User joined session:', sessionId);
         socket.join(`session_${sessionId}`);
         
-        // Update user's current activity
         const userData = this.connectedUsers.get(socket.user.id);
         if (userData) {
           userData.currentActivity = `Monitoring session ${sessionId}`;
+          userData.lastSeen = new Date();
           this.connectedUsers.set(socket.user.id, userData);
         }
         
-        // Notify others in the room
+        // Track user's sessions
+        if (!this.userSessions.has(socket.user.id)) {
+          this.userSessions.set(socket.user.id, new Set());
+        }
+        this.userSessions.get(socket.user.id).add(sessionId);
+        
+        this.broadcastConnectedUsers();
+        
         socket.to(`session_${sessionId}`).emit('user_joined_session', {
           userId: socket.user.id,
           userName: socket.user.name,
           role: socket.user.role,
           timestamp: new Date().toISOString()
         });
-        
-        // Broadcast updated user list
-        this.broadcastConnectedUsers();
       });
 
-      // ✅ NEW: Leave session room
+      // ✅ Leave session room
       socket.on('leave_session', (sessionId) => {
-        console.log('🚪 User left session room:', sessionId, 'User:', socket.user.id);
+        console.log('🚪 User left session:', sessionId);
         socket.leave(`session_${sessionId}`);
         
-        // Update user activity
         const userData = this.connectedUsers.get(socket.user.id);
         if (userData) {
           userData.currentActivity = null;
@@ -138,17 +159,21 @@ class WebSocketService {
           this.connectedUsers.set(socket.user.id, userData);
         }
         
-        // Notify others
+        // Remove from user's sessions
+        if (this.userSessions.has(socket.user.id)) {
+          this.userSessions.get(socket.user.id).delete(sessionId);
+        }
+        
+        this.broadcastConnectedUsers();
+        
         socket.to(`session_${sessionId}`).emit('user_left_session', {
           userId: socket.user.id,
           userName: socket.user.name,
           timestamp: new Date().toISOString()
         });
-        
-        this.broadcastConnectedUsers();
       });
 
-      // ✅ NEW: Update user presence/activity
+      // ✅ Update user activity
       socket.on('update_user_activity', (activityData) => {
         const userData = this.connectedUsers.get(socket.user.id);
         if (userData) {
@@ -162,12 +187,40 @@ class WebSocketService {
         }
       });
 
-      // ✅ Handle disconnect
+      // ✅ Heartbeat/ping
+      socket.on('ping', () => {
+        const userData = this.connectedUsers.get(socket.user.id);
+        if (userData) {
+          userData.lastSeen = new Date();
+          userData.isActive = true;
+          this.connectedUsers.set(socket.user.id, userData);
+        }
+        socket.emit('pong', { 
+          timestamp: new Date().toISOString(),
+          userId: socket.user.id
+        });
+      });
+
+      // ✅ Disconnect handling
       socket.on('disconnect', (reason) => {
-        console.log('🚪 === THERAPY TRACKER CLIENT DISCONNECTED ===');
+        console.log('🚪 === CLIENT DISCONNECTED ===');
         console.log('🚪 Socket ID:', socket.id);
         console.log('🚪 User:', socket.user?.id);
         console.log('🚪 Reason:', reason);
+        
+        // Clean up user sessions
+        if (this.userSessions.has(socket.user.id)) {
+          const userSessionIds = this.userSessions.get(socket.user.id);
+          userSessionIds.forEach(sessionId => {
+            socket.to(`session_${sessionId}`).emit('user_left_session', {
+              userId: socket.user.id,
+              userName: socket.user.name,
+              reason: 'disconnect',
+              timestamp: new Date().toISOString()
+            });
+          });
+          this.userSessions.delete(socket.user.id);
+        }
         
         // Remove from connected users
         this.connectedUsers.delete(socket.user.id);
@@ -175,42 +228,97 @@ class WebSocketService {
         // Broadcast updated user list
         this.broadcastConnectedUsers();
       });
-
-      // Existing handlers...
-      socket.on('ping', () => {
-        socket.emit('pong', { timestamp: new Date().toISOString() });
-      });
     });
 
     console.log('✅ Enhanced WebSocket event handlers setup complete');
   }
 
-  // ✅ NEW: Broadcast real-time therapy tracking updates
-  emitTherapyTrackingUpdate(eventType, data) {
-    console.log('📡 Broadcasting therapy tracking update:', eventType);
-    this.io.to('therapy_tracking').emit('therapy_tracking_update', {
-      type: eventType,
-      data,
+  // ✅ Start session countdown (NEW METHOD)
+  startSessionCountdown(sessionId, durationMinutes) {
+    // Clear existing countdown if any
+    this.stopSessionCountdown(sessionId);
+    
+    let remainingSeconds = durationMinutes * 60;
+    console.log(`⏰ Starting countdown for session ${sessionId}: ${durationMinutes} minutes (${remainingSeconds}s)`);
+    
+    const countdownInterval = setInterval(() => {
+      remainingSeconds--;
+      
+      // Broadcast every 30 seconds or in last minute
+      if (remainingSeconds % 30 === 0 || remainingSeconds <= 60) {
+        this.io.to(`session_${sessionId}`).emit('countdown_update', {
+          sessionId,
+          remainingSeconds,
+          remainingMinutes: Math.ceil(remainingSeconds / 60),
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log(`⏰ Session ${sessionId}: ${remainingSeconds}s remaining`);
+      }
+      
+      // Session time ended
+      if (remainingSeconds <= 0) {
+        console.log(`⏰ Session ${sessionId} time ended`);
+        this.stopSessionCountdown(sessionId);
+        
+        this.io.to(`session_${sessionId}`).emit('session_time_ended', {
+          sessionId,
+          message: 'Estimated session time has ended',
+          timestamp: new Date().toISOString()
+        });
+        
+        this.io.to('therapy_tracking').emit('session_time_alert', {
+          sessionId,
+          message: `Session ${sessionId} has exceeded estimated duration`,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }, 1000);
+    
+    // Store interval
+    this.sessionCountdowns.set(sessionId, countdownInterval);
+    
+    // Also broadcast to therapy tracking
+    this.io.to('therapy_tracking').emit('countdown_started', {
+      sessionId,
+      durationMinutes,
+      remainingSeconds,
       timestamp: new Date().toISOString()
     });
   }
 
-  // ✅ NEW: Session-specific updates
+  // ✅ Stop session countdown (NEW METHOD)
+  stopSessionCountdown(sessionId) {
+    const interval = this.sessionCountdowns.get(sessionId);
+    if (interval) {
+      clearInterval(interval);
+      this.sessionCountdowns.delete(sessionId);
+      console.log(`⏰ Stopped countdown for session ${sessionId}`);
+      
+      // Notify subscribers
+      this.io.to(`session_${sessionId}`).emit('countdown_stopped', {
+        sessionId,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  // ✅ Session status update
   emitSessionStatusUpdate(sessionId, updateData) {
-    console.log('📡 Broadcasting session status update:', sessionId);
+    console.log('📡 Broadcasting session update:', sessionId, updateData.status || updateData.type);
     
-    // Update active sessions cache
+    // Update cache
     if (updateData.status === 'in_progress') {
       this.activeSessions.set(sessionId, {
         id: sessionId,
         ...updateData,
-        participants: updateData.participants || []
+        lastUpdate: new Date()
       });
-    } else if (updateData.status === 'completed' || updateData.status === 'cancelled') {
+    } else if (['completed', 'cancelled'].includes(updateData.status)) {
       this.activeSessions.delete(sessionId);
     }
 
-    // Broadcast to all therapy tracking subscribers
+    // Broadcast to therapy tracking subscribers
     this.io.to('therapy_tracking').emit('session_status_update', {
       sessionId,
       ...updateData,
@@ -225,9 +333,9 @@ class WebSocketService {
     });
   }
 
-  // ✅ NEW: Milestone achievement broadcast
+  // ✅ Milestone achievement
   emitMilestoneAchieved(patientId, milestoneData) {
-    console.log('🏆 Broadcasting milestone achieved:', patientId);
+    console.log('🏆 Broadcasting milestone:', patientId);
     this.io.to('therapy_tracking').emit('milestone_achieved', {
       patientId,
       milestone: milestoneData,
@@ -235,23 +343,136 @@ class WebSocketService {
     });
   }
 
-  // ✅ NEW: Connected users broadcast
-  broadcastConnectedUsers() {
-    const connectedUsersArray = Array.from(this.connectedUsers.values());
-    this.io.to('therapy_tracking').emit('connected_users_update', {
-      users: connectedUsersArray,
-      totalCount: connectedUsersArray.length,
+  // ✅ Therapy tracking update
+  emitTherapyTrackingUpdate(eventType, data) {
+    console.log('📡 Broadcasting therapy update:', eventType);
+    this.io.to('therapy_tracking').emit('therapy_tracking_update', {
+      type: eventType,
+      data,
       timestamp: new Date().toISOString()
     });
   }
 
-  // ✅ NEW: Get current system state
+    // backend/services/websocket/websocketService.js
+
+// Emit to all admins
+emitToAdmins(event, data) {
+  this.io.to('admin-room').emit(event, data);
+  console.log(`📡 Emitted ${event} to all admins`);
+}
+
+// New patient registered
+notifyNewPatient(patientData) {
+  this.emitToAdmins('new_patient_registered', {
+    patientId: patientData._id,
+    patientName: patientData.name,
+    registeredAt: new Date(),
+    totalPatients: patientData.totalPatients
+  });
+}
+
+// New appointment booked
+notifyNewAppointment(appointmentData) {
+  this.emitToAdmins('new_appointment_booked', {
+    appointmentId: appointmentData._id,
+    patientName: appointmentData.patientName,
+    therapyType: appointmentData.therapyType,
+    scheduledAt: appointmentData.scheduledAt,
+    fee: appointmentData.fee
+  });
+}
+
+// Session status changed
+notifySessionStatus(sessionData) {
+  this.emitToAdmins('session_status_update', {
+    sessionId: sessionData._id,
+    status: sessionData.status,
+    patientName: sessionData.patientName,
+    therapyType: sessionData.therapyType
+  });
+}
+
+  // ✅ Connected users broadcast
+  broadcastConnectedUsers() {
+    const users = Array.from(this.connectedUsers.values()).map(u => ({
+      userId: u.userId,
+      name: u.name,
+      role: u.role,
+      isActive: u.isActive,
+      currentActivity: u.currentActivity,
+      lastSeen: u.lastSeen
+    }));
+    
+    this.io.to('therapy_tracking').emit('connected_users_update', {
+      users,
+      totalCount: users.length,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // ✅ Heartbeat monitor for connection health
+  startHeartbeatMonitor() {
+    console.log('💓 Starting heartbeat monitor...');
+    
+    setInterval(() => {
+      const now = new Date();
+      const timeout = 2 * 60 * 1000; // 2 minutes
+      
+      this.connectedUsers.forEach((userData, userId) => {
+        const timeSinceLastSeen = now - userData.lastSeen;
+        
+        if (timeSinceLastSeen > timeout && userData.isActive) {
+          console.log(`⚠️ User ${userId} appears inactive (${Math.round(timeSinceLastSeen / 1000)}s)`);
+          userData.isActive = false;
+          this.connectedUsers.set(userId, userData);
+          this.broadcastConnectedUsers();
+        }
+      });
+    }, 30000); // Check every 30 seconds
+  }
+
+  // ✅ System state
   getSystemState() {
     return {
-      connectedUsers: Array.from(this.connectedUsers.values()),
+      connectedUsers: Array.from(this.connectedUsers.values()).map(u => ({
+        userId: u.userId,
+        name: u.name,
+        role: u.role,
+        currentActivity: u.currentActivity,
+        isActive: u.isActive,
+        lastSeen: u.lastSeen
+      })),
       activeSessions: Array.from(this.activeSessions.values()),
-      totalConnections: this.connectedUsers.size
+      totalConnections: this.connectedUsers.size,
+      activeCountdowns: this.sessionCountdowns.size,
+      userSessions: this.userSessions.size
     };
+  }
+
+  // ✅ Cleanup on shutdown
+  cleanup() {
+    console.log('🧹 Cleaning up WebSocket service...');
+    
+    // Clear all countdowns
+    this.sessionCountdowns.forEach((interval, sessionId) => {
+      clearInterval(interval);
+      console.log(`⏰ Cleared countdown for session ${sessionId}`);
+    });
+    
+    // Notify all connected users
+    this.io.emit('server_shutdown', {
+      message: 'Server is shutting down',
+      timestamp: new Date().toISOString()
+    });
+    
+    // Clear all maps
+    this.sessionCountdowns.clear();
+    this.activeSessions.clear();
+    this.connectedUsers.clear();
+    this.userSessions.clear();
+    this.heartbeatIntervals.clear();
+    
+    console.log('✅ WebSocket cleanup complete');
   }
 }
 

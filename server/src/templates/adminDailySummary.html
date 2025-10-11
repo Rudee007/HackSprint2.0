@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <tr>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">📊 Daily Summary Report</h1>
+              <p style="color: #f0f0f0; margin: 10px 0 0 0;">{{reportDate}}</p>
+            </td>
+          </tr>
+          
+          <tr>
+            <td style="padding: 30px;">
+              <h2 style="color: #333; font-size: 20px; margin: 0 0 20px 0;">Today's Highlights</h2>
+              
+              <!-- Stats Grid -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="50%" style="padding: 10px;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 20px; text-align: center;">
+                      <p style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">{{newPatients}}</p>
+                      <p style="color: #f0f0f0; margin: 5px 0 0 0; font-size: 14px;">New Patients</p>
+                    </div>
+                  </td>
+                  <td width="50%" style="padding: 10px;">
+                    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; padding: 20px; text-align: center;">
+                      <p style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">{{totalAppointments}}</p>
+                      <p style="color: #f0f0f0; margin: 5px 0 0 0; font-size: 14px;">Total Appointments</p>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="padding: 10px;">
+                    <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; padding: 20px; text-align: center;">
+                      <p style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">{{completedSessions}}</p>
+                      <p style="color: #f0f0f0; margin: 5px 0 0 0; font-size: 14px;">Completed Sessions</p>
+                    </div>
+                  </td>
+                  <td width="50%" style="padding: 10px;">
+                    <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; padding: 20px; text-align: center;">
+                      <p style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">{{revenue}}</p>
+                      <p style="color: #f0f0f0; margin: 5px 0 0 0; font-size: 14px;">Revenue Generated</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Additional Stats -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f9f9f9; border-radius: 8px; padding: 20px;">
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <strong style="color: #667eea;">⭐ Average Rating:</strong>
+                    <span style="color: #333; margin-left: 10px;">{{averageRating}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <strong style="color: #667eea;">🌿 Top Therapy:</strong>
+                    <span style="color: #333; margin-left: 10px;">{{topTherapy}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <strong style="color: #667eea;">❌ Cancelled:</strong>
+                    <span style="color: #333; margin-left: 10px;">{{cancelledSessions}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <strong style="color: #667eea;">📝 Pending Feedback:</strong>
+                    <span style="color: #333; margin-left: 10px;">{{pendingFeedback}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <strong style="color: #667eea;">📅 Tomorrow's Appointments:</strong>
+                    <span style="color: #333; margin-left: 10px;">{{upcomingTomorrow}}</span>
+                  </td>
+                </tr>
+              </table>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{{dashboardUrl}}" style="background-color: #667eea; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  View Full Dashboard
+                </a>
+              </div>
+            </td>
+          </tr>
+          
+          <tr>
+            <td style="background-color: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+              <p style="font-size: 12px; color: #999; margin: 0;">
+                Generated at {{timestamp}}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
