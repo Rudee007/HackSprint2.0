@@ -1,0 +1,106 @@
+<!-- preTherapyAbhyanga.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pre-Therapy Instructions - Abhyanga</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+        .instruction-box { background: #f0f9ff; border-left: 4px solid #43e97b; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        ul { padding-left: 20px; }
+        ul li { margin: 8px 0; }
+        .icon { font-size: 20px; margin-right: 8px; }
+        .footer { text-align: center; padding: 20px; color: #666; background: #f9f9f9; border-radius: 0 0 8px 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 Pre-Therapy Instructions</h1>
+            <h2>Abhyanga (Full Body Oil Massage)</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{patientName}},</p>
+            
+            <p>Your <strong>Abhyanga therapy</strong> is scheduled for <strong>{{appointmentDate}}</strong> at <strong>{{appointmentTime}}</strong>.</p>
+            
+            <p>Please follow these important pre-therapy instructions to ensure maximum benefits:</p>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">🍽️</span> Dietary Guidelines (Before Session)</h3>
+                <ul>
+                    <li><strong>2 hours before:</strong> Avoid heavy meals - eat only light, easily digestible food</li>
+                    <li>Drink warm water throughout the day</li>
+                    <li>Avoid cold drinks, ice cream, or refrigerated items</li>
+                    <li>No alcohol 24 hours before therapy</li>
+                    <li>Empty your bladder before the session</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">👕</span> What to Bring/Wear</h3>
+                <ul>
+                    <li>Wear comfortable, loose-fitting clothes (preferably cotton)</li>
+                    <li>Bring an extra towel</li>
+                    <li>Bring old clothes (oil may stain)</li>
+                    <li>Remove all jewelry and accessories before arrival</li>
+                    <li>Tie long hair back</li>
+                </ul>
+            </div>
+            
+            <div class="warning-box">
+                <h3><span class="icon">⚠️</span> Important Medical Information</h3>
+                <ul>
+                    <li>Inform us if you have any <strong>skin allergies</strong> or sensitivities</li>
+                    <li>Notify us about any recent <strong>injuries or surgeries</strong></li>
+                    <li>Mention if you're <strong>pregnant</strong> or have any medical conditions</li>
+                    <li>Report any <strong>fever or infection</strong></li>
+                    <li>Let us know about current medications</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">⏰</span> Timing Guidelines</h3>
+                <ul>
+                    <li><strong>Arrive 15 minutes early</strong> for check-in and preparation</li>
+                    <li>Session duration: Approximately 60-75 minutes</li>
+                    <li>Plan to rest for 30 minutes after therapy</li>
+                    <li>Keep your schedule light for the rest of the day</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">✅</span> Day Before Checklist</h3>
+                <ul>
+                    <li>Get a good night's sleep (7-8 hours)</li>
+                    <li>Take a warm water bath (not hot)</li>
+                    <li>Avoid strenuous exercise or physical exertion</li>
+                    <li>Stay hydrated with warm water</li>
+                    <li>Avoid stress and maintain a calm mindset</li>
+                </ul>
+            </div>
+            
+            <p style="margin-top: 30px; padding: 15px; background: #e8f5e9; border-radius: 4px; text-align: center;">
+                <strong>Need to reschedule?</strong><br>
+                Please contact us at least 24 hours in advance: {{clinicPhone}}<br>
+                Email: {{clinicEmail}}
+            </p>
+            
+            <p style="margin-top: 20px;">We look forward to providing you with a rejuvenating Abhyanga experience!</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>{{clinicName}}</strong></p>
+            <p>🌿 Ancient Wisdom, Modern Care 🌿</p>
+            <p style="font-size: 12px; color: #999;">
+                This is an automated pre-therapy instruction. If you have questions, please contact us.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

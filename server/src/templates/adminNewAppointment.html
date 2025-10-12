@@ -1,83 +1,90 @@
+<!-- adminNewAppointment.html -->
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          
-          <tr>
-            <td style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">📅 New Appointment Booked</h1>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 30px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">📅 New Appointment Booked</h1>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding: 30px;">
+                            <p style="font-size: 16px; color: #333; margin: 0 0 20px 0;">
+                                A new appointment has been scheduled in the system.
+                            </p>
+                            
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9f9f9; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <strong style="color: #4facfe;">👤 Patient:</strong>
+                                        <span style="color: #333; margin-left: 10px;">{{patientName}}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <strong style="color: #4facfe;">🌿 Therapy:</strong>
+                                        <span style="color: #333; margin-left: 10px;">{{therapyType}}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <strong style="color: #4facfe;">📅 Date:</strong>
+                                        <span style="color: #333; margin-left: 10px;">{{scheduledDate}}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <strong style="color: #4facfe;">⏰ Time:</strong>
+                                        <span style="color: #333; margin-left: 10px;">{{scheduledTime}}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <strong style="color: #4facfe;">👨‍⚕️ Assigned To:</strong>
+                                        <span style="color: #333; margin-left: 10px;">{{therapistName}}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <strong style="color: #4facfe;">💰 Fee:</strong>
+                                        <span style="color: #333; margin-left: 10px;">{{fee}}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <strong style="color: #4facfe;">🆔 Appointment ID:</strong>
+                                        <span style="color: #333; margin-left: 10px; font-family: monospace;">{{appointmentId}}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="{{dashboardUrl}}" style="background-color: #4facfe; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                                    View in Dashboard
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="background-color: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                            <p style="font-size: 12px; color: #999; margin: 0;">
+                                Notification sent at {{timestamp}}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
             </td>
-          </tr>
-          
-          <tr>
-            <td style="padding: 30px;">
-              <p style="font-size: 16px; color: #333; margin: 0 0 20px 0;">
-                A new appointment has been booked:
-              </p>
-              
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f8ff; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #4facfe;">
-                <tr>
-                  <td style="padding: 8px 0;">
-                    <strong style="color: #4facfe;">👤 Patient:</strong>
-                    <span style="color: #333; margin-left: 10px;">{{patientName}}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0;">
-                    <strong style="color: #4facfe;">🌿 Therapy:</strong>
-                    <span style="color: #333; margin-left: 10px;">{{therapyType}}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0;">
-                    <strong style="color: #4facfe;">📅 Date:</strong>
-                    <span style="color: #333; margin-left: 10px;">{{scheduledDate}}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0;">
-                    <strong style="color: #4facfe;">⏰ Time:</strong>
-                    <span style="color: #333; margin-left: 10px;">{{scheduledTime}}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0;">
-                    <strong style="color: #4facfe;">👨‍⚕️ Therapist:</strong>
-                    <span style="color: #333; margin-left: 10px;">{{therapistName}}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0;">
-                    <strong style="color: #4facfe;">💰 Fee:</strong>
-                    <span style="color: #333; margin-left: 10px;">{{fee}}</span>
-                  </td>
-                </tr>
-              </table>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="{{dashboardUrl}}" style="background-color: #4facfe; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                  View Appointment Details
-                </a>
-              </div>
-            </td>
-          </tr>
-          
-          <tr>
-            <td style="background-color: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eee;">
-              <p style="font-size: 12px; color: #999; margin: 0;">
-                Booked at {{timestamp}}
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+        </tr>
+    </table>
 </body>
 </html>

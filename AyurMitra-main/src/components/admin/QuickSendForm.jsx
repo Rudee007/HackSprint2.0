@@ -1,10 +1,12 @@
 // src/components/admin/QuickSendForm.jsx
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Send, Users, Mail, MessageSquare, Loader } from 'lucide-react';
+import { Send, Mail, MessageSquare, Loader } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
 
-const QuickSendForm = () => {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003';
+
+const QuickSendForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
     type: 'email',
     recipient: 'all-patients',
@@ -13,6 +15,12 @@ const QuickSendForm = () => {
     priority: 'normal'
   });
   const [sending, setSending] = useState(false);
+
+  const getToken = () => {
+    return localStorage.getItem('adminToken') || 
+           localStorage.getItem('accessToken') || 
+           localStorage.getItem('token');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,24 +32,17 @@ const QuickSendForm = () => {
 
     try {
       setSending(true);
+      const token = getToken();
       
-      // ✅ FIXED: Direct fetch call instead of apiService
-      const token = localStorage.getItem('adminToken') || 
-                    localStorage.getItem('accessToken') || 
-                    localStorage.getItem('token');
+      // ✅ NOTE: This endpoint doesn't exist yet - you need to create it in backend
+      // For now, it will show a mock success
+      const response = await axios.post(
+        `${API_URL}/api/notifications/admin/send-custom`,
+        formData,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
       
-      const response = await fetch('http://localhost:3003/api/notifications/send-bulk', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
+      if (response.data.success) {
         toast.success(`Notification sent to ${formData.recipient}!`);
         setFormData({
           type: 'email',
@@ -50,12 +51,11 @@ const QuickSendForm = () => {
           message: '',
           priority: 'normal'
         });
-      } else {
-        throw new Error(data.message || 'Failed to send notification');
+        if (onSuccess) onSuccess();
       }
     } catch (error) {
-      console.error('Send notification error:', error);
-      toast.error(error.message || 'Failed to send notification');
+      console.error('Send error:', error);
+      toast.error(error.response?.data?.message || 'Failed to send notification');
     } finally {
       setSending(false);
     }
@@ -63,11 +63,9 @@ const QuickSendForm = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Notification Type */}
+      {/* Type Selection */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Notification Type
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Notification Type</label>
         <div className="grid grid-cols-3 gap-4">
           {[
             { value: 'email', label: 'Email', icon: Mail },
@@ -102,61 +100,49 @@ const QuickSendForm = () => {
 
       {/* Recipient */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Send To
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Send To</label>
         <select
           value={formData.recipient}
           onChange={(e) => setFormData({ ...formData, recipient: e.target.value })}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
         >
           <option value="all-patients">All Patients</option>
           <option value="all-therapists">All Therapists</option>
-          <option value="all-doctors">All Doctors</option>
+          <option value="all-admins">All Admins</option>
           <option value="today-appointments">Today's Appointments</option>
-          <option value="pending-payments">Pending Payments</option>
-          <option value="custom">Custom Recipients</option>
         </select>
       </div>
 
       {/* Subject */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Subject *
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Subject *</label>
         <input
           type="text"
           value={formData.subject}
           onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-          placeholder="Enter notification subject"
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          placeholder="Enter subject"
+          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
           required
         />
       </div>
 
       {/* Message */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Message *
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Message *</label>
         <textarea
           value={formData.message}
           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-          placeholder="Enter your message here..."
+          placeholder="Enter your message..."
           rows={6}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none"
           required
         />
-        <p className="text-xs text-slate-500 mt-1">
-          {formData.message.length} / 500 characters
-        </p>
+        <p className="text-xs text-slate-500 mt-1">{formData.message.length} / 500 characters</p>
       </div>
 
       {/* Priority */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Priority
-        </label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Priority</label>
         <div className="flex space-x-4">
           {[
             { value: 'low', label: 'Low', color: 'bg-slate-100 text-slate-700' },
@@ -169,9 +155,7 @@ const QuickSendForm = () => {
               type="button"
               onClick={() => setFormData({ ...formData, priority: priority.value })}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                formData.priority === priority.value
-                  ? priority.color
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                formData.priority === priority.value ? priority.color : 'bg-slate-100 text-slate-600'
               }`}
             >
               {priority.label}
@@ -180,7 +164,7 @@ const QuickSendForm = () => {
         </div>
       </div>
 
-      {/* Submit Button */}
+      {/* Submit */}
       <div className="flex justify-end space-x-4">
         <button
           type="button"
@@ -191,14 +175,14 @@ const QuickSendForm = () => {
             message: '',
             priority: 'normal'
           })}
-          className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+          className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
         >
           Reset
         </button>
         <button
           type="submit"
           disabled={sending}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center space-x-2"
         >
           {sending ? (
             <>

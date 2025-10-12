@@ -2,239 +2,11 @@ const { asyncHandler, AppError } = require('../middleware/error.middleware');
 const NotificationService = require('../services/notification.service');
 const User = require('../models/User');
 const Consultation = require('../models/Consultation');
+const Feedback = require('../models/Feedback'); // Add if you have this model
 
 class NotificationController {
 
   // ============ TEST ENDPOINTS ============
-
-  // At the end of your NotificationController class, ADD these methods:
-
-// ============ ADMIN NOTIFICATION ENDPOINTS ============
-
-// Send new patient alert to admin
-sendNewPatientAlert = asyncHandler(async (req, res) => {
-  const { patientId, patientName, patientEmail, patientPhone, totalPatients } = req.body;
-
-  if (!patientName || !patientEmail) {
-    throw new AppError('Patient name and email are required', 400, 'MISSING_FIELDS');
-  }
-
-  const patientData = {
-    _id: patientId,
-    name: patientName,
-    email: patientEmail,
-    phone: patientPhone,
-    totalPatients: totalPatients
-  };
-
-  const result = await NotificationService.sendNewPatientAlert(patientData);
-
-  return res.json({
-    success: true,
-    message: 'Admin alert sent for new patient registration',
-    data: result
-  });
-});
-
-// Send new appointment alert to admin
-sendNewAppointmentAlert = asyncHandler(async (req, res) => {
-  const { consultationId } = req.params;
-
-  const consultation = await Consultation.findById(consultationId)
-    .populate('patientId', 'name email')
-    .populate('providerId', 'name');
-
-  if (!consultation) {
-    throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
-  }
-
-  const appointmentData = {
-    _id: consultation._id,
-    patientName: consultation.patientId.name,
-    therapyType: consultation.sessionType || consultation.type || 'General',
-    scheduledAt: consultation.scheduledAt,
-    therapistName: consultation.providerId?.name || 'Not assigned',
-    fee: consultation.fee
-  };
-
-  const result = await NotificationService.sendNewAppointmentAlert(appointmentData);
-
-  return res.json({
-    success: true,
-    message: 'Admin alert sent for new appointment',
-    data: result
-  });
-});
-
-// Send session status alert to admin
-sendSessionStatusAlert = asyncHandler(async (req, res) => {
-  const { consultationId } = req.params;
-  const { status } = req.body;
-
-  if (!status) {
-    throw new AppError('Session status is required', 400, 'MISSING_FIELDS');
-  }
-
-  const consultation = await Consultation.findById(consultationId)
-    .populate('patientId', 'name')
-    .populate('providerId', 'name');
-
-  if (!consultation) {
-    throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
-  }
-
-  const sessionData = {
-    _id: consultation._id,
-    status: status,
-    patientName: consultation.patientId.name,
-    therapyType: consultation.sessionType || consultation.type || 'General',
-    therapistName: consultation.providerId?.name || 'Unassigned',
-    sessionStartTime: consultation.sessionStartTime,
-    sessionEndTime: consultation.sessionEndTime,
-    actualDuration: consultation.actualDuration,
-    estimatedDuration: consultation.estimatedDuration
-  };
-
-  const result = await NotificationService.sendSessionStatusAlert(sessionData);
-
-  return res.json({
-    success: true,
-    message: 'Session status alert sent to admin',
-    data: result
-  });
-});
-
-// Send daily summary report to admin
-sendDailySummary = asyncHandler(async (req, res) => {
-  const summaryData = req.body;
-
-  if (!summaryData.date) {
-    summaryData.date = new Date().toLocaleDateString('en-IN');
-  }
-
-  const result = await NotificationService.sendDailySummary(summaryData);
-
-  return res.json({
-    success: true,
-    message: 'Daily summary report sent to admin',
-    data: result
-  });
-});
-
-// Send payment notification to admin
-sendPaymentNotification = asyncHandler(async (req, res) => {
-  const paymentData = req.body;
-
-  if (!paymentData.patientName || !paymentData.amount) {
-    throw new AppError('Patient name and amount are required', 400, 'MISSING_FIELDS');
-  }
-
-  const result = await NotificationService.sendPaymentNotification(paymentData);
-
-  return res.json({
-    success: true,
-    message: 'Payment notification sent to admin',
-    data: result
-  });
-});
-
-// Send cancellation alert to admin
-sendCancellationAlert = asyncHandler(async (req, res) => {
-  const { consultationId } = req.params;
-  const { reason, cancelledBy } = req.body;
-
-  const consultation = await Consultation.findById(consultationId)
-    .populate('patientId', 'name');
-
-  if (!consultation) {
-    throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
-  }
-
-  const cancellationData = {
-    _id: consultation._id,
-    patientName: consultation.patientId.name,
-    therapyType: consultation.sessionType || consultation.type || 'General',
-    scheduledAt: consultation.scheduledAt,
-    reason: reason || 'No reason provided',
-    cancelledBy: cancelledBy || 'Unknown',
-    refundAmount: consultation.fee * 0.8 // 80% refund
-  };
-
-  const result = await NotificationService.sendCancellationAlert(cancellationData);
-
-  return res.json({
-    success: true,
-    message: 'Cancellation alert sent to admin',
-    data: result
-  });
-});
-
-// Send weekly analytics report to admin
-sendWeeklyReport = asyncHandler(async (req, res) => {
-  const weekData = req.body;
-
-  if (!weekData.weekStart || !weekData.weekEnd) {
-    throw new AppError('Week start and end dates are required', 400, 'MISSING_FIELDS');
-  }
-
-  const result = await NotificationService.sendWeeklyReport(weekData);
-
-  return res.json({
-    success: true,
-    message: 'Weekly analytics report sent to admin',
-    data: result
-  });
-});
-
-// Send system alert to admin
-sendSystemAlert = asyncHandler(async (req, res) => {
-  const alertData = req.body;
-
-  if (!alertData.title || !alertData.message) {
-    throw new AppError('Alert title and message are required', 400, 'MISSING_FIELDS');
-  }
-
-  const result = await NotificationService.sendSystemAlert(alertData);
-
-  return res.json({
-    success: true,
-    message: 'System alert sent to admin',
-    data: result
-  });
-});
-
-// Send therapist assignment notification
-sendTherapistAssignment = asyncHandler(async (req, res) => {
-  const { consultationId } = req.params;
-
-  const consultation = await Consultation.findById(consultationId)
-    .populate('patientId', 'name')
-    .populate('providerId', 'name email');
-
-  if (!consultation) {
-    throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
-  }
-
-  if (!consultation.providerId) {
-    throw new AppError('No therapist assigned to this consultation', 400, 'NO_THERAPIST');
-  }
-
-  const assignmentData = {
-    therapistEmail: consultation.providerId.email,
-    therapistName: consultation.providerId.name,
-    patientName: consultation.patientId.name,
-    therapyType: consultation.sessionType || consultation.type || 'General',
-    scheduledAt: consultation.scheduledAt
-  };
-
-  const result = await NotificationService.sendTherapistAssignment(assignmentData);
-
-  return res.json({
-    success: true,
-    message: 'Therapist assignment notification sent',
-    data: result
-  });
-});
 
   sendTestEmail = asyncHandler(async (req, res) => {
     const { email, subject, templateName, data } = req.body;
@@ -343,10 +115,10 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
     const appointmentData = {
       patientEmail: consultation.patientId.email,
       patientName: consultation.patientId.name,
-      therapyType: consultation.therapyType || 'Panchakarma',
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
       scheduledAt: consultation.scheduledAt,
-      providerId: consultation.providerId._id,
-      centerName: 'AyurSutra Wellness Center'
+      appointmentId: consultation._id,
+      centerName: consultation.centerName || 'AyurSutra Wellness Center'
     };
 
     const result = await NotificationService.sendAppointmentConfirmation(appointmentData);
@@ -371,9 +143,9 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
     const appointmentData = {
       patientEmail: consultation.patientId.email,
       patientName: consultation.patientId.name,
-      therapyType: consultation.therapyType || 'Panchakarma',
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
       scheduledAt: consultation.scheduledAt,
-      centerName: 'AyurSutra Wellness Center'
+      centerName: consultation.centerName || 'AyurSutra Wellness Center'
     };
 
     const result = await NotificationService.sendAppointmentReminder(appointmentData);
@@ -399,16 +171,19 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
     const appointmentData = {
       patientEmail: consultation.patientId.email,
       patientName: consultation.patientId.name,
-      therapyType: consultation.therapyType || 'Panchakarma',
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
       scheduledAt: consultation.scheduledAt,
-      reason: reason || 'unavoidable circumstances'
+      reason: reason || 'Unavoidable circumstances',
+      clinicName: consultation.centerName || 'AyurSutra Wellness Center',
+      clinicPhone: '+91 98765 43210',
+      clinicEmail: 'contact@ayursutra.com'
     };
 
     const result = await NotificationService.sendAppointmentCancellation(appointmentData);
 
     return res.json({
       success: true,
-      message: 'Appointment cancellation sent',
+      message: 'Appointment cancellation notification sent',
       data: result
     });
   });
@@ -430,9 +205,9 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
     const consultationData = {
       patientEmail: consultation.patientId.email,
       patientName: consultation.patientId.name,
-      therapyType: consultation.therapyType || 'Panchakarma',
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
       sessionId: consultation._id,
-      centerName: 'AyurSutra Wellness Center'
+      centerName: consultation.centerName || 'AyurSutra Wellness Center'
     };
 
     const result = await NotificationService.sendFeedbackRequest(consultationData);
@@ -444,20 +219,26 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
     });
   });
 
-  // ============ THERAPY NOTIFICATIONS ============
+  // ============ PRE & POST THERAPY NOTIFICATIONS ============
 
   sendPreTherapyInstructions = asyncHandler(async (req, res) => {
-    const { patientEmail, patientName, therapyType, scheduledAt } = req.body;
+    const { consultationId } = req.params;
 
-    if (!patientEmail || !patientName || !therapyType || !scheduledAt) {
-      throw new AppError('Patient email, name, therapy type, and scheduled time are required', 400, 'MISSING_FIELDS');
+    const consultation = await Consultation.findById(consultationId)
+      .populate('patientId', 'name email');
+
+    if (!consultation) {
+      throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
     }
 
     const appointmentData = {
-      patientEmail,
-      patientName,
-      therapyType,
-      scheduledAt
+      patientEmail: consultation.patientId.email,
+      patientName: consultation.patientId.name,
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
+      scheduledAt: consultation.scheduledAt,
+      clinicName: consultation.centerName || 'AyurSutra Wellness Center',
+      clinicPhone: '+91 98765 43210',
+      clinicEmail: 'contact@ayursutra.com'
     };
 
     const result = await NotificationService.sendPreTherapyInstructions(appointmentData);
@@ -470,16 +251,27 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
   });
 
   sendPostTherapyCare = asyncHandler(async (req, res) => {
-    const { patientEmail, patientName, therapyType } = req.body;
+    const { consultationId } = req.params;
 
-    if (!patientEmail || !patientName || !therapyType) {
-      throw new AppError('Patient email, name, and therapy type are required', 400, 'MISSING_FIELDS');
+    const consultation = await Consultation.findById(consultationId)
+      .populate('patientId', 'name email');
+
+    if (!consultation) {
+      throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
+    }
+
+    if (consultation.status !== 'completed') {
+      throw new AppError('Can only send post-care for completed sessions', 400, 'INVALID_SESSION_STATUS');
     }
 
     const consultationData = {
-      patientEmail,
-      patientName,
-      therapyType
+      patientEmail: consultation.patientId.email,
+      patientName: consultation.patientId.name,
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
+      nextSessionDate: consultation.nextSessionDate,
+      clinicName: consultation.centerName || 'AyurSutra Wellness Center',
+      clinicEmail: 'contact@ayursutra.com',
+      clinicPhone: '+91 98765 43210'
     };
 
     const result = await NotificationService.sendPostTherapyCare(consultationData);
@@ -491,43 +283,262 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
     });
   });
 
-  // ============ ENGAGEMENT NOTIFICATIONS ============
+  // ============ ADMIN NOTIFICATIONS ============
 
-  sendHealthTips = asyncHandler(async (req, res) => {
-    const { email, name, preferences } = req.body;
+  sendNewPatientAlert = asyncHandler(async (req, res) => {
+    const { patientId } = req.body;
 
-    if (!email || !name) {
-      throw new AppError('Email and name are required', 400, 'MISSING_FIELDS');
+    const patient = await User.findById(patientId);
+    
+    if (!patient) {
+      throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
     }
 
+    // Get total patient count
+    const totalPatients = await User.countDocuments({ role: 'patient' });
+
     const patientData = {
-      email,
-      name,
-      preferences: preferences || {}
+      _id: patient._id,
+      name: patient.name,
+      email: patient.email,
+      phone: patient.phone,
+      totalPatients
     };
 
-    const result = await NotificationService.sendHealthTips(patientData);
+    const result = await NotificationService.sendNewPatientAlert(patientData);
 
     return res.json({
       success: true,
-      message: 'Health tips sent',
+      message: 'Admin alert sent for new patient registration',
+      data: result
+    });
+  });
+
+  sendNewAppointmentAlert = asyncHandler(async (req, res) => {
+    const { consultationId } = req.params;
+
+    const consultation = await Consultation.findById(consultationId)
+      .populate('patientId', 'name email')
+      .populate('providerId', 'name');
+
+    if (!consultation) {
+      throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
+    }
+
+    const appointmentData = {
+      _id: consultation._id,
+      patientName: consultation.patientId.name,
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
+      scheduledAt: consultation.scheduledAt,
+      therapistName: consultation.providerId?.name || 'Not assigned',
+      fee: consultation.fee || 0
+    };
+
+    const result = await NotificationService.sendNewAppointmentAlert(appointmentData);
+
+    return res.json({
+      success: true,
+      message: 'Admin alert sent for new appointment',
       data: result
     });
   });
 
   sendCriticalFeedbackAlert = asyncHandler(async (req, res) => {
-    const feedbackData = req.body;
+    const { feedbackId } = req.params;
 
-    if (!feedbackData.patientName || !feedbackData.therapyType) {
-      throw new AppError('Patient name and therapy type are required', 400, 'MISSING_FIELDS');
+    let feedbackData;
+
+    // If feedbackId provided, fetch from database
+    if (feedbackId) {
+      const feedback = await Feedback.findById(feedbackId)
+        .populate('patientId', 'name')
+        .populate('providerId', 'name')
+        .populate('consultationId', 'therapyType sessionType scheduledAt');
+
+      if (!feedback) {
+        throw new AppError('Feedback not found', 404, 'FEEDBACK_NOT_FOUND');
+      }
+
+      feedbackData = {
+        _id: feedback._id,
+        patientName: feedback.patientId?.name || 'Unknown Patient',
+        therapyType: feedback.consultationId?.therapyType || feedback.consultationId?.sessionType || 'Unknown',
+        therapistName: feedback.providerId?.name || 'Unknown Therapist',
+        rating: feedback.averageRating || feedback.rating || 0,
+        concerns: feedback.textFeedback?.concernsOrIssues || feedback.concerns || 'No concerns specified',
+        recommendations: feedback.recommendations || 'None',
+        sessionDate: feedback.consultationId?.scheduledAt || feedback.createdAt
+      };
+    } else {
+      // Use body data if no feedbackId
+      feedbackData = req.body;
+
+      if (!feedbackData.patientName || !feedbackData.therapyType || !feedbackData.rating) {
+        throw new AppError('Patient name, therapy type, and rating are required', 400, 'MISSING_FIELDS');
+      }
     }
 
-    const results = await NotificationService.sendCriticalFeedbackAlert(feedbackData);
+    const result = await NotificationService.sendCriticalFeedbackAlert(feedbackData);
 
     return res.json({
       success: true,
-      message: 'Critical feedback alerts sent',
-      data: results
+      message: 'Critical feedback alert sent to admin',
+      data: result
+    });
+  });
+
+  sendDailySummary = asyncHandler(async (req, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Calculate summary data
+    const [
+      newPatients,
+      totalAppointments,
+      completedSessions,
+      cancelledSessions,
+      pendingFeedback,
+      upcomingTomorrow
+    ] = await Promise.all([
+      User.countDocuments({ 
+        role: 'patient', 
+        createdAt: { $gte: today, $lt: tomorrow } 
+      }),
+      Consultation.countDocuments({ 
+        scheduledAt: { $gte: today, $lt: tomorrow } 
+      }),
+      Consultation.countDocuments({ 
+        status: 'completed',
+        sessionEndTime: { $gte: today, $lt: tomorrow }
+      }),
+      Consultation.countDocuments({ 
+        status: 'cancelled',
+        updatedAt: { $gte: today, $lt: tomorrow }
+      }),
+      Consultation.countDocuments({ 
+        status: 'completed',
+        feedbackSubmitted: false,
+        sessionEndTime: { $lt: today }
+      }),
+      Consultation.countDocuments({ 
+        scheduledAt: { $gte: tomorrow, $lt: new Date(tomorrow.getTime() + 86400000) },
+        status: { $in: ['scheduled', 'confirmed'] }
+      })
+    ]);
+
+    // Calculate revenue
+    const revenueData = await Consultation.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          sessionEndTime: { $gte: today, $lt: tomorrow }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$fee' }
+        }
+      }
+    ]);
+
+    // Get average rating
+    const ratingData = await Feedback.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: today, $lt: tomorrow }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: '$averageRating' }
+        }
+      }
+    ]);
+
+    // Get top therapy
+    const topTherapyData = await Consultation.aggregate([
+      {
+        $match: {
+          scheduledAt: { $gte: today, $lt: tomorrow }
+        }
+      },
+      {
+        $group: {
+          _id: { $ifNull: ['$therapyType', '$sessionType'] },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      },
+      {
+        $limit: 1
+      }
+    ]);
+
+    const summaryData = {
+      date: today.toLocaleDateString('en-IN', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      newPatients,
+      totalAppointments,
+      completedSessions,
+      cancelledSessions,
+      revenue: revenueData[0]?.totalRevenue || 0,
+      averageRating: ratingData[0]?.avgRating ? ratingData[0].avgRating.toFixed(1) : 'N/A',
+      topTherapy: topTherapyData[0]?._id || 'Abhyanga',
+      pendingFeedback,
+      upcomingTomorrow
+    };
+
+    const result = await NotificationService.sendDailySummary(summaryData);
+
+    return res.json({
+      success: true,
+      message: 'Daily summary report sent to admin',
+      data: {
+        summary: summaryData,
+        emailResults: result
+      }
+    });
+  });
+
+  sendTherapistAssignment = asyncHandler(async (req, res) => {
+    const { consultationId } = req.params;
+
+    const consultation = await Consultation.findById(consultationId)
+      .populate('patientId', 'name')
+      .populate('providerId', 'name email');
+
+    if (!consultation) {
+      throw new AppError('Consultation not found', 404, 'CONSULTATION_NOT_FOUND');
+    }
+
+    if (!consultation.providerId) {
+      throw new AppError('No therapist assigned to this consultation', 400, 'NO_THERAPIST');
+    }
+
+    const assignmentData = {
+      therapistEmail: consultation.providerId.email,
+      therapistName: consultation.providerId.name,
+      patientName: consultation.patientId.name,
+      therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
+      scheduledAt: consultation.scheduledAt
+    };
+
+    const result = await NotificationService.sendTherapistAssignment(assignmentData);
+
+    return res.json({
+      success: true,
+      message: 'Therapist assignment notification sent',
+      data: result
     });
   });
 
@@ -547,14 +558,14 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
         $gte: tomorrow,
         $lte: endOfTomorrow
       },
-      status: 'scheduled'
+      status: { $in: ['scheduled', 'confirmed'] }
     }).populate('patientId', 'name email');
 
     if (upcomingAppointments.length === 0) {
       return res.json({
         success: true,
         message: 'No appointments found for tomorrow',
-        data: { count: 0 }
+        data: { count: 0, successful: 0, failed: 0 }
       });
     }
 
@@ -562,9 +573,9 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
       const appointmentData = {
         patientEmail: consultation.patientId.email,
         patientName: consultation.patientId.name,
-        therapyType: consultation.therapyType || 'Panchakarma',
+        therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
         scheduledAt: consultation.scheduledAt,
-        centerName: 'AyurSutra Wellness Center'
+        centerName: consultation.centerName || 'AyurSutra Wellness Center'
       };
 
       return await NotificationService.sendAppointmentReminder(appointmentData);
@@ -576,39 +587,60 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Bulk reminders processed`,
+      message: `Bulk reminders processed: ${successful} sent, ${failed} failed`,
       data: {
         total: upcomingAppointments.length,
         successful,
-        failed
+        failed,
+        results: results.map((r, i) => ({
+          consultationId: upcomingAppointments[i]._id,
+          status: r.status,
+          error: r.status === 'rejected' ? r.reason?.message : null
+        }))
       }
     });
   });
 
-  sendBulkHealthTips = asyncHandler(async (req, res) => {
-    const { recipients } = req.body;
+  sendBulkFeedbackRequests = asyncHandler(async (req, res) => {
+    // Find completed sessions without feedback from the last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-      throw new AppError('Recipients array is required', 400, 'MISSING_FIELDS');
+    const completedSessions = await Consultation.find({
+      status: 'completed',
+      feedbackSubmitted: false,
+      sessionEndTime: { $gte: sevenDaysAgo, $lte: new Date() }
+    }).populate('patientId', 'name email');
+
+    if (completedSessions.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No completed sessions pending feedback',
+        data: { count: 0, successful: 0, failed: 0 }
+      });
     }
 
-    const promises = recipients.map(recipient => 
-      NotificationService.sendHealthTips({
-        email: recipient.email,
-        name: recipient.name,
-        preferences: recipient.preferences || {}
-      })
-    );
+    const feedbackPromises = completedSessions.map(async (consultation) => {
+      const consultationData = {
+        patientEmail: consultation.patientId.email,
+        patientName: consultation.patientId.name,
+        therapyType: consultation.therapyType || consultation.sessionType || 'Panchakarma',
+        sessionId: consultation._id,
+        centerName: consultation.centerName || 'AyurSutra Wellness Center'
+      };
 
-    const results = await Promise.allSettled(promises);
+      return await NotificationService.sendFeedbackRequest(consultationData);
+    });
+
+    const results = await Promise.allSettled(feedbackPromises);
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
 
     return res.json({
       success: true,
-      message: 'Bulk health tips processed',
+      message: `Bulk feedback requests processed: ${successful} sent, ${failed} failed`,
       data: {
-        total: recipients.length,
+        total: completedSessions.length,
         successful,
         failed
       }
@@ -625,7 +657,10 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
       smsNotifications: false,
       appointmentConfirmation: true,
       appointmentReminder: true,
+      preTherapyInstructions: true,
+      postTherapyCare: true,
       feedbackRequest: true,
+      healthTips: false,
       promotionalEmails: false
     };
 
@@ -648,6 +683,41 @@ sendTherapistAssignment = asyncHandler(async (req, res) => {
       success: true,
       message: 'Notification preferences updated',
       data: user.notificationPreferences
+    });
+  });
+
+  // ============ NOTIFICATION STATS & HISTORY ============
+
+  getNotificationStats = asyncHandler(async (req, res) => {
+    // This would require a Notification model to track sent notifications
+    // For now, return mock data
+    return res.json({
+      success: true,
+      data: {
+        sent: 0,
+        delivered: 0,
+        failed: 0,
+        pending: 0
+      }
+    });
+  });
+
+  getNotificationHistory = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20 } = req.query;
+    
+    // This would require a Notification model
+    // For now, return empty array
+    return res.json({
+      success: true,
+      data: {
+        notifications: [],
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: 0,
+          totalRecords: 0
+        }
+      }
     });
   });
 }

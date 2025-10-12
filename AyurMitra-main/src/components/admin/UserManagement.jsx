@@ -1,4 +1,4 @@
-// src/components/admin/UserManagement.jsx
+// src/components/admin/UserManagement.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -86,10 +86,12 @@ const UserManagement = ({ dashboardStats, loading }) => {
     try {
       const result = await adminService.toggleUserStatus(userId);
       if (result.success) {
+        toast.success('User status updated');
         loadUsers();
       }
     } catch (error) {
       console.error('Error toggling status:', error);
+      toast.error('Failed to update status');
     }
   };
 
@@ -99,10 +101,12 @@ const UserManagement = ({ dashboardStats, loading }) => {
     try {
       const result = await adminService.deleteUser(userId);
       if (result.success) {
+        toast.success('User deleted successfully');
         loadUsers();
       }
     } catch (error) {
       console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
     }
   };
 
@@ -139,7 +143,6 @@ const UserManagement = ({ dashboardStats, loading }) => {
     setShowExportMenu(false);
     const filters = getExportFilters();
     
-    // Export based on current tab
     if (activeTab === 'patients') {
       await adminService.exportPatients(filters);
     } else if (activeTab === 'doctors') {
@@ -592,7 +595,7 @@ const UserRow = ({ user, onToggleStatus, onEdit, onDelete, getRoleBadge }) => (
   </motion.tr>
 );
 
-// User Modal Component (Create/Edit)
+// ✅ FIXED: User Modal Component (Create/Edit) - NO LOCATION FIELD
 const UserModal = ({ user, isCreating, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -605,26 +608,69 @@ const UserModal = ({ user, isCreating, onClose, onSuccess }) => {
       street: user?.address?.street || '',
       city: user?.address?.city || '',
       state: user?.address?.state || '',
-      pincode: user?.address?.pincode || ''
+      country: user?.address?.country || '',
+      zipCode: user?.address?.zipCode || ''
+    },
+    profile: {
+      gender: user?.profile?.gender || '',
+      dateOfBirth: user?.profile?.dateOfBirth || '',
+      constitution: user?.profile?.constitution || {
+        vata: 33,
+        pitta: 33,
+        kapha: 34
+      }
     }
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError(null);
 
     try {
+      // ✅ FIXED: Prepare data WITHOUT location field
+      const userData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        isActive: formData.isActive,
+        address: {
+          street: formData.address.street || '',
+          city: formData.address.city || '',
+          state: formData.address.state || '',
+          country: formData.address.country || '',
+          zipCode: formData.address.zipCode || ''
+        },
+        profile: {
+          gender: formData.profile.gender,
+          dateOfBirth: formData.profile.dateOfBirth,
+          constitution: formData.profile.constitution
+        }
+      };
+
+      // Only include password for new users
+      if (isCreating && formData.password) {
+        userData.password = formData.password;
+      }
+
+      // ✅ DON'T send location field at all
+      
       if (isCreating) {
-        await adminService.createUser(formData);
+        await adminService.createUser(userData);
         toast.success('User created successfully');
       } else {
-        await adminService.updateUser(user._id, formData);
+        await adminService.updateUser(user._id, userData);
         toast.success('User updated successfully');
       }
+      
       onSuccess();
     } catch (error) {
       console.error('Error saving user:', error);
+      setError(error.response?.data?.message || 'Failed to save user');
+      toast.error(error.response?.data?.message || 'Failed to save user');
     } finally {
       setSaving(false);
     }
@@ -645,7 +691,7 @@ const UserModal = ({ user, isCreating, onClose, onSuccess }) => {
         className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
           <h3 className="text-2xl font-bold text-slate-800">
             {isCreating ? 'Create New User' : 'Edit User'}
           </h3>
@@ -656,6 +702,12 @@ const UserModal = ({ user, isCreating, onClose, onSuccess }) => {
             <X className="w-6 h-6" />
           </button>
         </div>
+
+        {error && (
+          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -688,6 +740,7 @@ const UserModal = ({ user, isCreating, onClose, onSuccess }) => {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                placeholder="+91 1234567890"
                 className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -713,12 +766,40 @@ const UserModal = ({ user, isCreating, onClose, onSuccess }) => {
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
+                placeholder="Minimum 6 characters"
                 className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required={isCreating}
                 minLength={6}
               />
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">City</label>
+              <input
+                type="text"
+                value={formData.address.city}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  address: {...formData.address, city: e.target.value}
+                })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">State</label>
+              <input
+                type="text"
+                value={formData.address.state}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  address: {...formData.address, state: e.target.value}
+                })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
 
           <div>
             <label className="flex items-center space-x-2">
@@ -732,7 +813,7 @@ const UserModal = ({ user, isCreating, onClose, onSuccess }) => {
             </label>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}

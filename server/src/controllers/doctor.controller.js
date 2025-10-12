@@ -5,7 +5,7 @@ const TreatmentPlan = require('../models/TreatmentPlan'); // ✅ Add this line
 const logger = require('../config/logger');
 const User = require('../models/User'); // ← ADD THIS LINE
 const bcrypt = require('bcryptjs'); // ← You'll also need this for password hashing
-
+const mongoose = require('mongoose');
 class DoctorController {
 
   /**
@@ -673,51 +673,131 @@ async createTreatmentPlan(req, res, next) {
    * Update doctor verification status (Admin only)
    * PUT /api/doctors/:doctorId/verification
    */
-  async updateVerificationStatus(req, res, next) {
-    try {
-      const { doctorId } = req.params;
-      const { status, notes } = req.body;
+// In controllers/doctor.controller.js
 
-      if (!['pending', 'under_review', 'approved', 'rejected'].includes(status)) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'INVALID_STATUS',
-            message: 'Invalid verification status'
-          },
-          timestamp: new Date().toISOString()
-        });
-      }
+async updateVerificationStatus(req, res, next) {
+  try {
+    const { doctorId } = req.params;
+    const { status, notes } = req.body;
 
-      const updatedDoctor = await doctorService.updateVerificationStatus(
-        doctorId,
-        status,
-        notes
-      );
-
-      logger.info(`Doctor verification status updated`, { 
-        doctorId,
-        status,
-        adminId: req.user.id
-      });
-
-      res.json({
-        success: true,
-        message: `Doctor verification status updated to ${status}`,
-        data: {
-          doctor: {
-            id: updatedDoctor._id,
-            verificationStatus: updatedDoctor.verificationStatus
-          }
+    if (!['pending', 'under_review', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_STATUS',
+          message: 'Invalid verification status'
         },
         timestamp: new Date().toISOString()
       });
-
-    } catch (error) {
-      logger.error('Update verification status error:', error);
-      next(error);
     }
+
+    // ✅ Use direct MongoDB update - completely bypasses Mongoose validation
+    const updateData = {
+      verificationStatus: status,
+      'verification.status': status,
+      'verification.verifiedBy': req.user._id || req.user.id,
+      'verification.notes': notes,
+      isActive: status === 'approved'
+    };
+
+    if (status === 'approved') {
+      updateData['verification.verifiedAt'] = new Date();
+    }
+
+    if (status === 'rejected') {
+      updateData['verification.rejectionReason'] = notes;
+    }
+
+    // ✅ Direct MongoDB update - no Mongoose validation
+    const result = await mongoose.connection.db.collection('doctors').findOneAndUpdate(
+      { _id: new mongoose.Types.ObjectId(doctorId) },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    );
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'DOCTOR_NOT_FOUND',
+          message: 'Doctor not found'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const updatedDoctor = result;
+
+    // ✅ Send notifications
+    try {
+      if (status === 'approved') {
+        await NotificationService.sendEmail(
+          updatedDoctor.email,
+          'Account Verified - Welcome to AyurSutra',
+          'doctorVerificationApproved',
+          {
+            doctorName: updatedDoctor.name,
+            loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/doctor-login`
+          }
+        );
+
+        if (updatedDoctor.phone) {
+          await NotificationService.sendSMS(
+            updatedDoctor.phone,
+            `Congratulations Dr. ${updatedDoctor.name}! Your AyurSutra account has been verified.`
+          );
+        }
+
+      } else if (status === 'rejected') {
+        await NotificationService.sendEmail(
+          updatedDoctor.email,
+          'Account Verification Update',
+          'doctorVerificationRejected',
+          {
+            doctorName: updatedDoctor.name,
+            reason: notes || 'Please contact support',
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@ayursutra.com'
+          }
+        );
+
+        if (updatedDoctor.phone) {
+          await NotificationService.sendSMS(
+            updatedDoctor.phone,
+            `Your AyurSutra application requires additional information. Check your email.`
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Notification error:', notifError);
+    }
+
+    logger.info(`Doctor verification updated`, { 
+      doctorId,
+      status,
+      adminId: req.user.id
+    });
+
+    res.json({
+      success: true,
+      message: `Doctor verification status updated to ${status}`,
+      data: {
+        doctor: {
+          id: updatedDoctor._id,
+          name: updatedDoctor.name,
+          email: updatedDoctor.email,
+          verificationStatus: updatedDoctor.verificationStatus,
+          isActive: updatedDoctor.isActive
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logger.error('Update verification error:', error);
+    next(error);
   }
+}
+
 /**
  * Add new patient (Doctor only)
  * POST /api/doctors/patients/add

@@ -561,90 +561,158 @@ getUserStats = asyncHandler(async (req, res) => {
       data: { user }
     });
   });
-  
-  // Create new user
-  createUser = asyncHandler(async (req, res) => {
-    const {
-      name,
-      email,
-      password,
-      role = 'patient',
-      permissions = [],
-      isActive = true,
-      address,
-      profile
-    } = req.body;
-    
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      throw new AppError('User with this email already exists', 400, 'USER_EXISTS');
-    }
-    
-    // Create user
-    const userData = {
-      name,
-      email,
-      passwordHash: password, // Will be hashed by pre-save middleware
-      role,
-      permissions,
-      isActive,
-      address,
-      profile,
-      createdBy: req.user._id,
-      emailVerified: true // Admin-created users are auto-verified
-    };
-    
-    const user = await User.create(userData);
-    
-    // Remove sensitive data from response
-    const userResponse = user.toObject();
-    delete userResponse.passwordHash;
-    delete userResponse.refreshTokens;
-    
-    return res.status(201).json({
-      success: true,
-      message: 'User created successfully',
-      data: { user: userResponse }
+  // In controllers/admin.controller.js - REPLACE createUser function:
+// In controllers/admin.controller.js
+createUser = asyncHandler(async (req, res) => {
+  const {
+    name,
+    email,
+    phone,
+    password,
+    role,
+    permissions = [],
+    isActive = true,
+    address = {},
+    profile = {}
+  } = req.body;
+
+  // Validation
+  if (!name || !role) {
+    return res.status(400).json({
+      success: false,
+      message: 'Name and role are required'
     });
+  }
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password must be at least 6 characters'
+    });
+  }
+
+  // Check if email/phone already exists
+  if (email) {
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
+  }
+
+  if (phone) {
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) {
+      return res.status(409).json({
+        success: false,
+        message: 'Phone number already registered'
+      });
+    }
+  }
+
+  // ✅ FIXED: Prepare userData without location
+  const userData = {
+    name,
+    email,
+    phone,
+    passwordHash: password, // Will be hashed by pre-save middleware
+    role,
+    permissions,
+    isActive,
+    address: {
+      street: address.street || '',
+      city: address.city || '',
+      state: address.state || '',
+      country: address.country || '',
+      zipCode: address.zipCode || ''
+    },
+    profile: {
+      dateOfBirth: profile.dateOfBirth,
+      constitution: profile.constitution || {
+        vata: 33,
+        pitta: 33,
+        kapha: 34
+      }
+    },
+    createdBy: req.user._id,
+    emailVerified: true, // Admin-created users are auto-verified
+    phoneVerified: !!phone // Verify phone if provided
+  };
+
+  // ✅ Don't include location field at all for admin-created users
+  // Location will be added later when patient updates their profile
+
+  const user = await User.create(userData);
+
+  // Remove sensitive data from response
+  const userResponse = user.toObject();
+  delete userResponse.passwordHash;
+  delete userResponse.refreshTokens;
+
+  return res.status(201).json({
+    success: true,
+    message: 'User created successfully',
+    data: { user: userResponse }
   });
-  
+});
+
   // Update user
-  updateUser = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
-    const updateData = { ...req.body };
+// In controllers/admin.controller.js - REPLACE updateUser function:
+
+updateUser= asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const updateData = { ...req.body };
+  
+  // Remove fields that shouldn't be updated directly
+  delete updateData.passwordHash;
+  delete updateData.refreshTokens;
+  delete updateData.createdAt;
+  delete updateData.createdBy;
+  
+  // ✅ FIXED: Clean profile data to avoid empty gender enum error
+  if (updateData.profile) {
+    const cleanProfile = { ...updateData.profile };
     
-    // Remove fields that shouldn't be updated directly
-    delete updateData.passwordHash;
-    delete updateData.refreshTokens;
-    delete updateData.createdAt;
-    delete updateData.createdBy;
-    
-    // Add audit info
-    updateData.updatedBy = req.user._id;
-    
-    // Hash password if provided
-    if (updateData.password) {
-      updateData.passwordHash = updateData.password; // Will be hashed by pre-save middleware
-      delete updateData.password;
+    // Remove gender if it's empty string
+    if (cleanProfile.gender === '' || cleanProfile.gender === null) {
+      delete cleanProfile.gender;
     }
     
-    const user = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-passwordHash -refreshTokens');
-    
-    if (!user) {
-      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    // Remove dateOfBirth if it's empty
+    if (cleanProfile.dateOfBirth === '' || cleanProfile.dateOfBirth === null) {
+      delete cleanProfile.dateOfBirth;
     }
     
-    return res.json({
-      success: true,
-      message: 'User updated successfully',
-      data: { user }
-    });
+    updateData.profile = cleanProfile;
+  }
+  
+  // Add audit info
+  updateData.updatedBy = req.user._id;
+  
+  // Hash password if provided
+  if (updateData.password) {
+    updateData.passwordHash = updateData.password; // Will be hashed by pre-save middleware
+    delete updateData.password;
+  }
+  
+  const user = await User.findByIdAndUpdate(
+    userId,
+    updateData,
+    { new: true, runValidators: true }
+  ).select('-passwordHash -refreshTokens');
+  
+  if (!user) {
+    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+  }
+  
+  return res.json({
+    success: true,
+    message: 'User updated successfully',
+    data: { user }
   });
+});
   
   // Toggle user active status
   toggleUserStatus = asyncHandler(async (req, res) => {

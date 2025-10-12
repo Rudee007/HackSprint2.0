@@ -1,3 +1,4 @@
+// models/User.js - COMPLETE FIXED VERSION
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -97,25 +98,29 @@ const userSchema = new mongoose.Schema({
   // Session management
   refreshTokens: [String], // Store active refresh tokens
   
-  // Location for AyurSutra
+  // ✅ FIXED: Location for AyurSutra with conditional validation
   location: {
     type: {
       type: String,
       enum: ['Point'],
-      default: 'Point'
+      default: undefined // ✅ Don't set default 'Point' without coordinates
     },
     coordinates: {
       type: [Number], // [longitude, latitude]
+      default: undefined, // ✅ Allow undefined
       validate: {
         validator: function(coordinates) {
-          return !coordinates || (coordinates.length === 2 &&
+          // ✅ Allow empty/null OR valid coordinates
+          if (!coordinates || coordinates.length === 0) return true;
+          return coordinates.length === 2 &&
                  coordinates[0] >= -180 && coordinates[0] <= 180 &&
-                 coordinates[1] >= -90 && coordinates[1] <= 90);
+                 coordinates[1] >= -90 && coordinates[1] <= 90;
         },
-        message: 'Invalid coordinates format'
+        message: 'Invalid coordinates format. Must be [longitude, latitude]'
       }
     }
   },
+  
   address: {
     street: String,
     city: String,
@@ -138,7 +143,6 @@ const userSchema = new mongoose.Schema({
     },
     medicalHistory: [String],
     allergies: [String],
-
     symptoms: {
       type: [String],
     },
@@ -155,7 +159,6 @@ const userSchema = new mongoose.Schema({
     exerciseRoutine: String,
     menstrualHistory: String, // only relevant if gender = female
     currentMedications: [String]
-  
   },
   
   isActive: {
@@ -183,6 +186,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// ✅ Geospatial index for location-based queries
 userSchema.index({ location: '2dsphere' });
 
 // Virtual for account lock status
@@ -226,7 +230,20 @@ userSchema.methods.setAuditInfo = function(userId) {
   this.updatedAt = new Date();
 };
 
-// Pre-save middleware to hash password
+// ✅ PRE-SAVE MIDDLEWARE TO CLEAN INVALID LOCATION DATA
+userSchema.pre('save', function(next) {
+  // If location is set but coordinates are invalid/empty, remove location entirely
+  if (this.location) {
+    if (!this.location.coordinates || 
+        this.location.coordinates.length !== 2 ||
+        this.location.coordinates.every(coord => coord === null || coord === undefined || isNaN(coord))) {
+      this.location = undefined;
+    }
+  }
+  next();
+});
+
+// ✅ PRE-SAVE MIDDLEWARE TO HASH PASSWORD
 userSchema.pre('save', async function(next) {
   if (!this.isModified('passwordHash')) return next();
   

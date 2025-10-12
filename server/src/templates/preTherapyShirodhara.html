@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pre-Therapy Instructions - Shirodhara</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+        .instruction-box { background: #f0f9ff; border-left: 4px solid #4facfe; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        ul { padding-left: 20px; }
+        ul li { margin: 8px 0; }
+        .icon { font-size: 20px; margin-right: 8px; }
+        .footer { text-align: center; padding: 20px; color: #666; background: #f9f9f9; border-radius: 0 0 8px 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 Pre-Therapy Instructions</h1>
+            <h2>Shirodhara (Third Eye Oil Therapy)</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{patientName}},</p>
+            
+            <p>Your <strong>Shirodhara therapy</strong> is scheduled for <strong>{{appointmentDate}}</strong> at <strong>{{appointmentTime}}</strong>.</p>
+            
+            <p>Shirodhara is a deeply relaxing therapy where warm oil is gently poured on the forehead. Please follow these important instructions:</p>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">💆</span> Hair & Scalp Preparation</h3>
+                <ul>
+                    <li><strong>DO NOT wash your hair</strong> on the day of treatment</li>
+                    <li>Hair should be clean but dry (wash the night before if needed)</li>
+                    <li>Avoid using hair products (gel, spray, serum)</li>
+                    <li>Tie long hair back loosely</li>
+                    <li>Remove all hair accessories, pins, clips</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">👕</span> What to Wear/Bring</h3>
+                <ul>
+                    <li><strong>Wear OLD clothes</strong> - oil will stain!</li>
+                    <li>Preferably dark-colored, loose clothing</li>
+                    <li>Bring 2-3 towels (one for hair, one for body)</li>
+                    <li>Bring a shower cap or headband</li>
+                    <li>Bring extra underwear and clothes to change into</li>
+                    <li>Remove all jewelry, especially earrings</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">🍽️</span> Dietary Guidelines</h3>
+                <ul>
+                    <li><strong>24 hours before:</strong> No alcohol or caffeine</li>
+                    <li><strong>2 hours before:</strong> Only light, easy-to-digest food</li>
+                    <li>Drink plenty of warm water throughout the day</li>
+                    <li>Avoid cold drinks, ice cream, heavy meals</li>
+                    <li>Empty bladder before session</li>
+                </ul>
+            </div>
+            
+            <div class="warning-box">
+                <h3><span class="icon">⚠️</span> Important Medical Information</h3>
+                <ul>
+                    <li>Inform us about any <strong>head injuries or surgeries</strong></li>
+                    <li>Report any <strong>scalp conditions</strong> (psoriasis, eczema, infections)</li>
+                    <li>Mention if you have <strong>migraines or severe headaches</strong></li>
+                    <li>Let us know about <strong>sinus problems or allergies</strong></li>
+                    <li>Inform if you're <strong>pregnant</strong> or have <strong>high blood pressure</strong></li>
+                    <li>Report any <strong>eye conditions</strong> or recent eye surgery</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">🧘</span> Mental Preparation</h3>
+                <ul>
+                    <li>Shirodhara is a deeply meditative therapy</li>
+                    <li>Plan to have a quiet, stress-free day</li>
+                    <li>Avoid rushing to the appointment</li>
+                    <li>Turn off your phone during treatment</li>
+                    <li>Come with an open, receptive mindset</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3><span class="icon">⏰</span> Session Details</h3>
+                <ul>
+                    <li><strong>Arrive 20 minutes early</strong> for preparation</li>
+                    <li>Session duration: Approximately 60-90 minutes</li>
+                    <li>Oil will be kept on scalp for 30 minutes post-therapy</li>
+                    <li>Plan to rest for 1-2 hours after treatment</li>
+                    <li>Keep your schedule completely free for the rest of the day</li>
+                </ul>
+            </div>
+            
+            <div class="warning-box">
+                <h3><span class="icon">🚫</span> AVOID Before Treatment</h3>
+                <ul>
+                    <li>Avoid washing hair on therapy day</li>
+                    <li>No strenuous exercise or gym</li>
+                    <li>No loud music or overstimulation</li>
+                    <li>Avoid anger, stress, or emotional upset</li>
+                    <li>No smoking or alcohol 24 hours prior</li>
+                </ul>
+            </div>
+            
+            <p style="margin-top: 30px; padding: 15px; background: #e8f5e9; border-radius: 4px; text-align: center;">
+                <strong>Need to reschedule?</strong><br>
+                Please contact us at least 24 hours in advance: {{clinicPhone}}<br>
+                Email: {{clinicEmail}}
+            </p>
+            
+            <p style="margin-top: 20px;">Shirodhara is a profound healing experience. We look forward to guiding you through this ancient therapy!</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>{{clinicName}}</strong></p>
+            <p>🌿 Ancient Wisdom, Modern Care 🌿</p>
+            <p style="font-size: 12px; color: #999;">
+                This is an automated pre-therapy instruction. For questions, please contact us.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

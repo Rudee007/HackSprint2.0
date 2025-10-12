@@ -21,6 +21,32 @@ const ProviderVerification = React.lazy(() => import('../components/admin/Provid
 const RealTimeMonitor = React.lazy(() => import('../components/admin/RealTimeMonitor'));
 const NotificationCenter = React.lazy(() => import('../components/admin/NotificationCenter'));
 
+// 🎨 ============ DEMO MODE CONFIG ============
+// ✅ Set this to TRUE to enable styling without backend
+const DEMO_MODE = true; // ← Your friend can change this to false later
+
+// ✅ Demo/Mock data for styling purposes
+const DEMO_ADMIN_INFO = {
+  name: 'Demo Admin',
+  email: 'demo@ayursutra.com',
+  role: 'super_admin',
+  _id: 'demo-admin-id'
+};
+
+const DEMO_DASHBOARD_STATS = {
+  overview: {
+    totalUsers: 1234,
+    activeUsers: 856,
+    newUsersThisWeek: 45,
+    totalAppointments: 3456,
+    todaysAppointments: 28,
+    thisWeeksAppointments: 145,
+    pendingVerifications: 12,
+    activeSessions: 8
+  }
+};
+// ============================================
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,9 +71,19 @@ const AdminDashboard = () => {
 
   const DEV_MODE = import.meta.env.MODE === 'development';
 
-  // ✅ Auth Check
+  // ✅ Auth Check with DEMO MODE support
   useEffect(() => {
     const checkAuth = () => {
+      // 🎨 DEMO MODE: Skip authentication completely
+      if (DEMO_MODE) {
+        console.log('🎨 DEMO MODE ACTIVE - Using mock data for styling');
+        setAdminInfo(DEMO_ADMIN_INFO);
+        setDashboardStats(DEMO_DASHBOARD_STATS);
+        setLoading(false);
+        return;
+      }
+
+      // Normal authentication flow
       const token = localStorage.getItem('adminToken');
       
       console.log('🔐 Auth Check:', { 
@@ -87,8 +123,14 @@ const AdminDashboard = () => {
     checkAuth();
   }, [navigate, DEV_MODE]);
 
-  // ✅ Load Dashboard Data from Backend ONLY
+  // ✅ Load Dashboard Data from Backend (skip in DEMO MODE)
   useEffect(() => {
+    // 🎨 Skip backend calls in DEMO MODE
+    if (DEMO_MODE) {
+      console.log('🎨 DEMO MODE: Skipping backend API calls');
+      return;
+    }
+
     const loadDashboardData = async () => {
       if (!adminInfo) {
         console.log('⏳ Waiting for admin info...');
@@ -106,12 +148,10 @@ const AdminDashboard = () => {
           setDashboardStats(statsResult.data);
         } else {
           console.warn('⚠️ Backend returned no data');
-          // ✅ Set to null so UI shows "No data available"
           setDashboardStats(null);
         }
       } catch (error) {
         console.error('❌ Error loading dashboard data:', error);
-        // ✅ Set to null instead of dummy data
         setDashboardStats(null);
       } finally {
         setLoading(false);
@@ -200,13 +240,25 @@ const AdminDashboard = () => {
 
   const handleLogout = () => {
     console.log('👋 Logging out...');
+    
+    // 🎨 In DEMO MODE, just reload page
+    if (DEMO_MODE) {
+      window.location.reload();
+      return;
+    }
+
+    // Normal logout
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminData');
     navigate('/admin-login');
   };
 
   const renderSection = () => {
-    const sectionProps = { dashboardStats, adminInfo, loading };
+    const sectionProps = { 
+      dashboardStats, 
+      adminInfo, 
+      loading: DEMO_MODE ? false : loading // ✅ No loading in demo mode
+    };
     const components = {
       overview: <DashboardOverview {...sectionProps} />,
       users: <UserManagement {...sectionProps} />,
@@ -224,8 +276,8 @@ const AdminDashboard = () => {
     );
   };
 
-  // Show loading while checking auth
-  if (!adminInfo) {
+  // Show loading while checking auth (skip in DEMO MODE)
+  if (!DEMO_MODE && !adminInfo) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
         <LoadingSpinner />
@@ -237,8 +289,15 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 flex">
       <Toaster position="top-right" />
       
+      {/* 🎨 DEMO MODE Banner */}
+      {DEMO_MODE && (
+        <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 text-center text-sm font-semibold z-50 shadow-lg">
+          🎨 DEMO MODE ACTIVE - For Styling Only (No Backend Required)
+        </div>
+      )}
+      
       {/* Desktop Sidebar */}
-      <aside className={`bg-white/95 backdrop-blur-sm border-r border-slate-200/50 shadow-2xl transition-all duration-300 ${
+      <aside className={`${DEMO_MODE ? 'mt-10' : ''} bg-white/95 backdrop-blur-sm border-r border-slate-200/50 shadow-2xl transition-all duration-300 ${
         sidebarOpen ? 'w-80' : 'w-20'
       } hidden lg:block sticky top-0 h-screen overflow-y-auto`}>
         <div className="p-6">
@@ -270,7 +329,7 @@ const AdminDashboard = () => {
                 <span className="text-sm font-semibold text-slate-700">System Status</span>
                 <div className="flex items-center space-x-2 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Online</span>
+                  <span>{DEMO_MODE ? 'Demo' : 'Online'}</span>
                 </div>
               </div>
               <div className="text-xs text-slate-600 space-y-1">
@@ -346,7 +405,7 @@ const AdminDashboard = () => {
                 className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors text-sm font-medium"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
+                <span>{DEMO_MODE ? 'Reload' : 'Sign Out'}</span>
               </button>
             </div>
           )}
@@ -355,7 +414,7 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="flex-1 min-w-0">
-        <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 px-8 py-4 sticky top-0 z-30">
+        <header className={`${DEMO_MODE ? 'mt-10' : ''} bg-white/80 backdrop-blur-sm border-b border-slate-200/50 px-8 py-4 sticky top-0 z-30`}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
@@ -368,7 +427,7 @@ const AdminDashboard = () => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 px-3 py-2 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Online</span>
+                <span>{DEMO_MODE ? 'Demo Mode' : 'Online'}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="text-right hidden sm:block">

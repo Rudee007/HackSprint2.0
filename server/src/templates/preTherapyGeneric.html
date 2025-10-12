@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Post-Therapy Care</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+        .care-box { background: #f0f9ff; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .footer { text-align: center; padding: 20px; color: #666; background: #f9f9f9; border-radius: 0 0 8px 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 Post-Therapy Care</h1>
+            <h2>{{therapyType}} Completed</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{patientName}},</p>
+            
+            <p>Thank you for completing your <strong>{{therapyType}}</strong> session. Please follow these post-care instructions:</p>
+            
+            <div class="care-box">
+                <h3>✅ General Post-Care</h3>
+                <ul>
+                    <li>Rest for at least 1 hour after therapy</li>
+                    <li>Drink plenty of warm water</li>
+                    <li>Eat light, warm meals</li>
+                    <li>Avoid cold exposure for 24 hours</li>
+                    <li>Get adequate sleep tonight (7-8 hours)</li>
+                    <li>Avoid strenuous activities today</li>
+                </ul>
+            </div>
+            
+            <div class="care-box">
+                <h3>🍽️ Dietary Guidelines</h3>
+                <ul>
+                    <li><strong>Eat:</strong> Warm soups, cooked vegetables, rice, khichdi</li>
+                    <li><strong>Drink:</strong> Warm water, herbal teas</li>
+                    <li><strong>Avoid:</strong> Cold drinks, ice cream, raw foods, heavy meals</li>
+                </ul>
+            </div>
+            
+            <div class="care-box" style="background: #fff3e0; border-color: #ff9800;">
+                <h3>⚠️ Contact Us If:</h3>
+                <ul>
+                    <li>You experience unusual discomfort</li>
+                    <li>You have any adverse reactions</li>
+                    <li>You have questions about recovery</li>
+                </ul>
+                <p><strong>Contact:</strong> {{clinicPhone}}</p>
+            </div>
+            
+            <div style="background: #e8f5e9; padding: 15px; border-radius: 4px; text-align: center; margin: 20px 0;">
+                <p><strong>Next Session:</strong> {{nextSessionDate}}</p>
+            </div>
+            
+            <p>We hope you feel rejuvenated! Thank you for choosing {{clinicName}}.</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>{{clinicName}}</strong></p>
+            <p>🌿 Healing Naturally 🌿</p>
+        </div>
+    </div>
+</body>
+</html>

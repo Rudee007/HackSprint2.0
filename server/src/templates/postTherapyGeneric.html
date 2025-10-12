@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pre-Therapy Instructions</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+        .instruction-box { background: #f0f9ff; border-left: 4px solid #43e97b; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .footer { text-align: center; padding: 20px; color: #666; background: #f9f9f9; border-radius: 0 0 8px 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 Pre-Therapy Instructions</h1>
+            <h2>{{therapyType}} Therapy</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{patientName}},</p>
+            
+            <p>Your <strong>{{therapyType}}</strong> therapy session is scheduled for <strong>{{appointmentDate}}</strong> at <strong>{{appointmentTime}}</strong>.</p>
+            
+            <p>Please follow these general pre-therapy guidelines:</p>
+            
+            <div class="instruction-box">
+                <h3>📋 General Preparation</h3>
+                <ul>
+                    <li>Arrive <strong>15 minutes early</strong> for check-in</li>
+                    <li>Wear comfortable, loose-fitting clothes</li>
+                    <li>Avoid heavy meals 2 hours before therapy</li>
+                    <li>Stay well hydrated with warm water</li>
+                    <li>Bring any medical reports or prescriptions</li>
+                    <li>Inform us about allergies or sensitivities</li>
+                </ul>
+            </div>
+            
+            <div class="instruction-box">
+                <h3>🚫 Please Avoid</h3>
+                <ul>
+                    <li>Alcohol consumption 24 hours before</li>
+                    <li>Heavy exercise immediately before session</li>
+                    <li>Coming on an empty stomach</li>
+                    <li>Being stressed or rushed</li>
+                </ul>
+            </div>
+            
+            <p style="margin-top: 30px; padding: 15px; background: #e8f5e9; border-radius: 4px; text-align: center;">
+                <strong>Questions?</strong><br>
+                Contact us: {{clinicPhone}} | {{clinicEmail}}
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>{{clinicName}}</strong></p>
+            <p>🌿 Your Wellness Journey Begins Here 🌿</p>
+        </div>
+    </div>
+</body>
+</html>

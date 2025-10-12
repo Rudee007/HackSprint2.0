@@ -1,0 +1,135 @@
+<!-- postTherapyAbhyanga.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Post-Therapy Care - Abhyanga</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+        .care-box { background: #f0f9ff; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .do-dont-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .do-dont-table td { padding: 12px; border: 1px solid #e0e0e0; vertical-align: top; }
+        .do-column { background: #e8f5e9; }
+        .dont-column { background: #ffebee; }
+        .timeline { background: #fff9c4; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; background: #f9f9f9; border-radius: 0 0 8px 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 Post-Therapy Care Instructions</h1>
+            <h2>Abhyanga Therapy Completed</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{patientName}},</p>
+            
+            <p>Congratulations on completing your <strong>Abhyanga therapy session</strong>! To maximize the benefits and ensure proper recovery, please follow these post-therapy care instructions carefully.</p>
+            
+            <div class="timeline">
+                <h3>⏰ Timeline of Care (Next 24 Hours)</h3>
+                <ul>
+                    <li><strong>Next 2-3 hours:</strong> Keep your body warm, rest, avoid cold exposure</li>
+                    <li><strong>Next 6 hours:</strong> No cold water bath or shower</li>
+                    <li><strong>Next 12 hours:</strong> Follow dietary restrictions strictly</li>
+                    <li><strong>Next 24 hours:</strong> Avoid strenuous activities</li>
+                </ul>
+            </div>
+            
+            <div class="care-box">
+                <h3>🛁 Bathing Guidelines</h3>
+                <ul>
+                    <li><strong>Wait 6 hours</strong> before taking a bath</li>
+                    <li>Use only <strong>warm water</strong> (not hot or cold)</li>
+                    <li>Gently wash off excess oil with mild soap</li>
+                    <li>Don't scrub your skin vigorously</li>
+                    <li>Pat dry gently with a soft towel</li>
+                    <li>Avoid public swimming pools for 24 hours</li>
+                </ul>
+            </div>
+            
+            <div class="care-box">
+                <h3>🍽️ Dietary Recommendations</h3>
+                <ul>
+                    <li>Eat light, warm, easily digestible meals</li>
+                    <li>Drink plenty of warm water throughout the day</li>
+                    <li><strong>Recommended:</strong> Khichdi, soups, cooked vegetables, herbal teas</li>
+                    <li><strong>Avoid:</strong> Cold drinks, ice cream, heavy/fried foods, raw vegetables</li>
+                    <li>No alcohol for 24 hours</li>
+                    <li>Eat at regular intervals - don't skip meals</li>
+                </ul>
+            </div>
+            
+            <table class="do-dont-table">
+                <tr>
+                    <td class="do-column" width="50%">
+                        <h3 style="color: #2e7d32; margin-top: 0;">✅ DO</h3>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li>Rest for at least 1 hour</li>
+                            <li>Keep yourself warm</li>
+                            <li>Drink warm water frequently</li>
+                            <li>Wear comfortable clothes</li>
+                            <li>Sleep early tonight</li>
+                            <li>Practice gentle breathing</li>
+                            <li>Stay in a calm environment</li>
+                        </ul>
+                    </td>
+                    <td class="dont-column" width="50%">
+                        <h3 style="color: #c62828; margin-top: 0;">❌ DON'T</h3>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li>Exposure to cold air/AC directly</li>
+                            <li>Strenuous exercise or gym</li>
+                            <li>Long travel immediately</li>
+                            <li>Stress or anger</li>
+                            <li>Screen time (TV/phone) excessively</li>
+                            <li>Sexual activity for 24 hours</li>
+                            <li>Smoking or alcohol</li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+            
+            <div class="care-box">
+                <h3>🌙 Sleep Recommendations</h3>
+                <ul>
+                    <li>Go to bed early tonight (by 10 PM)</li>
+                    <li>Ensure 7-8 hours of quality sleep</li>
+                    <li>Sleep in a warm, comfortable room</li>
+                    <li>Avoid heavy blankets immediately</li>
+                </ul>
+            </div>
+            
+            <div class="care-box" style="background: #fff3e0; border-color: #ff9800;">
+                <h3>⚠️ When to Contact Us</h3>
+                <p>Please contact us immediately if you experience:</p>
+                <ul>
+                    <li>Severe itching or skin rash</li>
+                    <li>Unusual body pain or discomfort</li>
+                    <li>Dizziness or nausea</li>
+                    <li>Excessive sweating or fever</li>
+                    <li>Any allergic reaction</li>
+                </ul>
+                <p style="margin-bottom: 0;"><strong>Emergency Contact:</strong> {{clinicPhone}}</p>
+            </div>
+            
+            <div style="background: #e8f5e9; padding: 15px; border-radius: 4px; margin: 20px 0; text-align: center;">
+                <h3 style="margin-top: 0; color: #2e7d32;">📅 Next Steps</h3>
+                <p>Your next session (if applicable): {{nextSessionDate}}</p>
+                <p>We'll send you a feedback request in 24 hours to track your progress.</p>
+            </div>
+            
+            <p style="margin-top: 30px;">Thank you for choosing {{clinicName}}. We hope you feel rejuvenated and energized!</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>{{clinicName}}</strong></p>
+            <p>🌿 Healing Through Nature 🌿</p>
+            <p>Questions? Email us: {{clinicEmail}} | Call: {{clinicPhone}}</p>
+        </div>
+    </div>
+</body>
+</html>

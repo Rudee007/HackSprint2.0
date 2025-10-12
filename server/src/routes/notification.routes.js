@@ -4,10 +4,29 @@ const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/admin.middleware');
 const notificationController = require('../controllers/notification.controller');
 
-// Apply authentication to all routes
+// ============ PUBLIC/AUTH ENDPOINTS (No authentication required) ============
+
+// Send email verification (called during signup)
+router.post('/send-verification-email', 
+  notificationController.sendVerificationEmail
+);
+
+// Send phone OTP (SMS)
+router.post('/send-otp', 
+  notificationController.sendPhoneOTP
+);
+
+// Send welcome email
+router.post('/send-welcome-email', 
+  notificationController.sendWelcomeEmail
+);
+
+// ============ AUTHENTICATED ENDPOINTS ============
+
+// Apply authentication to all routes below
 router.use(authenticate);
 
-// ============ TEST ENDPOINTS ============
+// ============ TEST ENDPOINTS (Admin Only) ============
 
 // Send test email
 router.post('/test-email', 
@@ -27,24 +46,7 @@ router.get('/test-connection',
   notificationController.testAllConnections
 );
 
-// ============ AUTH NOTIFICATIONS ============
-
-// Send email verification
-router.post('/send-verification-email', 
-  notificationController.sendVerificationEmail
-);
-
-// Send phone OTP (SMS)
-router.post('/send-otp', 
-  notificationController.sendPhoneOTP
-);
-
-// Send welcome email
-router.post('/send-welcome-email', 
-  notificationController.sendWelcomeEmail
-);
-
-// ============ APPOINTMENT NOTIFICATIONS ============
+// ============ APPOINTMENT NOTIFICATIONS (Patient/Provider) ============
 
 // Send appointment confirmation
 router.post('/appointment/:consultationId/confirmation', 
@@ -66,43 +68,16 @@ router.post('/appointment/:consultationId/feedback-request',
   notificationController.sendFeedbackRequest
 );
 
-// ============ THERAPY NOTIFICATIONS ============
+// ============ PRE & POST THERAPY INSTRUCTIONS ============
 
 // Send pre-therapy instructions
-router.post('/therapy/pre-instructions', 
+router.post('/appointment/:consultationId/pre-instructions', 
   notificationController.sendPreTherapyInstructions
 );
 
 // Send post-therapy care
-router.post('/therapy/post-care', 
+router.post('/appointment/:consultationId/post-care', 
   notificationController.sendPostTherapyCare
-);
-
-// ============ ENGAGEMENT NOTIFICATIONS ============
-
-// Send health tips
-router.post('/provider/my-feedback/send-health-tips', 
-  notificationController.sendHealthTips
-);
-
-// Send critical feedback alert
-router.post('/critical-feedback-alert', 
-  requireAdmin,
-  notificationController.sendCriticalFeedbackAlert
-);
-
-// ============ BULK OPERATIONS ============
-
-// Send bulk appointment reminders
-router.post('/bulk/reminders', 
-  requireAdmin, 
-  notificationController.sendBulkReminders
-);
-
-// Send bulk health tips
-router.post('/bulk/health-tips', 
-  requireAdmin, 
-  notificationController.sendBulkHealthTips
 );
 
 // ============ USER PREFERENCES ============
@@ -116,54 +91,37 @@ router.get('/preferences',
 router.put('/preferences', 
   notificationController.updateNotificationPreferences
 );
-// ============ ADMIN NOTIFICATION ENDPOINTS ============
 
-// Send new patient alert
+// ============ ADMIN NOTIFICATIONS ============
+
+// Send new patient alert to admin
 router.post('/admin/new-patient-alert', 
   requireAdmin,
   notificationController.sendNewPatientAlert
 );
 
-// Send new appointment alert
+// Send new appointment alert to admin
 router.post('/admin/appointment/:consultationId/alert', 
   requireAdmin,
   notificationController.sendNewAppointmentAlert
 );
 
-// Send session status alert
-router.post('/admin/session/:consultationId/status-alert', 
+// ✅ FIXED: Send critical feedback alert (with feedbackId)
+router.post('/admin/critical-feedback/:feedbackId', 
   requireAdmin,
-  notificationController.sendSessionStatusAlert
+  notificationController.sendCriticalFeedbackAlert
 );
 
-// Send daily summary report
+// ✅ FIXED: Send critical feedback alert (without feedbackId - uses body)
+router.post('/admin/critical-feedback', 
+  requireAdmin,
+  notificationController.sendCriticalFeedbackAlert
+);
+
+// Send daily summary report to admin
 router.post('/admin/daily-summary', 
   requireAdmin,
   notificationController.sendDailySummary
-);
-
-// Send payment notification
-router.post('/admin/payment-notification', 
-  requireAdmin,
-  notificationController.sendPaymentNotification
-);
-
-// Send cancellation alert
-router.post('/admin/appointment/:consultationId/cancellation-alert', 
-  requireAdmin,
-  notificationController.sendCancellationAlert
-);
-
-// Send weekly report
-router.post('/admin/weekly-report', 
-  requireAdmin,
-  notificationController.sendWeeklyReport
-);
-
-// Send system alert
-router.post('/admin/system-alert', 
-  requireAdmin,
-  notificationController.sendSystemAlert
 );
 
 // Send therapist assignment notification
@@ -172,5 +130,32 @@ router.post('/admin/appointment/:consultationId/assign-therapist',
   notificationController.sendTherapistAssignment
 );
 
+// ============ BULK OPERATIONS (Admin Only) ============
+
+// Send bulk appointment reminders (for tomorrow)
+router.post('/admin/bulk/reminders', 
+  requireAdmin, 
+  notificationController.sendBulkReminders
+);
+
+// Send bulk feedback requests
+router.post('/admin/bulk/feedback-requests', 
+  requireAdmin, 
+  notificationController.sendBulkFeedbackRequests
+);
+
+// ============ NOTIFICATION STATS & HISTORY (Admin Only) ============
+
+// Get notification statistics
+router.get('/admin/stats', 
+  requireAdmin, 
+  notificationController.getNotificationStats
+);
+
+// Get notification history
+router.get('/admin/history', 
+  requireAdmin, 
+  notificationController.getNotificationHistory
+);
 
 module.exports = router;
