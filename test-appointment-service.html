@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Appointment Service</title>
+</head>
+
+<body>
+    <h2>Test Appointment Service</h2>
+    <div>
+        <label>Symptoms:</label>
+        <input type="text" id="symptoms" value="headache, migraine" style="width: 300px;">
+        <button onclick="testService()">Test Service</button>
+    </div>
+    <div id="results" style="margin-top: 20px;"></div>
+
+    <script type="module">
+        import { appointmentService } from './src/services/appointmentService.js';
+
+        window.testService = async function () {
+            const symptoms = document.getElementById('symptoms').value;
+            const resultsDiv = document.getElementById('results');
+
+            resultsDiv.innerHTML = 'Loading...';
+
+            try {
+                const result = await appointmentService.bookAppointment({
+                    symptoms: symptoms,
+                    patientDetails: { address: 'Mumbai, Maharashtra' }
+                });
+
+                resultsDiv.innerHTML = `
+                    <h3>Recommended Doctors (${result.recommendedDoctors.length}):</h3>
+                    ${result.recommendedDoctors.map(doctor => `
+                        <div style="border: 1px solid #ccc; margin: 10px; padding: 10px;">
+                            <h4>${doctor.name}</h4>
+                            <p><strong>Specialization:</strong> ${doctor.specialization}</p>
+                            <p><strong>Symptoms:</strong> ${doctor.symptoms_alerted.join(', ')}</p>
+                            <p><strong>Description:</strong> ${doctor.description}</p>
+                            <p><strong>Rating:</strong> ${doctor.rating.toFixed(1)}/5</p>
+                            <p><strong>Address:</strong> ${doctor.address}</p>
+                            <p><strong>Score:</strong> ${doctor.finalScore}% | Distance: ${doctor.distance}km</p>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Test error:', error);
+            }
+        };
+    </script>
+</body>
+
+</html>

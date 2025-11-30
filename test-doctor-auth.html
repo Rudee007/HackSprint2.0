@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Vaidya Authentication</title>
+</head>
+
+<body>
+    <h1>Test Vaidya Authentication</h1>
+    <div>
+        <h3>Sample Vaidya Credentials from CSV:</h3>
+        <p>Username: vaidya.gopal.menon</p>
+        <p>Password: NGxX5KTt</p>
+        <button onclick="testAuth()">Test Authentication</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testAuth() {
+            try {
+                const response = await fetch('/panchakarma_doctor2.csv');
+                const csvText = await response.text();
+                console.log('CSV loaded successfully');
+                console.log('First few lines:', csvText.split('\n').slice(0, 5));
+
+                const lines = csvText.split('\n');
+                let found = false;
+
+                // Test with the first vaidya's credentials
+                const username = 'vaidya.gopal.menon';
+                const password = 'NGxX5KTt';
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    const values = line.split(',');
+                    const vaidyaUsername = values[4]?.replace(/"/g, '').trim();
+                    const vaidyaPassword = values[5]?.replace(/"/g, '').trim();
+
+                    console.log(`Row ${i}: Username="${vaidyaUsername}", Password="${vaidyaPassword}"`);
+
+                    if (vaidyaUsername === username && vaidyaPassword === password) {
+                        found = true;
+                        document.getElementById('result').innerHTML = `
+                            <p style="color: green;">✓ Authentication successful!</p>
+                            <p>Vaidya: ${values[2]?.replace(/"/g, '').trim()}</p>
+                            <p>Specialization: ${values[3]?.replace(/"/g, '').trim()}</p>
+                        `;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    document.getElementById('result').innerHTML = `
+                        <p style="color: red;">✗ Authentication failed!</p>
+                        <p>Credentials not found in CSV</p>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `
+                    <p style="color: red;">Error: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+
+</html>
