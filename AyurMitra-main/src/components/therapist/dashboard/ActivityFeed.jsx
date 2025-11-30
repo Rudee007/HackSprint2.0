@@ -1,4 +1,5 @@
-// src/components/therapist/dashboard/ActivityFeed.jsx
+// src/components/therapist/dashboards/ActivityFeed.jsx
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react';
 
 const ActivityFeed = () => {
+  
   // Sample activities - you can fetch real data from backend
   const activities = [
     {

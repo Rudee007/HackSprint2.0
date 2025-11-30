@@ -1,4 +1,5 @@
-// src/components/therapist/analytics/PerformanceAnalytics.jsx
+// src/components/therapist/analytics/PerformanceAnalytic.jsx
+
 import React from 'react';
 import { BarChart3 } from 'lucide-react';
 
