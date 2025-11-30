@@ -111,7 +111,7 @@ const TherapistLogin = () => {
         login(userData, token);
 
         // ✅ Check if therapist profile exists
-        const existingProfile = localStorage.getItem('therapistProfile');
+        const existingProfile = localStorage.getItem('user');
         
         if (existingProfile) {
           // Profile exists, go to dashboard

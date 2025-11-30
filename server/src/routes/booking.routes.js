@@ -12,6 +12,8 @@ router.post('/create', authenticate, bookingController.createBooking);
 // Get provider bookings for a specific date
 router.get('/provider/:providerId/bookings', authenticate, bookingController.getProviderBookings);
 
+router.get('/provider/:providerId/all-bookings', authenticate, bookingController.getAllProviderBookings);
+
 
 // Add this route to your existing booking routes
 router.post('/alternative-slots', authenticate, bookingController.getAlternativeSlots);

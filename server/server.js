@@ -10,8 +10,11 @@ const { generalLimiter } = require('./src/middleware/rateLimit.middleware');
 const http = require('http');
 const WebSocketService = require('./src/services/websocket.service');
 require('dotenv').config();
-
 const app = express();
+
+const therapistRoutes = require('./src/routes/therapist.routes');
+const prescriptionRoutes = require('./src/routes/prescription.routes');
+
 
 // ✅ Connect Database
 connectDB();
@@ -30,36 +33,80 @@ app.use('/api', routes);
 // ✅ Error Handler
 app.use(errorHandler);
 
+
+// Add this in your main server file
+
+// Mount routes
+app.use('/api/therapists', therapistRoutes);
+
+app.use('/api/prescriptions', prescriptionRoutes);
+
+console.log('✅ Therapist routes mounted at /api/therapists');
+
 // ✅ HTTP + WebSocket Server
 const server = http.createServer(app);
 const wsService = new WebSocketService(server);
 app.set('wsService', wsService);
 
-// ✅ Graceful Shutdown Handlers
-const gracefulShutdown = (signal) => {
-  console.log(`\n⚠️  ${signal} received, shutting down gracefully...`);
+// // ✅ Graceful Shutdown Handlers
+// const gracefulShutdown = (signal) => {
+//   console.log(`\n⚠️  ${signal} received, shutting down gracefully...`);
   
-  // Stop accepting new connections
-  server.close(() => {
-    console.log('✅ HTTP server closed');
+//   // Stop accepting new connections
+//   server.close(() => {
+//     console.log('✅ HTTP server closed');
     
-    // Cleanup WebSocket service
-    wsService.cleanup();
+//     // Cleanup WebSocket service
+//     wsService.cleanup();
     
-    // Close database connection
-    require('mongoose').connection.close(false, () => {
+//     // Close database connection
+//     require('mongoose').connection.close(false, () => {
+//       console.log('✅ MongoDB connection closed');
+//       console.log('👋 Goodbye!');
+//       process.exit(0);
+//     });
+//   });
+  
+//   // Force shutdown after 30 seconds
+//   setTimeout(() => {
+//     console.error('❌ Forced shutdown after timeout');
+//     process.exit(1);
+//   }, 30000);
+// };
+// ✅ Graceful Shutdown Handlers (Mongoose 7+ FIXED)
+const gracefulShutdown = async (signal) => {
+  console.log(`\n⚠️  ${signal} received, shutting down gracefully...`);
+
+  try {
+    // Stop accepting new connections
+    server.close(async () => {
+      console.log('✅ HTTP server closed');
+
+      // Cleanup WebSocket service
+      wsService.cleanup();
+      console.log('✅ WebSocket cleanup complete');
+
+      // Close database connection (NO callback, Mongoose 7+)
+      const mongoose = require('mongoose');
+      await mongoose.connection.close();
       console.log('✅ MongoDB connection closed');
+
       console.log('👋 Goodbye!');
       process.exit(0);
     });
-  });
-  
-  // Force shutdown after 30 seconds
-  setTimeout(() => {
-    console.error('❌ Forced shutdown after timeout');
+
+    // Force shutdown after 30 seconds
+    setTimeout(() => {
+      console.error('❌ Forced shutdown after timeout');
+      process.exit(1);
+    }, 30000);
+
+  } catch (err) {
+    console.error('❌ Error during graceful shutdown:', err);
     process.exit(1);
-  }, 30000);
+  }
 };
+
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));

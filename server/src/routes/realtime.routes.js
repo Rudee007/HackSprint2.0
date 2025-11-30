@@ -69,5 +69,67 @@ router.post(
   authorize('super_admin','admin', 'doctor', 'therapist'), // ✅ Add authorization
   therapyTrackingController.updateMilestone
 );
+// ✅ ADD TO src/routes/realtime.routes.js
+
+// Emergency alert
+router.post(
+  '/sessions/:sessionId/emergency',
+  authenticate,
+  authorize('therapist', 'doctor'),
+  sessionController.sendEmergencyAlert
+);
+
+// Pause/Resume/Complete session
+router.post(
+  '/sessions/:sessionId/pause',
+  authenticate,
+  authorize('therapist', 'doctor'),
+  sessionController.pauseSession
+);
+
+router.post(
+  '/sessions/:sessionId/resume',
+  authenticate,
+  authorize('therapist', 'doctor'),
+  sessionController.resumeSession
+);
+
+router.post(
+  '/sessions/:sessionId/complete',
+  authenticate,
+  authorize('therapist', 'doctor'),
+  sessionController.completeSession
+);
+
+// Vitals and progress tracking
+router.post(
+  '/sessions/:sessionId/vitals',
+  authenticate,
+  authorize('therapist', 'doctor'),
+  therapyTrackingController.updateVitals
+);
+
+router.post(
+  '/sessions/:sessionId/progress',
+  authenticate,
+  authorize('therapist'),
+  therapyTrackingController.updateProgress
+);
+
+// Adverse effects
+router.post(
+  '/sessions/:sessionId/adverse-effect',
+  authenticate,
+  authorize('therapist', 'doctor'),
+  therapyTrackingController.reportAdverseEffect
+);
+
+// Session notes
+router.post(
+  '/sessions/:sessionId/notes',
+  authenticate,
+  authorize('therapist', 'doctor', 'admin'),
+  therapyTrackingController.addSessionNote
+);
 
 module.exports = router;

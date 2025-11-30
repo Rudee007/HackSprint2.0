@@ -4,8 +4,137 @@ const { AppError, asyncHandler } = require('../middleware/error.middleware');
 const moment = require('moment');
 const alternativeSlotsService = require('../services/alternativeSlots.service');
 
+const User = require('../models/User');
+const mongoose = require('mongoose');
+const logger = require('../config/logger');
+
 class BookingController {
   
+
+getPatientDetails = asyncHandler(async (req, res) => {
+  const { patientId } = req.params;
+  
+  console.log('🔄 Getting patient details');
+  console.log('👨‍⚕️ Doctor:', req.user.email, '| ID:', req.user._id);
+  console.log('👤 Patient ID:', patientId);
+
+  // ✅ Validate patient ID format
+  if (!mongoose.Types.ObjectId.isValid(patientId)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_PATIENT_ID',
+        message: 'Invalid patient ID format'
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // ✅ Get patient from User model
+  const patient = await User.findById(patientId)
+    .select('-passwordHash -refreshTokens -__v -emailVerificationToken -phoneOTP -passwordResetToken -loginAttempts -lockUntil')
+    .lean();
+
+  if (!patient) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: 'PATIENT_NOT_FOUND',
+        message: 'Patient not found'
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // ✅ Verify user is a patient
+  if (patient.role !== 'patient') {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_ROLE',
+        message: 'User is not a patient'
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // ✅ Calculate age from date of birth
+  const calculateAge = (dob) => {
+    if (!dob) return null;
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const age = calculateAge(patient.profile?.dateOfBirth);
+
+  // ✅ Determine dominant dosha
+  const constitution = patient.profile?.constitution || { vata: 33, pitta: 33, kapha: 34 };
+  const dominantDosha = Object.entries(constitution).reduce((a, b) => 
+    constitution[a[0]] > constitution[b[0]] ? a : b
+  )[0];
+
+  // ✅ Format patient details response
+  const patientDetails = {
+    id: patient._id,
+    name: patient.name,
+    email: patient.email,
+    phone: patient.phone,
+    age: age,
+    dateOfBirth: patient.profile?.dateOfBirth,
+    gender: patient.profile?.gender,
+    
+    // Medical information
+    medicalHistory: patient.profile?.medicalHistory || [],
+    allergies: patient.profile?.allergies || [],
+    symptoms: patient.profile?.symptoms || [],
+    currentMedications: patient.profile?.currentMedications || [],
+    
+    // Ayurvedic profile
+    constitution: constitution,
+    dominantDosha: dominantDosha,
+    dietHabits: patient.profile?.dietHabits,
+    sleepPattern: patient.profile?.sleepPattern,
+    stressLevel: patient.profile?.stressLevel,
+    digestion: patient.profile?.digestion,
+    bowelHabits: patient.profile?.bowelHabits,
+    exerciseRoutine: patient.profile?.exerciseRoutine,
+    addictions: patient.profile?.addictions || [],
+    menstrualHistory: patient.profile?.menstrualHistory,
+    
+    // Address & metadata
+    address: patient.address,
+    createdAt: patient.createdAt,
+    updatedAt: patient.updatedAt,
+    emailVerified: patient.emailVerified,
+    phoneVerified: patient.phoneVerified,
+    isActive: patient.isActive
+  };
+
+  // ✅ Log access for audit
+  logger.info('Patient details viewed by doctor', {
+    doctorId: req.user._id,
+    doctorEmail: req.user.email,
+    patientId: patientId,
+    patientName: patient.name
+  });
+
+  console.log('✅ Patient details retrieved successfully');
+
+  // ✅ Return formatted response
+  return res.json({
+    success: true,
+    message: 'Patient details retrieved successfully',
+    data: patientDetails,
+    timestamp: new Date().toISOString()
+  });
+});
+
   // Check if a slot is available before booking
   checkSlotAvailability = asyncHandler(async (req, res) => {
     const { providerId, startTime, duration = 30 } = req.body;
@@ -277,6 +406,35 @@ createBooking = asyncHandler(async (req, res) => {
   });
 
 
+  // Get all bookings for a specific provider (no date filter)
+getAllProviderBookings = asyncHandler(async (req, res) => {
+  const { providerId } = req.params;
+
+  const bookings = await Consultation.find({
+    providerId,
+    status: { $nin: ['cancelled'] } // exclude cancelled ones if needed
+  })
+    .populate('patientId', 'name email')
+    .sort({ scheduledAt: 1 }); // sort by date ascending
+
+  return res.json({
+    success: true,
+    data: {
+      providerId,
+      bookings: bookings.map(booking => ({
+        consultationId: booking._id,
+        patientName: booking.patientId.name,
+        patientEmail: booking.patientId.email,
+        scheduledAt: booking.scheduledAt,
+        duration: booking.duration,
+        type: booking.type,
+        status: booking.status
+      })),
+      totalBookings: bookings.length
+    }
+  });
+});
+
   // Get existing bookings for a provider on a specific date
   getProviderBookings = asyncHandler(async (req, res) => {
     const { providerId } = req.params;
@@ -318,6 +476,8 @@ createBooking = asyncHandler(async (req, res) => {
     });
   });
 }
+
+
 
 
 module.exports = new BookingController();

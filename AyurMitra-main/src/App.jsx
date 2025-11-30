@@ -18,7 +18,7 @@ import DoctorLogin from './pages/DoctorLogin';
 import TherapistLogin from './pages/TherapistLogin';
 import Signup from './pages/Signup';
 import IntialPatientProfile from './components/InitialPatientProfile';
-
+import TherapistPatientDetails from './pages/TherapistPatientDetails';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
 import TherapistDashboard from './pages/TherapistDashboard';
@@ -111,6 +111,7 @@ function AppContent() {
           }
         />
 
+  <Route path='/therapist/patients/:patientId' element={TherapistPatientDetails}/>
         {/* ---------- Management routes ---------- */}
         <Route
           path="/management-dashboard"

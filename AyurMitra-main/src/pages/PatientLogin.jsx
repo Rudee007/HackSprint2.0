@@ -97,32 +97,23 @@ const PatientLogin = () => {
         const token = response.data.data.accessToken; // or accessToken
 
         login(userData, token);
+        const existingProfile = localStorage.getItem('user');
 
-        setSuccess('Login successful! Redirecting to dashboard...');
+        if(existingProfile){
+          setSuccess('Login successful! Redirecting to dashboard...');
+           
+
+          setTimeout(() =>{
+
+            navigate('/patient-dashboard');
+          })
+        }
+
         
-        // Redirect based on user role
-        setTimeout(() => {
-          const userRole = response.data.data.user.role;
-          switch (userRole) {
-            case 'patient':
-              navigate('/initial-profile');
-              break;
-            case 'doctor':
-              // login(userData, token);
 
-              navigate('/doctor-dashboard');
-              break;
-            case 'admin':
-              // login(userData, token);
-
-              navigate('/admin-dashboard');
-              break;
-            default:
-              navigate('/dashboard');
-          }
-        }, 1500);
-      }
-    } catch (err) {
+    }
+  
+  } catch (err) {
       console.error('Login error:', err);
       
       const errorMessage = err.response?.data?.error?.message || 

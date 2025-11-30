@@ -4,34 +4,54 @@ const moment = require('moment');
 class FeedbackAnalyticsService {
   
   async updatePatientProgress(patientId) {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔥 [FeedbackAnalyticsService] updatePatientProgress called');
+    console.log('📊 patientId:', patientId);
+    
     try {
       const recentFeedback = await Feedback.find({ patientId })
         .sort({ createdAt: -1 })
         .limit(10);
 
-      // ✅ Add null check
+      console.log('📈 Recent feedback found:', recentFeedback.length);
+
       if (!recentFeedback || recentFeedback.length === 0) {
+        console.log('⚠️  No feedback found for patient');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         return null;
       }
 
       const progressData = this.calculateProgressMetrics(recentFeedback);
       
-      return {
+      const result = {
         patientId,
         progressBars: progressData.progressBars || {},
         improvements: progressData.improvements || [],
         trends: progressData.trends || {},
         lastUpdated: new Date()
       };
+      
+      console.log('✅ Progress calculated:');
+      console.log('   - Progress bars:', Object.keys(result.progressBars).length);
+      console.log('   - Improvements:', result.improvements.length);
+      console.log('   - Trend:', result.trends.overall);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      
+      return result;
     } catch (error) {
-      console.error('Error updating patient progress:', error);
+      console.error('❌ Error updating patient progress:', error);
+      console.error('   - Error message:', error.message);
+      console.error('   - Error stack:', error.stack);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return null;
     }
   }
 
   calculateProgressMetrics(feedbackArray) {
-    // ✅ Add comprehensive null checks
+    console.log('🔍 [calculateProgressMetrics] Called with', feedbackArray?.length, 'feedback items');
+    
     if (!feedbackArray || !Array.isArray(feedbackArray) || feedbackArray.length === 0) {
+      console.log('⚠️  Insufficient feedback data');
       return {
         progressBars: {},
         improvements: [],
@@ -42,8 +62,11 @@ class FeedbackAnalyticsService {
     const latest = feedbackArray[0];
     const baseline = feedbackArray[feedbackArray.length - 1];
     
-    // ✅ Add null checks for feedback objects
+    console.log('📊 Latest feedback date:', latest?.createdAt);
+    console.log('📊 Baseline feedback date:', baseline?.createdAt);
+    
     if (!latest || !baseline) {
+      console.log('⚠️  Missing latest or baseline feedback');
       return {
         progressBars: {},
         improvements: [],
@@ -54,18 +77,14 @@ class FeedbackAnalyticsService {
     const progressBars = {};
     const improvements = [];
     
-    // Calculate progress for each health metric with null checks
-    if (latest.healthMetrics && baseline.healthMetrics && 
-        typeof latest.healthMetrics === 'object' && typeof baseline.healthMetrics === 'object') {
+    if (latest.healthMetrics && baseline.healthMetrics) {
+      console.log('✅ Health metrics available');
       
       Object.keys(latest.healthMetrics).forEach(metric => {
         const latestMetric = latest.healthMetrics[metric];
         const baselineMetric = baseline.healthMetrics[metric];
         
-        if (latestMetric && baselineMetric && 
-            latestMetric.before && latestMetric.after && 
-            baselineMetric.before) {
-          
+        if (latestMetric && baselineMetric && latestMetric.before && latestMetric.after && baselineMetric.before) {
           const improvement = this.calculateImprovement(
             baselineMetric.before,
             latestMetric.after,
@@ -78,12 +97,16 @@ class FeedbackAnalyticsService {
             improvement: Math.max(0, Math.min(100, improvement)),
             trend: this.calculateTrend(feedbackArray, metric)
           };
+          
+          console.log(`   - ${metric}: ${improvement.toFixed(1)}% improvement`);
         }
       });
+    } else {
+      console.log('⚠️  Health metrics missing');
     }
 
-    // Extract specific improvements with null checks
     if (latest.improvements && Array.isArray(latest.improvements)) {
+      console.log('✅ Improvements found:', latest.improvements.length);
       latest.improvements.forEach(imp => {
         if (imp && imp.aspect) {
           improvements.push({
@@ -96,16 +119,19 @@ class FeedbackAnalyticsService {
       });
     }
 
+    const trends = this.calculateOverallTrends(feedbackArray);
+    console.log('📈 Overall trend:', trends.overall);
+
     return {
       progressBars,
       improvements,
-      trends: this.calculateOverallTrends(feedbackArray)
+      trends
     };
   }
 
-  // ✅ Fixed method with null checks
   calculateOverallTrends(feedbackArray) {
-    // Add comprehensive null checks
+    console.log('🔍 [calculateOverallTrends] Called with', feedbackArray?.length, 'items');
+    
     if (!feedbackArray || !Array.isArray(feedbackArray) || feedbackArray.length < 2) {
       return {
         overall: 'insufficient_data',
@@ -117,6 +143,9 @@ class FeedbackAnalyticsService {
     const satisfactionTrend = this.calculateRatingTrend(feedbackArray, 'overallSatisfaction');
     const effectivenessTrend = this.calculateRatingTrend(feedbackArray, 'treatmentEffectiveness');
     
+    console.log('   - Satisfaction trend:', satisfactionTrend);
+    console.log('   - Effectiveness trend:', effectivenessTrend);
+    
     return {
       overall: this.determineOverallTrend(satisfactionTrend, effectivenessTrend),
       satisfaction: satisfactionTrend,
@@ -125,21 +154,22 @@ class FeedbackAnalyticsService {
   }
 
   calculateRatingTrend(feedbackArray, ratingField) {
-    // ✅ Add null checks
     if (!feedbackArray || !Array.isArray(feedbackArray) || feedbackArray.length < 2) {
       return 'stable';
     }
     
     const ratings = feedbackArray
-      .filter(fb => fb && fb.ratings && typeof fb.ratings === 'object') // ✅ Filter out null/undefined
+      .filter(fb => fb && fb.ratings && typeof fb.ratings === 'object')
       .map(fb => fb.ratings[ratingField])
-      .filter(rating => rating !== undefined && rating !== null && !isNaN(rating)) // ✅ Filter valid ratings
-      .reverse(); // oldest to newest
+      .filter(rating => rating !== undefined && rating !== null && !isNaN(rating))
+      .reverse();
+    
+    console.log(`   - ${ratingField} ratings:`, ratings);
     
     if (ratings.length < 2) return 'stable';
     
-    const recent = ratings.slice(-3); // last 3 ratings
-    const older = ratings.slice(0, -3); // older ratings
+    const recent = ratings.slice(-3);
+    const older = ratings.slice(0, -3);
     
     if (older.length === 0) return 'stable';
     
@@ -147,6 +177,8 @@ class FeedbackAnalyticsService {
     const olderAvg = older.reduce((sum, r) => sum + r, 0) / older.length;
     
     const improvement = ((recentAvg - olderAvg) / olderAvg) * 100;
+    
+    console.log(`   - ${ratingField}: recent=${recentAvg.toFixed(2)}, older=${olderAvg.toFixed(2)}, change=${improvement.toFixed(1)}%`);
     
     if (improvement > 10) return 'improving';
     if (improvement < -10) return 'declining';
@@ -164,20 +196,19 @@ class FeedbackAnalyticsService {
   }
 
   calculateTrend(feedbackArray, metric) {
-    // ✅ Add null checks
     if (!feedbackArray || !Array.isArray(feedbackArray) || feedbackArray.length < 2) {
       return 'stable';
     }
     
     const improvements = feedbackArray
-      .filter(fb => fb && fb.healthMetrics && fb.healthMetrics[metric]) // ✅ Filter valid feedback
+      .filter(fb => fb && fb.healthMetrics && fb.healthMetrics[metric])
       .map(fb => {
         const healthMetric = fb.healthMetrics[metric];
         if (!healthMetric || !healthMetric.before || !healthMetric.after) return 0;
         
         return this.calculateSessionImprovement(healthMetric, metric);
       })
-      .filter(imp => !isNaN(imp) && imp !== 0); // ✅ Filter valid improvements
+      .filter(imp => !isNaN(imp) && imp !== 0);
     
     if (improvements.length === 0) return 'stable';
     
@@ -189,7 +220,6 @@ class FeedbackAnalyticsService {
   }
 
   calculateImprovement(before, after, lowerIsBetter = false) {
-    // ✅ Add validation
     if (typeof before !== 'number' || typeof after !== 'number' || before === 0) {
       return 0;
     }
@@ -202,7 +232,6 @@ class FeedbackAnalyticsService {
   }
 
   calculateSessionImprovement(metric, metricType) {
-    // ✅ Add null checks
     if (!metric || typeof metric !== 'object' || !metric.before || !metric.after) {
       return 0;
     }
@@ -211,17 +240,26 @@ class FeedbackAnalyticsService {
     return this.calculateImprovement(metric.before, metric.after, lowerIsBetter);
   }
 
-  // ✅ Simplified and safe methods
   async getPatientProgressAnalytics(patientId, timeRange = '6months') {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔥 [getPatientProgressAnalytics] called');
+    console.log('📊 patientId:', patientId);
+    console.log('📅 timeRange:', timeRange);
+    
     try {
       const startDate = moment().subtract(6, 'months').toDate();
+      console.log('📅 Start date:', moment(startDate).format('YYYY-MM-DD'));
       
       const feedback = await Feedback.find({
         patientId,
         createdAt: { $gte: startDate }
       }).sort({ createdAt: 1 });
 
+      console.log('📈 Feedback found:', feedback.length);
+
       if (!feedback || feedback.length === 0) {
+        console.log('⚠️  No feedback data available');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         return { 
           message: 'No feedback data available for this patient',
           patientId,
@@ -230,7 +268,7 @@ class FeedbackAnalyticsService {
         };
       }
 
-      return {
+      const result = {
         patientId,
         timeRange,
         totalSessions: feedback.length,
@@ -239,8 +277,15 @@ class FeedbackAnalyticsService {
         recommendations: this.generatePersonalizedRecommendations(feedback) || [],
         generatedAt: new Date()
       };
+      
+      console.log('✅ Analytics generated successfully');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      
+      return result;
     } catch (error) {
-      console.error('Error getting patient progress analytics:', error);
+      console.error('❌ Error getting patient progress analytics:', error);
+      console.error('   - Error message:', error.message);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return {
         message: 'Error retrieving progress analytics',
         patientId,
@@ -252,7 +297,8 @@ class FeedbackAnalyticsService {
   }
 
   calculateSafeProgressData(feedbackArray) {
-    // ✅ Safe method with comprehensive checks
+    console.log('🔍 [calculateSafeProgressData] Processing', feedbackArray?.length, 'items');
+    
     if (!feedbackArray || !Array.isArray(feedbackArray) || feedbackArray.length === 0) {
       return {};
     }
@@ -262,14 +308,16 @@ class FeedbackAnalyticsService {
     
     metrics.forEach(metric => {
       const validData = feedbackArray
-        .filter(fb => fb && fb.healthMetrics && fb.healthMetrics[metric]) // ✅ Filter valid data
+        .filter(fb => fb && fb.healthMetrics && fb.healthMetrics[metric])
         .map(fb => ({
           date: fb.createdAt,
           before: fb.healthMetrics[metric].before,
           after: fb.healthMetrics[metric].after,
           improvement: this.calculateSessionImprovement(fb.healthMetrics[metric], metric)
         }))
-        .filter(d => d.before && d.after); // ✅ Filter complete data
+        .filter(d => d.before && d.after);
+
+      console.log(`   - ${metric}: ${validData.length} valid data points`);
 
       progressData[metric] = {
         timeline: validData,
@@ -284,7 +332,8 @@ class FeedbackAnalyticsService {
   }
 
   identifyMilestones(feedbackArray) {
-    // ✅ Safe method with null checks
+    console.log('🔍 [identifyMilestones] Processing', feedbackArray?.length, 'items');
+    
     if (!feedbackArray || !Array.isArray(feedbackArray)) {
       return [];
     }
@@ -294,7 +343,6 @@ class FeedbackAnalyticsService {
     feedbackArray.forEach((feedback) => {
       if (!feedback) return;
 
-      // Check for significant improvements
       if (feedback.overallImprovement && feedback.overallImprovement > 50) {
         milestones.push({
           date: feedback.createdAt,
@@ -304,7 +352,6 @@ class FeedbackAnalyticsService {
         });
       }
       
-      // Check for high satisfaction scores
       if (feedback.averageRating >= 4.5 && feedback.recommendationScore >= 9) {
         milestones.push({
           date: feedback.createdAt,
@@ -315,11 +362,14 @@ class FeedbackAnalyticsService {
       }
     });
     
+    console.log('   - Milestones identified:', milestones.length);
+    
     return milestones.sort((a, b) => new Date(b.date) - new Date(a.date));
   }
 
   generatePersonalizedRecommendations(feedbackArray) {
-    // ✅ Safe method with null checks
+    console.log('🔍 [generatePersonalizedRecommendations] Processing', feedbackArray?.length, 'items');
+    
     if (!feedbackArray || !Array.isArray(feedbackArray) || feedbackArray.length === 0) {
       return [];
     }
@@ -329,7 +379,6 @@ class FeedbackAnalyticsService {
     
     if (!latest) return recommendations;
     
-    // Analyze patterns and generate recommendations
     if (latest.healthMetrics && latest.healthMetrics.sleepQuality && 
         latest.healthMetrics.sleepQuality.after < 6) {
       recommendations.push({
@@ -349,12 +398,19 @@ class FeedbackAnalyticsService {
       });
     }
     
+    console.log('   - Recommendations generated:', recommendations.length);
+    
     return recommendations;
   }
 
   async getOverallStats(timeRange = '6months') {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔥 [getOverallStats] called');
+    console.log('📅 timeRange:', timeRange);
+    
     try {
       const startDate = moment().subtract(6, 'months').toDate();
+      console.log('📅 Start date:', moment(startDate).format('YYYY-MM-DD'));
       
       const [totalFeedback, criticalFeedbackCount] = await Promise.all([
         Feedback.countDocuments({ createdAt: { $gte: startDate } }),
@@ -363,6 +419,11 @@ class FeedbackAnalyticsService {
           'flags.criticalFeedback': true 
         })
       ]);
+
+      console.log('📊 Stats:');
+      console.log('   - Total feedback:', totalFeedback);
+      console.log('   - Critical feedback:', criticalFeedbackCount);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
       return {
         overview: {
@@ -374,7 +435,9 @@ class FeedbackAnalyticsService {
         generatedAt: new Date()
       };
     } catch (error) {
-      console.error('Error getting overall stats:', error);
+      console.error('❌ Error getting overall stats:', error);
+      console.error('   - Error message:', error.message);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       return {
         overview: {
           totalFeedback: 0,

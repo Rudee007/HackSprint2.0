@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const FeedbackSchema = new Schema({
   // Core References
   patientId: { 
-    type: Schema.Types.ObjectId, 
+    type: Schema.Types.Mixed, 
     ref: 'User', 
     required: true,
     validate: {
@@ -17,13 +17,13 @@ const FeedbackSchema = new Schema({
   },
   
   sessionId: { 
-    type: Schema.Types.ObjectId, 
+    type: Schema.Types.Mixed, 
     ref: 'Consultation', 
     required: true 
   },
   
   providerId: { 
-    type: Schema.Types.ObjectId, 
+    type: Schema.Types.Mixed, 
     ref: 'User', 
     required: true 
   },

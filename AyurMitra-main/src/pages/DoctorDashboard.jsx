@@ -1,11 +1,13 @@
-// src/pages/DoctorDashboard.jsx (Updated with Therapy Tracking)
+// src/pages/DoctorDashboard.jsx
+// 🔥 PRODUCTION-READY v3.0 - COMPLETE WITH THERAPY TRACKING INTEGRATION
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, Users, Activity, TrendingUp, DollarSign, LogOut,
-  Loader2, WifiOff, Bell, Circle, Monitor, Eye, Menu, ChevronRight, Sparkles, Zap, AlertCircle,
-  BarChart3, Stethoscope, Settings, Target, Timer, Heart // ✅ New icons for therapy tracking
+  Loader2, WifiOff, Bell, Circle, Menu, ChevronRight, Sparkles, Zap, AlertCircle,
+  BarChart3, Stethoscope, Settings, Heart
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -13,19 +15,11 @@ import { useRealTime } from "../context/RealTimeContext";
 import doctorApiService from "../services/doctorApiService";
 import websocketService from "../services/websocketService";
 
-// ✅ Existing real-time components
+// Components
 import RealTimeSessionDashboard from "../components/realtime/RealTimeSessionDashboard";
 import ProviderStatusWidget from "../components/realtime/ProviderStatusWidget";
 import SessionNotifications from "../components/realtime/SessionNotifications";
-
-// ✅ NEW: Panchakarma Therapy Tracking Components
-import RealTimeTherapyTracker from "../components/realtime/RealTimeTherapyTracker";
-import LiveProgressMonitor from "../components/realtime/LiveProgressMonitor";
-import SessionMilestones from "../components/realtime/SessionMilestones";
-import UpcomingSessionsDashboard from "../components/realtime/UpcomingSessionsDashboard";
-import MultiUserSyncStatus from "../components/realtime/MultiUserSyncStatus";
-
-// ✅ Existing components
+import DoctorTherapyTracking from "../components/DoctorTherapyTracking";
 import PatientManagement from "../components/PatientManagement";
 import TreatmentPlanning from "../components/TreatmentPlanning";
 import ProfileSettings from "../components/ProfileSettings";
@@ -36,15 +30,13 @@ const DoctorDashboard = () => {
 
   const {
     isConnected,
-    connectionStatus,
-    notifications,
     unreadNotifications,
     providerStatus,
     activeSessions,
     forceRefresh
   } = useRealTime();
 
-  // Refs to avoid duplicates/double init
+  // Refs
   const consultationIds = useRef(new Set());
   const dataLoadedOnce = useRef(false);
   const websocketConnected = useRef(false);
@@ -54,7 +46,6 @@ const DoctorDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Data state
   const [doctorInfo, setDoctorInfo] = useState(null);
@@ -62,16 +53,7 @@ const DoctorDashboard = () => {
   const [recentConsultations, setRecentConsultations] = useState([]);
   const [allConsultations, setAllConsultations] = useState([]);
 
-  // ✅ NEW: Therapy tracking state
-  const [therapyTrackingData, setTherapyTrackingData] = useState({
-    activeSessions: [],
-    upcomingSessions: [],
-    completedToday: [],
-    milestones: {},
-    connectedUsers: []
-  });
-
-  // Treatment state (used by children)
+  // Treatment state
   const [treatmentPlans, setTreatmentPlans] = useState([]);
   const [treatmentForm, setTreatmentForm] = useState({
     patientName: "",
@@ -82,7 +64,9 @@ const DoctorDashboard = () => {
     detailedProtocol: ""
   });
 
-  // Connect WebSocket once after login
+  // ═══════════════════════════════════════════════════════════
+  // 🔥 WEBSOCKET CONNECTION
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     const connect = async () => {
       const token = localStorage.getItem("accessToken");
@@ -91,7 +75,9 @@ const DoctorDashboard = () => {
           websocketConnected.current = true;
           await websocketService.connect(token);
           forceRefresh?.();
-        } catch {
+          console.log('✅ WebSocket connected');
+        } catch (err) {
+          console.error('❌ WebSocket connection failed:', err);
           websocketConnected.current = false;
         }
       }
@@ -99,7 +85,9 @@ const DoctorDashboard = () => {
     connect();
   }, [isAuthenticated, isConnected, forceRefresh]);
 
-  // Load initial dashboard data exactly once
+  // ═══════════════════════════════════════════════════════════
+  // 🔥 LOAD INITIAL DASHBOARD DATA (ONCE)
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     const load = async () => {
       if (dataLoadedOnce.current) return;
@@ -114,6 +102,8 @@ const DoctorDashboard = () => {
       try {
         setLoading(true);
         setError(null);
+
+        console.log('🔄 Loading initial dashboard data...');
 
         const [profileRes, consultRes, statsRes] = await Promise.all([
           doctorApiService.getDoctorProfile(),
@@ -136,7 +126,9 @@ const DoctorDashboard = () => {
         setDashboardStats(statsRes.data.data);
 
         dataLoadedOnce.current = true;
+        console.log('✅ Initial dashboard data loaded');
       } catch (e) {
+        console.error('❌ Dashboard data load failed:', e);
         setError(e?.response?.data?.message || "Failed to load dashboard data");
       } finally {
         setLoading(false);
@@ -146,77 +138,66 @@ const DoctorDashboard = () => {
     load();
   }, []);
 
- // In DoctorDashboard.jsx
-const loadTherapyTrackingData = async () => {
-  if (!isConnected) return;
-
-  try {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      console.error('No auth token found');
-      return;
-    }
-
-    // ✅ Use full URL and proper headers
-    const response = await fetch('http://localhost:3003/api/realtime/therapy-tracking/dashboard', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // ✅ Check if response is actually JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const textResponse = await response.text();
-      console.error('Expected JSON but got:', textResponse.substring(0, 200));
-      throw new Error('Server returned non-JSON response');
-    }
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.success) {
-      setTherapyTrackingData(data.data);
-    } else {
-      console.error('API returned error:', data.message);
-    }
-  } catch (error) {
-    console.error('Failed to load therapy tracking data:', error);
-    // ✅ Set fallback data
-    setTherapyTrackingData({
-      activeSessions: [],
-      upcomingSessions: [],
-      completedToday: [],
-      connectedUsers: []
-    });
-  }
-};
- // Display name
+  // Display name
   const displayName = useMemo(
     () => doctorInfo?.userId?.name || doctorInfo?.name || user?.name || "Doctor",
     [doctorInfo, user]
   );
 
-  // ✅ UPDATED: Navigation items with Therapy Tracking
+  // ✅ Navigation items
   const navigationItems = useMemo(() => ([
-    { id: "overview", label: "Overview", icon: BarChart3, description: "Dashboard overview", color: "emerald" },
-    { id: "realtime", label: "Live Sessions", icon: Activity, description: "Real-time monitoring", color: "blue", badge: activeSessions?.size || 0, realTime: true },
-    { id: "therapy-tracking", label: "Therapy Tracker", icon: Heart, description: "Panchakarma progress tracking", color: "rose", badge: therapyTrackingData.activeSessions?.length || 0, realTime: true }, // ✅ NEW
-    { id: "patients", label: "Patients", icon: Users, description: "Patient management", color: "purple" },
-    { id: "treatment", label: "Treatments", icon: Stethoscope, description: "Treatment planning", color: "teal" },
-    { id: "settings", label: "Settings", icon: Settings, description: "Profile settings", color: "slate" },
-  ]), [activeSessions?.size, therapyTrackingData.activeSessions?.length]);
+    { 
+      id: "overview", 
+      label: "Overview", 
+      icon: BarChart3, 
+      description: "Dashboard overview", 
+      color: "emerald" 
+    },
+    { 
+      id: "realtime", 
+      label: "Live Sessions", 
+      icon: Activity, 
+      description: "Real-time monitoring", 
+      color: "blue", 
+      badge: activeSessions?.size || 0, 
+      realTime: true 
+    },
+    { 
+      id: "therapy-tracking", 
+      label: "Therapy Tracker", 
+      icon: Heart, 
+      description: "Panchakarma progress", 
+      color: "rose", 
+      realTime: true 
+    },
+    { 
+      id: "patients", 
+      label: "Patients", 
+      icon: Users, 
+      description: "Patient management", 
+      color: "purple" 
+    },
+    { 
+      id: "treatment", 
+      label: "Treatments", 
+      icon: Stethoscope, 
+      description: "Treatment planning", 
+      color: "teal" 
+    },
+    { 
+      id: "settings", 
+      label: "Settings", 
+      icon: Settings, 
+      description: "Profile settings", 
+      color: "slate" 
+    },
+  ]), [activeSessions?.size]);
 
-  // ✅ UPDATED: Title and subtitle maps
+  // Title maps
   const titleMap = useMemo(() => ({
     overview: `🙏 Welcome, Dr. ${displayName}`,
     realtime: "🔄 Real-Time Sessions",
-    "therapy-tracking": "🌿 Panchakarma Therapy Tracker", // ✅ NEW
+    "therapy-tracking": "🌿 Panchakarma Therapy Tracker",
     patients: "👥 Patient Management",
     treatment: "🌿 Treatment Planning",
     settings: "⚙️ Profile Settings",
@@ -225,49 +206,36 @@ const loadTherapyTrackingData = async () => {
   const subTitleMap = {
     overview: "Manage your Ayurvedic practice with ancient wisdom and modern efficiency",
     realtime: "Monitor live sessions, track participants, and manage real-time consultations",
-    "therapy-tracking": "Real-time Panchakarma therapy progress, milestones, and session monitoring", // ✅ NEW
+    "therapy-tracking": "Real-time Panchakarma therapy progress, milestones, and session monitoring",
     patients: "Comprehensive patient care and consultation management",
     treatment: "Create personalized healing journeys with Ayurvedic protocols",
     settings: "Customize your profile and practice preferences",
   };
 
-  // ✅ UPDATED: Stats with therapy tracking data
+  // ✅ Stats
   const stats = useMemo(() => {
     if (!dashboardStats) {
       return [
         { label: "Today's Patients", value: "0", icon: Users, color: "emerald", bgGradient: "from-emerald-50 via-emerald-100 to-green-50" },
         { label: "Active Sessions", value: String(activeSessions?.size || 0), icon: Activity, color: "blue", bgGradient: "from-blue-50 via-blue-100 to-cyan-50", realTime: true },
-        { label: "Active Therapies", value: String(therapyTrackingData.activeSessions?.length || 0), icon: Heart, color: "rose", bgGradient: "from-rose-50 via-rose-100 to-pink-50", realTime: true }, // ✅ NEW
+        { label: "Active Therapies", value: "0", icon: Heart, color: "rose", bgGradient: "from-rose-50 via-rose-100 to-pink-50", realTime: true },
         { label: "Success Rate", value: "0%", icon: TrendingUp, color: "purple", bgGradient: "from-purple-50 via-purple-100 to-violet-50" },
         { label: "Revenue (30d)", value: "₹0", icon: DollarSign, color: "amber", bgGradient: "from-amber-50 via-amber-100 to-yellow-50" },
       ];
     }
-    const completionRate = dashboardStats.completionRate || 0;
-    const totalRevenue = dashboardStats.totalRevenue || 0;
     return [
       { label: "Today's Patients", value: String(dashboardStats.totalConsultations || 0), icon: Users, color: "emerald", bgGradient: "from-emerald-50 via-emerald-100 to-green-50" },
       { label: "Active Sessions", value: String(activeSessions?.size || 0), icon: Activity, color: "blue", bgGradient: "from-blue-50 via-blue-100 to-cyan-50", realTime: true },
-      { label: "Active Therapies", value: String(therapyTrackingData.activeSessions?.length || 0), icon: Heart, color: "rose", bgGradient: "from-rose-50 via-rose-100 to-pink-50", realTime: true }, // ✅ NEW
-      { label: "Success Rate", value: `${completionRate}%`, icon: TrendingUp, color: "purple", bgGradient: "from-purple-50 via-purple-100 to-violet-50" },
-      { label: "Revenue (30d)", value: `₹${totalRevenue.toLocaleString()}`, icon: DollarSign, color: "amber", bgGradient: "from-amber-50 via-amber-100 to-yellow-50" },
+      { label: "Success Rate", value: `${dashboardStats.completionRate || 0}%`, icon: TrendingUp, color: "purple", bgGradient: "from-purple-50 via-purple-100 to-violet-50" },
+      { label: "Revenue (30d)", value: `₹${(dashboardStats.totalRevenue || 0).toLocaleString()}`, icon: DollarSign, color: "amber", bgGradient: "from-amber-50 via-amber-100 to-yellow-50" },
     ];
-  }, [dashboardStats, activeSessions, therapyTrackingData]);
+  }, [dashboardStats, activeSessions]);
 
   // Handlers
   const handleNavClick = useCallback((sectionId) => {
     setActiveSection(sectionId);
-    setSidebarOpen(false);
     setMobileNavOpen(false);
   }, []);
-
-  const handleRealTimeDashboard = useCallback(() => {
-    navigate("/doctor/realtime");
-  }, [navigate]);
-
-  // ✅ NEW: Handler for therapy tracking page
-  const handleTherapyTracking = useCallback(() => {
-    navigate("/doctor/therapy-tracking");
-  }, [navigate]);
 
   const loadAllConsultations = useCallback(async (filters = {}) => {
     try {
@@ -305,7 +273,6 @@ const loadTherapyTrackingData = async () => {
     navigate("/doctor-login");
   }, [logout, navigate]);
 
-  // Helpers
   const getStatusColor = (status) => {
     switch (status) {
       case "scheduled": return "bg-amber-100 text-amber-800 border-amber-200";
@@ -316,7 +283,7 @@ const loadTherapyTrackingData = async () => {
     }
   };
 
-  // Loading & Error states remain the same...
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
@@ -331,6 +298,7 @@ const loadTherapyTrackingData = async () => {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
@@ -353,7 +321,7 @@ const loadTherapyTrackingData = async () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20">
-      {/* Mobile Header - Same as before but updated navigation items */}
+      {/* Mobile Header */}
       <div className="lg:hidden bg-white/95 backdrop-blur-sm border-b border-emerald-100 sticky top-0 z-50">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-3">
@@ -452,7 +420,7 @@ const loadTherapyTrackingData = async () => {
 
             {/* Navigation */}
             <nav className="space-y-2">
-              {navigationItems.map((item, index) => (
+              {navigationItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
@@ -471,35 +439,9 @@ const loadTherapyTrackingData = async () => {
                   </div>
                   {item.badge > 0 && <div className="bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-lg">{item.badge}</div>}
                   {item.realTime && <Sparkles className={`w-4 h-4 ${activeSection === item.id ? "text-white" : "text-emerald-500"}`} />}
-                  <ChevronRight className={`w-4 h-4 ${activeSection === item.id ? "rotate-90 text-white" : "group-hover:translate-x-1 text-slate-400"}`} />
+                  <ChevronRight className={`w-4 h-4 transition-transform ${activeSection === item.id ? "rotate-90 text-white" : "group-hover:translate-x-1 text-slate-400"}`} />
                 </button>
               ))}
-
-              {/* Quick links */}
-              {/* <button
-                onClick={handleRealTimeDashboard}
-                className="w-full flex items-center space-x-4 px-4 py-4 rounded-2xl text-left transition-all duration-300 text-emerald-600 hover:bg-emerald-50 mt-6 border-2 border-dashed border-emerald-200"
-              >
-                <div className="p-2 rounded-xl bg-emerald-100"><Monitor className="w-5 h-5" /></div>
-                <div className="flex-1">
-                  <div className="font-semibold">Advanced View</div>
-                  <div className="text-xs text-emerald-600">Full monitoring</div>
-                </div>
-                <Eye className="w-4 h-4" />
-              </button> */}
-
-              {/* ✅ NEW: Therapy Tracking Quick Link */}
-              {/* <button
-                onClick={handleTherapyTracking}
-                className="w-full flex items-center space-x-4 px-4 py-4 rounded-2xl text-left transition-all duration-300 text-rose-600 hover:bg-rose-50 border-2 border-dashed border-rose-200"
-              >
-                <div className="p-2 rounded-xl bg-rose-100"><Timer className="w-5 h-5" /></div>
-                <div className="flex-1">
-                  <div className="font-semibold">Therapy Tracker</div>
-                  <div className="text-xs text-rose-600">Full panchakarma view</div>
-                </div>
-                <Target className="w-4 h-4" />
-              </button> */}
 
               {/* Logout */}
               <button
@@ -552,8 +494,8 @@ const loadTherapyTrackingData = async () => {
             <AnimatePresence mode="wait">
               {activeSection === "overview" && (
                 <motion.div key="overview" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6 lg:space-y-8">
-                  {/* ✅ UPDATED: Stats cards now include therapy tracking */}
-                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6">
+                  {/* Stats cards */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
                     {stats.map((stat, i) => (
                       <motion.div
                         key={stat.label}
@@ -574,10 +516,6 @@ const loadTherapyTrackingData = async () => {
                           <div className={`w-10 h-10 lg:w-14 lg:h-14 bg-${stat.color}-500 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform flex-shrink-0 ml-2`}>
                             <stat.icon className="w-5 h-5 lg:w-7 lg:h-7 text-white" />
                           </div>
-                        </div>
-                        <div className="absolute inset-0 opacity-10">
-                          <div className="absolute -right-4 -top-4 w-16 lg:w-24 h-16 lg:h-24 rounded-full bg-white" />
-                          <div className="absolute -left-2 -bottom-2 w-10 lg:w-16 h-10 lg:h-16 rounded-full bg-white" />
                         </div>
                       </motion.div>
                     ))}
@@ -633,42 +571,10 @@ const loadTherapyTrackingData = async () => {
                       </div>
                     </div>
 
-                    {/* ✅ UPDATED: Real-time sidebar with therapy preview */}
+                    {/* Sidebar */}
                     <div className="xl:col-span-1 space-y-4 lg:space-y-6">
                       <ProviderStatusWidget />
                       <SessionNotifications compact />
-                      
-                      {/* ✅ NEW: Therapy Tracking Preview */}
-                      {therapyTrackingData.activeSessions?.length > 0 && (
-                        <motion.div
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl border border-rose-200/50 p-4 lg:p-6"
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center space-x-2">
-                              <Heart className="w-5 h-5 text-rose-600" />
-                              <h4 className="font-semibold text-rose-800">Active Therapies</h4>
-                            </div>
-                            <span className="text-sm font-bold text-rose-600">
-                              {therapyTrackingData.activeSessions.length}
-                            </span>
-                          </div>
-                          <div className="space-y-2">
-                            {therapyTrackingData.activeSessions.slice(0, 3).map((session, i) => (
-                              <div key={session.id || i} className="text-sm text-rose-700">
-                                • {session.patientName || `Patient ${i + 1}`} - {session.therapyType || 'Panchakarma'}
-                              </div>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => handleNavClick('therapy-tracking')}
-                            className="w-full mt-4 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors text-sm font-medium"
-                          >
-                            View All Therapies
-                          </button>
-                        </motion.div>
-                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -680,10 +586,15 @@ const loadTherapyTrackingData = async () => {
                 </motion.div>
               )}
 
-              {/* ✅ NEW: Therapy Tracking Section */}
+              {/* ✅ THERAPY TRACKING - PRODUCTION READY */}
               {activeSection === "therapy-tracking" && (
-                <motion.div key="therapy-tracking" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                  <RealTimeTherapyTracker />
+                <motion.div 
+                  key="therapy-tracking" 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <DoctorTherapyTracking />
                 </motion.div>
               )}
 

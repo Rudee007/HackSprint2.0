@@ -4,6 +4,7 @@ const logger = require('../config/logger');
 const mongoose = require('mongoose');
 const TreatmentPlan = require('../models/TreatmentPlan'); // ✅ Add this line
 // At the top of your doctor.service.js
+const Consultation = require('../models/Consultation');
 
 class DoctorService {
   
@@ -568,6 +569,95 @@ class DoctorService {
       throw error;
     }
   }
+
+
+
+async getPatientDetails(patientId) {
+  try {
+    console.log('🔄 Service: Getting patient details for:', patientId);
+
+    // ✅ Get patient from User model
+    const patient = await User.findById(patientId)
+      .select('-passwordHash -refreshTokens -__v -emailVerificationToken -phoneOTP -passwordResetToken -loginAttempts -lockUntil')
+      .lean();
+
+    if (!patient) {
+      throw new Error('Patient not found');
+    }
+
+    // ✅ Verify user is a patient
+    if (patient.role !== 'patient') {
+      throw new Error('User is not a patient');
+    }
+
+    // ✅ Calculate age
+    const calculateAge = (dob) => {
+      if (!dob) return null;
+      const today = new Date();
+      const birthDate = new Date(dob);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    };
+
+    const age = calculateAge(patient.profile?.dateOfBirth);
+
+    // ✅ Determine dominant dosha
+    const constitution = patient.profile?.constitution || { vata: 33, pitta: 33, kapha: 34 };
+    const dominantDosha = Object.entries(constitution).reduce((a, b) => 
+      constitution[a[0]] > constitution[b[0]] ? a : b
+    )[0];
+
+    // ✅ Format and return patient details
+    const patientDetails = {
+      id: patient._id,
+      name: patient.name,
+      email: patient.email,
+      phone: patient.phone,
+      age: age,
+      dateOfBirth: patient.profile?.dateOfBirth,
+      gender: patient.profile?.gender,
+      
+      // Medical information
+      medicalHistory: patient.profile?.medicalHistory || [],
+      allergies: patient.profile?.allergies || [],
+      symptoms: patient.profile?.symptoms || [],
+      currentMedications: patient.profile?.currentMedications || [],
+      
+      // Ayurvedic profile
+      constitution: constitution,
+      dominantDosha: dominantDosha,
+      dietHabits: patient.profile?.dietHabits,
+      sleepPattern: patient.profile?.sleepPattern,
+      stressLevel: patient.profile?.stressLevel,
+      digestion: patient.profile?.digestion,
+      bowelHabits: patient.profile?.bowelHabits,
+      exerciseRoutine: patient.profile?.exerciseRoutine,
+      addictions: patient.profile?.addictions || [],
+      menstrualHistory: patient.profile?.menstrualHistory,
+      
+      // Address & metadata
+      address: patient.address,
+      createdAt: patient.createdAt,
+      updatedAt: patient.updatedAt,
+      emailVerified: patient.emailVerified,
+      phoneVerified: patient.phoneVerified,
+      isActive: patient.isActive
+    };
+
+    console.log('✅ Service: Patient details formatted successfully');
+    return patientDetails;
+
+  } catch (error) {
+    console.error('❌ Service error getting patient details:', error);
+    throw error;
+  }
+}
+
+
 
   /**
    * ═══════════════════════════════════════════════════════════

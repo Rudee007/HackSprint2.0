@@ -8,76 +8,262 @@ class TherapyTrackingController {
   // ✅ FIXED: Get dashboard data for therapy tracking
   // src/controllers/realtime/therapyTracking.controller.js
 
-getTrackingDashboard = asyncHandler(async (req, res) => {
-  // ✅ FIX: Wider date range
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+  // ✅ ADD THESE TO TherapyTrackingController class
+
+// Update vitals in real-time
+updateVitals = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const { vitals } = req.body;
   
-  const sevenDaysAhead = new Date();
-  sevenDaysAhead.setDate(sevenDaysAhead.getDate() + 7);
-  sevenDaysAhead.setHours(23, 59, 59, 999);
+  if (!vitals) {
+    throw new AppError('Vitals data is required', 400, 'VALIDATION_ERROR');
+  }
+  
+  console.log('💓 Updating vitals for session:', sessionId);
+  
+  const consultation = await Consultation.findById(sessionId);
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  // ✅ REMOVED SESSION TYPE CHECK - ALLOW ALL TYPES
+  // Now vitals can be updated for ANY session type
+  
+  // Update vitals using model method
+  await consultation.updateVitals(vitals);
+  
+  console.log('✅ Vitals updated for session type:', consultation.sessionType);
+  
+  // Broadcast real-time update
+  const wsService = req.app.get('wsService');
+  if (wsService) {
+    wsService.emitVitalsUpdate(sessionId, {
+      vitals,
+      updatedBy: req.user.name,
+      timestamp: new Date()
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Vitals updated successfully',
+    data: { vitals, sessionId, sessionType: consultation.sessionType }
+  });
+});
+
+// Update therapy progress in real-time
+updateProgress = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const { stage, notes, percentage } = req.body;
+  
+  if (!stage || percentage === undefined) {
+    throw new AppError('Stage and percentage are required', 400, 'VALIDATION_ERROR');
+  }
+  
+  console.log('📈 Updating progress for session:', sessionId, '- Stage:', stage);
+  
+  const consultation = await Consultation.findById(sessionId);
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  // Add progress using model method
+  await consultation.addTherapyProgress(stage, notes, percentage);
+  
+  console.log('✅ Progress updated:', { stage, percentage });
+  
+  // Broadcast progress update
+  const wsService = req.app.get('wsService');
+  if (wsService) {
+    wsService.emitProgressUpdate(sessionId, {
+      stage,
+      percentage,
+      notes,
+      updatedBy: req.user.name,
+      timestamp: new Date()
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Progress updated successfully',
+    data: { stage, percentage, sessionId }
+  });
+});
+
+// Report adverse effect
+reportAdverseEffect = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const { effect, severity, description, actionTaken } = req.body;
+  
+  if (!effect || !severity) {
+    throw new AppError('Effect and severity are required', 400, 'VALIDATION_ERROR');
+  }
+  
+  console.log('⚠️ Adverse effect reported for session:', sessionId);
+  
+  const consultation = await Consultation.findById(sessionId)
+    .populate('patientId', 'name')
+    .populate('providerId', 'name');
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  // Add adverse effect using model method
+  await consultation.addAdverseEffect(effect, severity, description, actionTaken);
+  
+  console.log('✅ Adverse effect recorded:', { effect, severity });
+  
+  // Broadcast to admins if severe
+  const wsService = req.app.get('wsService');
+  if (wsService && (severity === 'severe' || severity === 'critical')) {
+    wsService.emitEmergencyAlert({
+      sessionId,
+      type: 'adverse_effect',
+      effect,
+      severity,
+      patientName: consultation.patientId?.name,
+      therapistName: consultation.providerId?.name,
+      description,
+      reportedBy: req.user.name,
+      timestamp: new Date()
+    });
+  }
+  
+  // Broadcast to session participants
+  if (wsService) {
+    wsService.emitAdverseEffectReport(sessionId, {
+      effect,
+      severity,
+      description,
+      actionTaken,
+      reportedBy: req.user.name,
+      timestamp: new Date()
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Adverse effect reported successfully',
+    data: { effect, severity, sessionId }
+  });
+});
+
+// Add session note in real-time
+addSessionNote = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const { note, type } = req.body;
+  
+  if (!note) {
+    throw new AppError('Note content is required', 400, 'VALIDATION_ERROR');
+  }
+  
+  const consultation = await Consultation.findById(sessionId);
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  // Add note
+  consultation.sessionNotes = consultation.sessionNotes || [];
+  const newNote = {
+    timestamp: new Date(),
+    note,
+    addedBy: req.user._id,
+    type: type || 'general'
+  };
+  
+  consultation.sessionNotes.push(newNote);
+  await consultation.save();
+  
+  // Broadcast note
+  const wsService = req.app.get('wsService');
+  if (wsService) {
+    wsService.emitSessionNote(sessionId, {
+      ...newNote,
+      addedByName: req.user.name
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Note added successfully',
+    data: { note: newNote }
+  });
+});
+
+
+getTrackingDashboard = asyncHandler(async (req, res) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
 
   try {
     console.log('📊 Loading therapy tracking dashboard for user:', req.user.id, req.user.role);
-    console.log('📅 Date range:', sevenDaysAgo, 'to', sevenDaysAhead);
+    console.log('📅 Today range:', today, 'to', tomorrow);
 
-    const query = {
+    const baseQuery = {
       scheduledAt: {
-        $gte: sevenDaysAgo,
-        $lte: sevenDaysAhead
+        $gte: today,
+        $lt: tomorrow
       }
     };
 
     // If doctor/therapist, filter by providerId
     if (req.user.role === 'doctor' || req.user.role === 'therapist') {
-      query.providerId = req.user._id;
+      baseQuery.providerId = req.user._id;
     }
 
-    console.log('🔍 Query being executed:', JSON.stringify(query));
+    console.log('🔍 Base query:', JSON.stringify(baseQuery));
 
-    const sessions = await Consultation.find(query)
-      .populate('patientId', 'name email phone')
-      .populate('providerId', 'name role')
-      .sort({ scheduledAt: -1 })
-      .lean();
-
-    console.log(`📊 Found ${sessions.length} sessions in date range`);
-
-    if (sessions.length > 0) {
-      console.log('📊 Sample session:', sessions[0]);
-    }
-
-    // ✅ FIX: Categorize sessions properly
-    const activeSessions = sessions.filter(s => 
-      s.sessionStatus === 'in_progress' || s.status === 'in_progress'
-    );
+    // ✅ FETCH EACH CATEGORY SEPARATELY WITH SPECIFIC STATUS FILTERS
     
-    const upcomingSessions = sessions.filter(s => 
-      ['scheduled', 'confirmed', 'patient_arrived', 'therapist_ready'].includes(s.sessionStatus || s.status) &&
-      new Date(s.scheduledAt) > new Date()
-    );
-    
-    const completedSessions = sessions.filter(s => 
-      s.sessionStatus === 'completed' || s.status === 'completed'
-    );
-    
-    const pausedSessions = sessions.filter(s => 
-      s.sessionStatus === 'paused' || s.status === 'paused'
-    );
+    // 1. ACTIVE SESSIONS - Must be 'in_progress'
+    const activeSessions = await Consultation.find({
+      ...baseQuery,
+      sessionStatus: 'in_progress'
+    })
+    .populate('patientId', 'name email phone')
+    .populate('providerId', 'name role')
+    .sort({ scheduledAt: -1 })
+    .lean();
 
-    console.log(`📊 Categorized - Active: ${activeSessions.length}, Upcoming: ${upcomingSessions.length}, Completed: ${completedSessions.length}, Paused: ${pausedSessions.length}`);
+    // 2. PAUSED SESSIONS - Must be 'paused'
+    const pausedSessions = await Consultation.find({
+      ...baseQuery,
+      sessionStatus: 'paused'
+    })
+    .populate('patientId', 'name email phone')
+    .populate('providerId', 'name role')
+    .sort({ scheduledAt: -1 })
+    .lean();
 
-    // ✅ Get TODAY's completed count for stats
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    
-    const completedToday = completedSessions.filter(s => {
-      const completedDate = new Date(s.sessionEndTime || s.updatedAt);
-      return completedDate >= today && completedDate < tomorrow;
-    });
+    // 3. UPCOMING SESSIONS - scheduled/confirmed and NOT started yet
+    const upcomingSessions = await Consultation.find({
+      ...baseQuery,
+      sessionStatus: { $in: ['scheduled', 'confirmed', 'patient_arrived', 'therapist_ready'] }
+    })
+    .populate('patientId', 'name email phone')
+    .populate('providerId', 'name role')
+    .sort({ scheduledAt: 1 })
+    .lean();
+
+    // 4. COMPLETED SESSIONS - Must be 'completed'
+    const completedSessions = await Consultation.find({
+      ...baseQuery,
+      sessionStatus: 'completed'
+    })
+    .populate('patientId', 'name email phone')
+    .populate('providerId', 'name role')
+    .sort({ sessionEndTime: -1 })
+    .lean();
+
+    console.log(`📊 Results - Active: ${activeSessions.length}, Paused: ${pausedSessions.length}, Upcoming: ${upcomingSessions.length}, Completed: ${completedSessions.length}`);
 
     // ✅ WebSocket state
     let systemState = { 
@@ -97,7 +283,7 @@ getTrackingDashboard = asyncHandler(async (req, res) => {
       console.warn('⚠️ WebSocket service not available:', wsError.message);
     }
 
-    // ✅ FIX: Format sessions for frontend
+    // ✅ Format sessions for frontend
     const formatSession = (session) => ({
       _id: session._id,
       id: session._id.toString(),
@@ -130,38 +316,40 @@ getTrackingDashboard = asyncHandler(async (req, res) => {
       sessionNotes: session.sessionNotes,
       activeParticipants: session.activeParticipants,
       statusHistory: session.statusHistory,
-      timing: session.timing,
-      participantCount: session.activeParticipants?.length || 0
+      participantCount: session.activeParticipants?.length || 0,
+      timing: session.sessionStartTime && session.sessionStatus === 'in_progress' ? {
+        elapsedTime: Date.now() - new Date(session.sessionStartTime).getTime(),
+        remainingTime: Math.max(0, (session.estimatedDuration * 60 * 1000) - (Date.now() - new Date(session.sessionStartTime).getTime())),
+        progressPercentage: Math.min(100, Math.round(((Date.now() - new Date(session.sessionStartTime).getTime()) / (session.estimatedDuration * 60 * 1000)) * 100 * 10) / 10)
+      } : null
     });
 
     // Calculate statistics
     const stats = {
       active: activeSessions.length,
       upcoming: upcomingSessions.length,
-      completed: completedToday.length, // Only today's completed
+      completed: completedSessions.length,
       paused: pausedSessions.length,
-      total: sessions.length,
+      total: activeSessions.length + upcomingSessions.length + completedSessions.length + pausedSessions.length,
       connectedUsers: systemState.totalConnections || 0,
       activeCountdowns: systemState.activeCountdowns || 0
     };
 
     console.log('✅ Sending response with stats:', stats);
-    console.log('✅ Completed sessions array length:', completedSessions.length);
 
-    // ✅ FIX: Send properly formatted response
     res.json({
       success: true,
       data: {
         activeSessions: activeSessions.map(formatSession),
         upcomingSessions: upcomingSessions.map(formatSession),
-        completedSessions: completedSessions.map(formatSession), // ✅ MUST send this array
+        completedSessions: completedSessions.map(formatSession),
         pausedSessions: pausedSessions.map(formatSession),
         connectedUsers: systemState.connectedUsers || [],
-        totalSessions: sessions.length,
+        totalSessions: stats.total,
         stats,
         dateRange: {
-          from: sevenDaysAgo,
-          to: sevenDaysAhead
+          from: today,
+          to: tomorrow
         }
       },
       timestamp: new Date().toISOString()

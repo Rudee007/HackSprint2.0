@@ -502,6 +502,9 @@ router.delete('/treatment-plans/:id',
   doctorController.deleteTreatmentPlan
 );
 
+router.get('/patients/:patientId',authenticate,doctorController.getPatientDetails)
+
+
 /**
  * ═══════════════════════════════════════════════════════════
  * 7. ERROR HANDLING MIDDLEWARE

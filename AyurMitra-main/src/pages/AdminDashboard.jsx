@@ -23,7 +23,7 @@ const NotificationCenter = React.lazy(() => import('../components/admin/Notifica
 
 // 🎨 ============ DEMO MODE CONFIG ============
 // ✅ Set this to TRUE to enable styling without backend
-const DEMO_MODE = true; // ← Your friend can change this to false later
+const DEMO_MODE = false; // ← Your friend can change this to false later
 
 // ✅ Demo/Mock data for styling purposes
 const DEMO_ADMIN_INFO = {

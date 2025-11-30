@@ -4,6 +4,201 @@ const Consultation = require('../../models/Consultation');
 
 class RealtimeSessionController {
   
+
+
+
+  // ✅ ADD THIS TO RealtimeSessionController class
+
+// Send emergency alert
+sendEmergencyAlert = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const { message, severity } = req.body;
+  
+  if (!message || !severity) {
+    throw new AppError('Message and severity are required', 400, 'VALIDATION_ERROR');
+  }
+  
+  const consultation = await Consultation.findById(sessionId)
+    .populate('patientId', 'name email')
+    .populate('providerId', 'name');
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  // Update emergency flag in database
+  if (consultation.sessionType === 'therapy' && consultation.therapyData) {
+    consultation.therapyData.emergencyReported = true;
+    consultation.therapyData.emergencyDetails = {
+      type: 'manual_alert',
+      message,
+      severity,
+      timestamp: new Date(),
+      reportedBy: req.user._id
+    };
+    await consultation.save();
+  }
+  
+  // Broadcast emergency to all admins and doctors
+  const wsService = req.app.get('wsService');
+  if (wsService) {
+    wsService.emitEmergencyAlert({
+      sessionId,
+      sessionType: consultation.sessionType,
+      message,
+      severity,
+      patientName: consultation.patientId?.name,
+      therapistName: consultation.providerId?.name,
+      reportedBy: req.user.name,
+      timestamp: new Date()
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Emergency alert sent successfully',
+    data: { sessionId, severity }
+  });
+});
+
+// Pause session
+pauseSession = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const { reason } = req.body;
+  
+  const consultation = await Consultation.findById(sessionId);
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  if (consultation.sessionStatus !== 'in_progress') {
+    throw new AppError('Only in-progress sessions can be paused', 400, 'INVALID_STATE');
+  }
+  
+  // Update status
+  consultation.sessionStatus = 'paused';
+  consultation.sessionMetadata = consultation.sessionMetadata || {};
+  consultation.sessionMetadata.totalPauses = (consultation.sessionMetadata.totalPauses || 0) + 1;
+  consultation.sessionMetadata.lastActivity = new Date();
+  
+  await consultation.save();
+  
+  // Broadcast pause event
+  const wsService = req.app.get('wsService');
+  if (wsService) {
+    wsService.emitSessionStatusUpdate(sessionId, {
+      status: 'paused',
+      reason,
+      pausedBy: req.user.name,
+      timestamp: new Date()
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Session paused',
+    data: { consultation }
+  });
+});
+
+// Resume session
+resumeSession = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  
+  const consultation = await Consultation.findById(sessionId);
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  if (consultation.sessionStatus !== 'paused') {
+    throw new AppError('Only paused sessions can be resumed', 400, 'INVALID_STATE');
+  }
+  
+  // Resume session
+  consultation.sessionStatus = 'in_progress';
+  consultation.sessionMetadata = consultation.sessionMetadata || {};
+  consultation.sessionMetadata.lastActivity = new Date();
+  
+  await consultation.save();
+  
+  // Broadcast resume event
+  const wsService = req.app.get('wsService');
+  if (wsService) {
+    wsService.emitSessionStatusUpdate(sessionId, {
+      status: 'in_progress',
+      resumedBy: req.user.name,
+      timestamp: new Date()
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Session resumed',
+    data: { consultation }
+  });
+});
+
+// Complete session
+completeSession = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const { summary, notes } = req.body;
+  
+  const consultation = await Consultation.findById(sessionId)
+    .populate('patientId', 'name email')
+    .populate('providerId', 'name');
+  
+  if (!consultation) {
+    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+  }
+  
+  if (consultation.sessionStatus !== 'in_progress' && consultation.sessionStatus !== 'paused') {
+    throw new AppError('Only in-progress or paused sessions can be completed', 400, 'INVALID_STATE');
+  }
+  
+  // Complete session
+  consultation.sessionStatus = 'completed';
+  consultation.sessionEndTime = new Date();
+  consultation.notes = notes || consultation.notes;
+  
+  // Calculate actual duration
+  if (consultation.sessionStartTime) {
+    const duration = (consultation.sessionEndTime - consultation.sessionStartTime) / (1000 * 60); // minutes
+    consultation.actualDuration = Math.round(duration);
+  }
+  
+  await consultation.save();
+  
+  // Stop countdown
+  const wsService = req.app.get('wsService');
+  if (wsService) {
+    wsService.stopSessionCountdown(sessionId);
+    
+    wsService.emitSessionStatusUpdate(sessionId, {
+      status: 'completed',
+      completedBy: req.user.name,
+      actualDuration: consultation.actualDuration,
+      timestamp: new Date()
+    });
+    
+    // Notify patient
+    wsService.emitToUser(consultation.patientId._id, 'session_completed', {
+      sessionId,
+      therapyType: consultation.sessionType,
+      therapistName: consultation.providerId?.name,
+      summary,
+      timestamp: new Date()
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Session completed successfully',
+    data: { consultation }
+  });
+});
+
   // Update session status with real-time broadcast
   updateSessionStatus = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
@@ -82,12 +277,26 @@ class RealtimeSessionController {
       throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
     }
     
-    if (consultation.sessionStatus !== 'confirmed') {
+    // ✅ ALLOW BOTH 'scheduled' AND 'confirmed'
+    if (!['scheduled', 'confirmed'].includes(consultation.sessionStatus)) {
       throw new AppError(
-        'Session must be confirmed before starting',
+        `Cannot start session from ${consultation.sessionStatus} status`,
         400,
         'INVALID_SESSION_STATE'
       );
+    }
+    
+    // ✅ ALREADY IN PROGRESS? Just return success
+    if (consultation.sessionStatus === 'in_progress') {
+      return res.json({
+        success: true,
+        message: 'Session already in progress',
+        data: { 
+          consultation,
+          countdownStarted: true,
+          estimatedEndTime: new Date(Date.now() + (consultation.estimatedDuration * 60 * 1000))
+        }
+      });
     }
     
     // Update to in-progress
@@ -99,21 +308,21 @@ class RealtimeSessionController {
     // ✅ Get WebSocket service
     const wsService = req.app.get('wsService');
     if (!wsService) {
-      throw new AppError('WebSocket service unavailable', 503, 'WS_SERVICE_ERROR');
+      console.warn('⚠️ WebSocket service unavailable');
+    } else {
+      // ✅ Start countdown in WebSocket service
+      wsService.startSessionCountdown(sessionId, consultation.estimatedDuration || 60);
+      
+      // Broadcast session started
+      wsService.emitSessionStatusUpdate(sessionId, {
+        status: 'in_progress',
+        startTime: consultation.sessionStartTime,
+        estimatedDuration: consultation.estimatedDuration,
+        patientName: consultation.patientId?.name,
+        providerName: consultation.providerId?.name,
+        countdown: (consultation.estimatedDuration || 60) * 60
+      });
     }
-    
-    // ✅ Start countdown in WebSocket service
-    wsService.startSessionCountdown(sessionId, consultation.estimatedDuration || 60);
-    
-    // Broadcast session started
-    wsService.emitSessionStatusUpdate(sessionId, {
-      status: 'in_progress',
-      startTime: consultation.sessionStartTime,
-      estimatedDuration: consultation.estimatedDuration,
-      patientName: consultation.patientId?.name,
-      providerName: consultation.providerId?.name,
-      countdown: (consultation.estimatedDuration || 60) * 60
-    });
     
     res.json({
       success: true,
@@ -125,7 +334,7 @@ class RealtimeSessionController {
       }
     });
   });
-  
+    
   // Get real-time session details
   getSessionDetails = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;

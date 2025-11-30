@@ -300,6 +300,44 @@ class WebSocketService {
   getSocketId() {
     return this.socket?.id;
   }
+
+  on(eventType, callback) {
+    // Use existing socket listener if available
+    if (this.socket && this.socket.connected) {
+      this.socket.on(eventType, callback);
+      console.log(`📡 Registered socket listener for: ${eventType}`);
+    }
+    
+    // Also add to internal listeners for persistence
+    this.addEventListener(eventType, callback);
+  }
+
+  /**
+   * Alias for removeEventListener (Socket.IO style)
+   */
+  off(eventType, callback) {
+    // Remove from socket if available
+    if (this.socket) {
+      this.socket.off(eventType, callback);
+      console.log(`🔕 Removed socket listener for: ${eventType}`);
+    }
+    
+    // Also remove from internal listeners
+    this.removeEventListener(eventType, callback);
+  }
+
+  /**
+   * Emit event directly to socket
+   */
+  emit(event, data) {
+    if (this.socket?.connected) {
+      this.socket.emit(event, data);
+      console.log(`📤 Emitted socket event: ${event}`, data);
+      return true;
+    }
+    console.warn(`⚠️ Cannot emit ${event}: Socket not connected`);
+    return false;
+  }
 }
 
 export default new WebSocketService();

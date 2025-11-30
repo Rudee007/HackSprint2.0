@@ -81,43 +81,67 @@ class FeedbackService {
   // ============ PROVIDER OPERATIONS ============
   
   async getProviderFeedback(providerId, options = {}) {
-    const { page = 1, limit = 10, timeRange = '3months' } = options;
-    const skip = (page - 1) * limit;
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔥 [FeedbackService] getProviderFeedback called');
+    console.log('📊 providerId:', providerId.toString());
     
-    const dateFilter = {
-      createdAt: { $gte: moment().subtract(3, 'months').toDate() }
-    };
-
-    const [feedback, total, avgRating] = await Promise.all([
-      Feedback.find({ providerId, ...dateFilter })
-        .populate('patientId', 'name')
-        .populate('sessionId', 'scheduledAt therapyType')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Feedback.countDocuments({ providerId, ...dateFilter }),
-      Feedback.aggregate([
-        { $match: { providerId, ...dateFilter } },
-        { $group: { 
-          _id: null, 
-          avgOverall: { $avg: '$ratings.overallSatisfaction' },
-          avgEffectiveness: { $avg: '$ratings.treatmentEffectiveness' },
-          avgCare: { $avg: '$ratings.patientCare' }
-        }}
-      ])
-    ]);
-
-    return {
-      feedback,
-      averageRatings: avgRating[0] || {},
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalFeedback: total
-      }
-    };
+    const { page = 1, limit = 10 } = options;
+    const skip = (page - 1) * limit;
+    const providerIdString = providerId.toString();
+    
+    // ✅ REMOVE DATE FILTER FOR NOW (testing)
+    // const dateFilter = { createdAt: { $gte: moment().subtract(3, 'months').toDate() } };
+    const dateFilter = {};  // ← NO DATE FILTER
+    
+    console.log('🔍 Query: { providerId: "' + providerIdString + '" }');
+    
+    try {
+      const [feedback, total, avgRating] = await Promise.all([
+        Feedback.find({ providerId: providerIdString, ...dateFilter })
+          .populate('patientId', 'name')
+          .populate('sessionId', 'scheduledAt therapyType')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        
+        Feedback.countDocuments({ providerId: providerIdString, ...dateFilter }),
+        
+        Feedback.aggregate([
+          { $match: { providerId: providerIdString, ...dateFilter } },
+          { $group: { 
+            _id: null, 
+            avgOverall: { $avg: '$ratings.overallSatisfaction' },
+            avgEffectiveness: { $avg: '$ratings.treatmentEffectiveness' },
+            avgCare: { $avg: '$ratings.patientCare' }
+          }}
+        ])
+      ]);
+      
+      console.log('✅ Found:', feedback.length, 'feedback items');
+      console.log('✅ Average rating:', avgRating[0]?.avgOverall || 0);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      
+      return {
+        feedback,
+        averageRatings: avgRating[0] || {
+          avgOverall: 0,
+          avgEffectiveness: 0,
+          avgCare: 0
+        },
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalFeedback: total
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ ERROR:', error);
+      throw error;
+    }
   }
-
+  
   // ============ ADMIN OPERATIONS ============
   
   async getAllFeedback(options = {}) {

@@ -24,7 +24,6 @@ class DoctorController {
       console.log('🟢 Doctor registration started');
       console.log('🟢 User:', req.user.email, '| Role:', req.user.role, '| ID:', req.user._id);
       
-      // Validate request data
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         console.log('❌ Validation errors:', errors.array());
@@ -39,7 +38,6 @@ class DoctorController {
         });
       }
   
-      // Check user role
       if (req.user.role !== 'doctor') {
         console.log('❌ Access denied - user role:', req.user.role);
         return res.status(403).json({
@@ -119,6 +117,123 @@ class DoctorController {
     }
   };
   
+
+  /**
+ * Get patient details by ID
+ * GET /api/doctors/patients/:patientId
+ */
+async getPatientDetails(req, res, next) {
+  try {
+    console.log('🔄 Fetching patient details');
+    console.log('👤 Doctor:', req.user.email);
+    console.log('🆔 Patient ID:', req.params.patientId);
+
+    // Check if user is a doctor
+    if (req.user.role !== 'doctor') {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_PERMISSIONS',
+          message: 'Only doctors can view patient details'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const { patientId } = req.params;
+
+    // Validate patientId
+    if (!mongoose.Types.ObjectId.isValid(patientId)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_PATIENT_ID',
+          message: 'Invalid patient ID format'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Call service to get patient details
+    const patientDetails = await doctorService.getPatientDetails(patientId, req.user._id);
+
+    if (!patientDetails) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'PATIENT_NOT_FOUND',
+          message: 'Patient not found'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log('✅ Patient details retrieved successfully');
+    logger.info('Patient details viewed', {
+      doctorId: req.user._id,
+      patientId,
+      doctorEmail: req.user.email
+    });
+
+    res.json({
+      success: true,
+      message: 'Patient details retrieved successfully',
+      data: patientDetails,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Get patient details error:', error.message);
+    logger.error('Get patient details error:', {
+      error: error.message,
+      doctorId: req.user?._id,
+      patientId: req.params.patientId
+    });
+    next(error);
+  }
+}
+
+/**
+ * Get all patients list (for doctor)
+ * GET /api/doctors/patients
+ */
+async getPatientsList(req, res, next) {
+  try {
+    console.log('🔄 Fetching patients list');
+    
+    if (req.user.role !== 'doctor') {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_PERMISSIONS',
+          message: 'Only doctors can view patients list'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const options = {
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20,
+      search: req.query.search
+    };
+
+    const result = await doctorService.getPatientsList(req.user._id, options);
+
+    res.json({
+      success: true,
+      message: 'Patients list retrieved successfully',
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Get patients list error:', error.message);
+    logger.error('Get patients list error:', error);
+    next(error);
+  }
+}
+
 
   /**
    * Get doctor profile

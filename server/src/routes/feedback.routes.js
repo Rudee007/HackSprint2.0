@@ -25,13 +25,11 @@ router.put('/my-feedback/:feedbackId', feedbackController.updateMyFeedback);
 
 // Get feedback for my sessions (therapists/doctors)
 router.get('/provider/my-feedback', 
-  requirePermission('view_provider_feedback'), 
   feedbackController.getProviderFeedback
 );
 
 // Get my performance analytics
 router.get('/provider/analytics', 
-  requirePermission('view_provider_analytics'), 
   feedbackController.getProviderAnalytics
 );
 

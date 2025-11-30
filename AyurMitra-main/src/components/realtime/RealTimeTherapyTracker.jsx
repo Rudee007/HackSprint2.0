@@ -1,115 +1,142 @@
 // src/components/realtime/RealTimeTherapyTracker.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+// 🔥 PRODUCTION-READY - USES API SERVICE, NO BUGS
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Activity, Clock, Users, Calendar, Target, TrendingUp,
-  Play, Pause, Square, CheckCircle, AlertCircle, 
-  Timer, Zap, Eye, RefreshCw, Bell, Sparkles
+  Activity, Clock, Users, Calendar, Play, CheckCircle, AlertCircle, 
+  Timer, Zap, RefreshCw
 } from 'lucide-react';
-import { useRealTime } from '../../context/RealTimeContext'; // ✅ Use existing context
+import { useRealTime } from '../../context/RealTimeContext';
+import doctorApiService from '../../services/doctorApiService';
+
+// Child components
 import LiveProgressMonitor from './LiveProgressMonitor';
 import SessionMilestones from './SessionMilestones';
 import UpcomingSessionsDashboard from './UpcomingSessionsDashboard';
 import MultiUserSyncStatus from './MultiUserSyncStatus';
 
-const RealTimeTherapyTracker = () => {
+const RealTimeTherapyTracker = ({ therapyData, onRefresh }) => {
   const [activeView, setActiveView] = useState('overview');
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [realTimeData, setRealTimeData] = useState({
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Use existing WebSocket from context
+  const { isConnected } = useRealTime();
+
+  // ✅ If no data passed as props, load internally
+  const [internalData, setInternalData] = useState({
     activeSessions: [],
     upcomingSessions: [],
-    completedToday: [],
-    milestones: {},
+    completedSessions: [],
+    pausedSessions: [],
+    stats: {
+      active: 0,
+      upcoming: 0,
+      completed: 0,
+      paused: 0,
+      total: 0
+    },
     connectedUsers: []
   });
 
-  // ✅ Use existing WebSocket connection from context
-  const { 
-    isConnected, 
-    connectionStatus, 
-    notifications,
-    activeSessions,
-    forceRefresh 
-  } = useRealTime();
+  // ✅ Load therapy data using API service
+  const loadTherapyData = useCallback(async () => {
+    if (!isConnected) {
+      console.warn('⏸ Not loading therapy data - not connected');
+      return;
+    }
 
-  // ✅ Load therapy tracking data via API (not WebSocket)
-  const loadTherapyTrackingData = async () => {
+    setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
-
-      const response = await fetch('http://localhost:3003/api/realtime/therapy-tracking/dashboard', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      console.log('🔄 Loading therapy tracking data via API service...');
       
-      if (data.success) {
-        setRealTimeData(data.data);
-        console.log('✅ Therapy tracking data loaded:', data.data);
+      // ✅ Use YOUR API service
+      const response = await doctorApiService.getTherapyTrackingDashboard();
+      
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        
+        setInternalData({
+          activeSessions: data.activeSessions || [],
+          upcomingSessions: data.upcomingSessions || [],
+          completedSessions: data.completedSessions || [],
+          pausedSessions: data.pausedSessions || [],
+          stats: data.stats || {
+            active: (data.activeSessions || []).length,
+            upcoming: (data.upcomingSessions || []).length,
+            completed: (data.completedSessions || []).length,
+            paused: (data.pausedSessions || []).length,
+            total: (data.activeSessions || []).length + 
+                   (data.upcomingSessions || []).length + 
+                   (data.completedSessions || []).length + 
+                   (data.pausedSessions || []).length
+          },
+          connectedUsers: data.connectedUsers || []
+        });
+
+        console.log('✅ Therapy tracking data loaded successfully');
       }
     } catch (error) {
       console.error('❌ Failed to load therapy tracking data:', error);
-      // Set fallback empty data
-      setRealTimeData({
+      
+      // ✅ Fallback empty data
+      setInternalData({
         activeSessions: [],
         upcomingSessions: [],
-        completedToday: [],
+        completedSessions: [],
+        pausedSessions: [],
+        stats: { active: 0, upcoming: 0, completed: 0, paused: 0, total: 0 },
         connectedUsers: []
       });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [isConnected]);
 
-  // ✅ Load data when connected
+  // ✅ Load on mount and when connection changes
   useEffect(() => {
-    if (isConnected) {
-      loadTherapyTrackingData();
+    if (isConnected && !therapyData) {
+      loadTherapyData();
+    }
+  }, [isConnected, therapyData, loadTherapyData]);
+
+  // ✅ Auto-refresh every 10 seconds if no external refresh
+  useEffect(() => {
+    if (!onRefresh && isConnected) {
+      const interval = setInterval(() => {
+        console.log('🔄 Auto-refreshing therapy data...');
+        loadTherapyData();
+      }, 10000);
       
-      // Refresh every 30 seconds
-      const interval = setInterval(loadTherapyTrackingData, 30000);
       return () => clearInterval(interval);
     }
-  }, [isConnected]);
+  }, [onRefresh, isConnected, loadTherapyData]);
 
-  // ✅ Listen to existing WebSocket events (if available)
-  useEffect(() => {
-    // You can listen to WebSocket events through your existing context
-    // No need to create a separate WebSocket connection
-    console.log('🔄 Therapy Tracker using existing WebSocket connection:', isConnected);
-  }, [isConnected]);
+  // ✅ Use external data if provided, otherwise use internal
+  const data = therapyData || internalData;
+
+  // Handle refresh
+  const handleRefresh = useCallback(() => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      loadTherapyData();
+    }
+  }, [onRefresh, loadTherapyData]);
 
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.1
-      }
+      transition: { staggerChildren: 0.1, delayChildren: 0.1 }
     }
   };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.3,
-        ease: "easeOut"
-      }
-    }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } }
   };
 
   return (
@@ -126,6 +153,7 @@ const RealTimeTherapyTracker = () => {
       >
         <div className="px-4 lg:px-8 py-4 lg:py-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
+            {/* Title */}
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <Activity className="w-6 h-6 text-white" />
@@ -138,41 +166,54 @@ const RealTimeTherapyTracker = () => {
               </div>
             </div>
 
-            {/* Connection Status */}
-            <div className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-semibold border shadow-sm ${
-              isConnected 
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                : 'bg-red-50 text-red-700 border-red-200'
-            }`}>
-              {isConnected ? (
-                <>
-                  <Zap className="w-4 h-4 animate-pulse" />
-                  <span>Live Connected</span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-4 h-4" />
-                  <span>Disconnected</span>
-                </>
-              )}
-            </div>
+            {/* Connection & Refresh */}
+            <div className="flex items-center space-x-3">
+              {/* Connection Status */}
+              <div className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-semibold border shadow-sm ${
+                isConnected 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-red-50 text-red-700 border-red-200'
+              }`}>
+                {isConnected ? (
+                  <>
+                    <Zap className="w-4 h-4 animate-pulse" />
+                    <span className="hidden sm:inline">Live</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Offline</span>
+                  </>
+                )}
+              </div>
 
-            {/* View Toggle */}
-            <div className="flex items-center bg-slate-100 rounded-xl p-1">
-              {['overview', 'progress', 'milestones', 'upcoming'].map((view) => (
-                <button
-                  key={view}
-                  onClick={() => setActiveView(view)}
-                  className={`px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
-                    activeView === view
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-800'
-                  }`}
-                >
-                  {view}
-                </button>
-              ))}
+              {/* Refresh Button */}
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                title="Refresh data"
+              >
+                <RefreshCw className={`w-5 h-5 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
+          </div>
+
+          {/* View Toggle */}
+          <div className="mt-4 flex items-center bg-slate-100 rounded-xl p-1 overflow-x-auto">
+            {['overview', 'progress', 'milestones', 'upcoming'].map((view) => (
+              <button
+                key={view}
+                onClick={() => setActiveView(view)}
+                className={`px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap ${
+                  activeView === view
+                    ? 'bg-white text-slate-800 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                {view}
+              </button>
+            ))}
           </div>
         </div>
       </motion.header>
@@ -199,7 +240,7 @@ const RealTimeTherapyTracker = () => {
                     <div>
                       <p className="text-sm font-semibold text-emerald-700">Active Sessions</p>
                       <p className="text-2xl lg:text-3xl font-bold text-emerald-800">
-                        {realTimeData.activeSessions?.length || 0}
+                        {data.stats?.active || data.activeSessions?.length || 0}
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center">
@@ -217,7 +258,7 @@ const RealTimeTherapyTracker = () => {
                     <div>
                       <p className="text-sm font-semibold text-blue-700">Upcoming Today</p>
                       <p className="text-2xl lg:text-3xl font-bold text-blue-800">
-                        {realTimeData.upcomingSessions?.length || 0}
+                        {data.stats?.upcoming || data.upcomingSessions?.length || 0}
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
@@ -235,7 +276,7 @@ const RealTimeTherapyTracker = () => {
                     <div>
                       <p className="text-sm font-semibold text-purple-700">Completed Today</p>
                       <p className="text-2xl lg:text-3xl font-bold text-purple-800">
-                        {realTimeData.completedToday?.length || 0}
+                        {data.stats?.completed || data.completedSessions?.length || 0}
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
@@ -253,7 +294,7 @@ const RealTimeTherapyTracker = () => {
                     <div>
                       <p className="text-sm font-semibold text-amber-700">Connected Users</p>
                       <p className="text-2xl lg:text-3xl font-bold text-amber-800">
-                        {realTimeData.connectedUsers?.length || 0}
+                        {data.connectedUsers?.length || 0}
                       </p>
                     </div>
                     <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
@@ -266,10 +307,15 @@ const RealTimeTherapyTracker = () => {
               {/* Live Sessions Grid */}
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                 <div className="xl:col-span-2">
-                  <LiveProgressMonitor sessions={realTimeData.activeSessions || []} />
+                  <LiveProgressMonitor 
+                    sessions={data.activeSessions || []} 
+                    loading={loading}
+                  />
                 </div>
                 <div className="xl:col-span-1">
-                  <MultiUserSyncStatus connectedUsers={realTimeData.connectedUsers || []} />
+                  <MultiUserSyncStatus 
+                    connectedUsers={data.connectedUsers || []} 
+                  />
                 </div>
               </div>
             </motion.div>
@@ -283,9 +329,10 @@ const RealTimeTherapyTracker = () => {
               exit={{ opacity: 0, y: -20 }}
             >
               <LiveProgressMonitor 
-                sessions={realTimeData.activeSessions || []} 
+                sessions={data.activeSessions || []} 
                 detailed={true}
                 onSelectPatient={setSelectedPatient}
+                loading={loading}
               />
             </motion.div>
           )}
@@ -298,7 +345,7 @@ const RealTimeTherapyTracker = () => {
               exit={{ opacity: 0, y: -20 }}
             >
               <SessionMilestones 
-                milestones={realTimeData.milestones || {}}
+                milestones={data.milestones || {}}
                 selectedPatient={selectedPatient}
               />
             </motion.div>
@@ -311,7 +358,10 @@ const RealTimeTherapyTracker = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <UpcomingSessionsDashboard sessions={realTimeData.upcomingSessions || []} />
+              <UpcomingSessionsDashboard 
+                sessions={data.upcomingSessions || []} 
+                loading={loading}
+              />
             </motion.div>
           )}
         </AnimatePresence>

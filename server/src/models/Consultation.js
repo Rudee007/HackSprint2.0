@@ -1,190 +1,281 @@
+// backend/models/Consultation.js - ENHANCED VERSION
 const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const Schema = mongoose.Schema;
 
 const ConsultationSchema = new Schema({
-  // ============ EXISTING CORE FIELDS ============
-  patientId: { 
-    type: Schema.Types.ObjectId, 
-    ref: 'User', 
+  // ═══════════════════════════════════════════════════════════
+  // EXISTING FIELDS (Keep as is)
+  // ═══════════════════════════════════════════════════════════
+  patientId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
-    validate: {
-      validator: async function(id) {
-        const user = await mongoose.model('User').findById(id);
-        return user && user.role === 'patient';
-      },
-      message: 'Referenced user must be a patient'
-    }
+    index: true
   },
-  
-  providerId: { 
-    type: Schema.Types.ObjectId, 
-    ref: 'User', 
+  providerId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
-    validate: {
-      validator: async function(id) {
-        const user = await mongoose.model('User').findById(id);
-        return user && ['doctor', 'therapist'].includes(user.role);
-      },
-      message: 'Provider must be a doctor or therapist'
-    }
+    index: true
   },
-  
   providerType: {
     type: String,
     enum: ['doctor', 'therapist'],
     required: true
   },
-  
-  type: { 
-    type: String, 
-    enum: ['video', 'in_person'], 
-    required: true 
-  },
-  
-  scheduledAt: { 
-    type: Date, 
-    required: true,
-    validate: {
-      validator: function(date) {
-        return date > new Date();
-      },
-      message: 'Consultation must be scheduled for a future date'
-    }
-  },
-  
-  status: { 
-    type: String, 
-    enum: ['scheduled', 'in_progress', 'completed', 'cancelled'], 
-    default: 'scheduled' 
-  },
-  
-  fee: { 
-    type: Number, 
-    required: true,
-    min: [0, 'Fee cannot be negative']
-  },
-  
-  notes: String,
-  
-  meetingLink: {
+  type: {
     type: String,
-    required: function() { 
-      return this.type === 'video'; 
-    }
+    enum: ['video', 'in_person', 'follow_up'],
+    required: true
   },
-  
+  scheduledAt: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  status: {
+    type: String,
+    enum: ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show', 'patient_arrived', 'therapist_ready'],
+    default: 'scheduled',
+    index: true
+  },
+  fee: Number,
+  notes: String,
+  meetingLink: String,
+
+  // Session Type & Status
   sessionType: {
     type: String,
-    enum: ['consultation', 'therapy', 'follow_up'],
-    default: function() {
-      return this.providerType === 'doctor' ? 'consultation' : 'therapy';
-    }
+    enum: ['consultation', 'followup', 'therapy'],
+    default: 'consultation'
   },
-  
+  sessionStatus: {
+    type: String,
+    enum: ['scheduled', 'in_progress', 'completed', 'paused', 'cancelled', 'patient_arrived', 'therapist_ready'],
+    default: 'scheduled'
+  },
+  estimatedDuration: {
+    type: Number,
+    default: 60
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // EXISTING SESSION METADATA (Keep as is)
+  // ═══════════════════════════════════════════════════════════
+  sessionMetadata: {
+    totalPauses: { type: Number, default: 0 },
+    pausedDuration: { type: Number, default: 0 },
+    connectionIssues: { type: Number, default: 0 },
+    lastActivity: Date,
+    qualityRating: { type: Number, min: 1, max: 5 }
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // 🔥 NEW: THERAPY-SPECIFIC FIELDS
+  // Only populated when sessionType === 'therapy'
+  // ═══════════════════════════════════════════════════════════
+  therapyData: {
+    // Treatment Plan Reference
+    treatmentPlanId: {
+      type: Schema.Types.ObjectId,
+      ref: 'TreatmentPlan'
+    },
+    doctorId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    
+    // Therapy Details
+    therapyType: {
+      type: String,
+      enum: ['abhyanga', 'shirodhara', 'panchakarma', 'swedana', 'nasya', 'virechana', 'basti', 'other']
+    },
+    dayNumber: Number,
+    totalDays: Number,
+    room: String,
+    todayProcedure: String,
+    
+    // 🔥 VITALS (Real-time tracking)
+    vitals: {
+      bloodPressure: {
+        systolic: { type: Number, min: 70, max: 250 },
+        diastolic: { type: Number, min: 40, max: 150 },
+        measuredAt: Date
+      },
+      pulse: {
+        type: Number,
+        min: 40,
+        max: 200
+      },
+      temperature: {
+        type: Number,
+        min: 95,
+        max: 106
+      },
+      weight: {
+        type: Number,
+        min: 20,
+        max: 300
+      },
+      respiratoryRate: Number,
+      oxygenSaturation: Number
+    },
+
+    // 🔥 OBSERVATIONS (Real-time tracking)
+    observations: {
+      sweatingQuality: {
+        type: String,
+        enum: ['good', 'moderate', 'poor', 'none']
+      },
+      skinTexture: {
+        type: String,
+        enum: ['soft', 'normal', 'rough', 'dry']
+      },
+      skinColor: {
+        type: String,
+        enum: ['normal', 'flushed', 'pale']
+      },
+      patientComfort: {
+        type: String,
+        enum: ['comfortable', 'mild_discomfort', 'moderate_discomfort', 'severe_discomfort']
+      },
+      responseToTreatment: {
+        type: String,
+        enum: ['excellent', 'good', 'fair', 'poor']
+      },
+      timeOfObservation: [Date]
+    },
+
+    // 🔥 ADVERSE EFFECTS (Critical for safety)
+    adverseEffects: [{
+      effect: {
+        type: String,
+        enum: ['nausea', 'dizziness', 'skin_irritation', 'weakness', 'pain', 'headache', 'breathing_difficulty', 'allergic_reaction', 'other'],
+        required: true
+      },
+      severity: {
+        type: String,
+        enum: ['mild', 'moderate', 'severe', 'critical'],
+        required: true
+      },
+      description: String,
+      occurredAt: {
+        type: Date,
+        default: Date.now
+      },
+      actionTaken: String,
+      resolved: {
+        type: Boolean,
+        default: false
+      }
+    }],
+
+    // 🔥 MATERIALS USED (Inventory tracking)
+    materialsUsed: [{
+      name: {
+        type: String,
+        required: true
+      },
+      quantity: {
+        type: String,
+        required: true
+      },
+      unit: {
+        type: String,
+        enum: ['ml', 'g', 'kg', 'units', 'drops'],
+        default: 'ml'
+      },
+      batchNumber: String
+    }],
+
+    // 🔥 REAL-TIME PROGRESS (For live tracking)
+    progressUpdates: [{
+      timestamp: {
+        type: Date,
+        default: Date.now
+      },
+      stage: {
+        type: String,
+        enum: ['preparation', 'massage', 'steam', 'rest', 'cleanup', 'completed']
+      },
+      notes: String,
+      percentage: {
+        type: Number,
+        min: 0,
+        max: 100
+      }
+    }],
+
+    // Special Instructions
+    preInstructions: String,
+    postInstructions: String,
+    specialInstructions: String,
+    
+    // Emergency
+    emergencyReported: {
+      type: Boolean,
+      default: false
+    },
+    emergencyDetails: {
+      type: String,
+      timestamp: Date,
+      actionTaken: String
+    },
+
+    // Session Feedback
+    patientFeedback: String,
+    nextSessionPrep: String
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // EXISTING FIELDS (Keep as is)
+  // ═══════════════════════════════════════════════════════════
+  sessionNotes: [{
+    timestamp: { type: Date, default: Date.now },
+    note: String,
+    addedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    type: {
+      type: String,
+      enum: ['progress', 'alert', 'observation', 'general'],
+      default: 'general'
+    }
+  }],
+
+  activeParticipants: [{
+    userId: { type: Schema.Types.ObjectId, ref: 'User' },
+    joinedAt: Date,
+    role: {
+      type: String,
+      enum: ['patient', 'doctor', 'therapist', 'admin']
+    },
+    isActive: { type: Boolean, default: true }
+  }],
+
+  statusHistory: [{
+    status: String,
+    timestamp: { type: Date, default: Date.now },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    reason: String,
+    previousStatus: String
+  }],
+
+  adminActions: [{
+    action: String,
+    performedBy: { type: Schema.Types.ObjectId, ref: 'Admin' },
+    timestamp: { type: Date, default: Date.now },
+    reason: String,
+    _id: { type: Schema.Types.ObjectId, auto: true }
+  }],
+
+  sessionStartTime: Date,
+  sessionEndTime: Date,
+  actualDuration: Number,
   rating: {
     type: Number,
     min: 1,
     max: 5
   },
-  
-  patientFeedback: String,
-
-  // ============ ✅ NEW REAL-TIME SESSION TRACKING FIELDS ============
-  
-  // Enhanced session status for real-time tracking
-  sessionStatus: {
-    type: String,
-    enum: [
-      'scheduled', 
-      'patient_arrived', 
-      'therapist_ready',
-      'in_progress', 
-      'paused', 
-      'completed', 
-      'cancelled', 
-      'no_show'
-    ],
-    default: 'scheduled'
-  },
-  
-  // Session timing for real-time countdown
-  sessionStartTime: {
-    type: Date
-  },
-  
-  sessionEndTime: {
-    type: Date
-  },
-  
-  estimatedDuration: {
-    type: Number, // in minutes
-    default: 60,
-    min: [15, 'Session must be at least 15 minutes'],
-    max: [240, 'Session cannot exceed 4 hours']
-  },
-  
-  actualDuration: {
-    type: Number // in minutes, calculated when session ends
-  },
-  
-  // Real-time session notes
-  sessionNotes: [{
-    timestamp: { type: Date, default: Date.now },
-    note: { type: String, required: true },
-    addedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    type: {
-      type: String,
-      enum: ['general', 'progress', 'instruction', 'alert'],
-      default: 'general'
-    }
-  }],
-  
-  // Track active participants in real-time
-  activeParticipants: [{
-    userId: { type: Schema.Types.ObjectId, ref: 'User' },
-    joinedAt: { type: Date, default: Date.now },
-    leftAt: Date,
-    role: { 
-      type: String, 
-      enum: ['patient', 'therapist', 'doctor', 'admin'] 
-    },
-    isActive: { type: Boolean, default: true }
-  }],
-  
-  // Session status history for audit trail
-  statusHistory: [{
-    status: { type: String, required: true },
-    timestamp: { type: Date, default: Date.now },
-    updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    reason: String,
-    previousStatus: String
-  }],
-
-  // Real-time session metadata
-  sessionMetadata: {
-    totalPauses: { type: Number, default: 0 },
-    pausedDuration: { type: Number, default: 0 }, // in minutes
-    lastActivity: { type: Date, default: Date.now },
-    connectionIssues: { type: Number, default: 0 },
-    qualityRating: {
-      type: Number,
-      min: 1,
-      max: 5
-    }
-  },
-
-  // Admin actions for session management
-  adminActions: [{
-    action: {
-      type: String,
-      enum: ['reschedule', 'cancel', 'override_status', 'extend_time', 'emergency_stop'],
-      required: true
-    },
-    performedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    timestamp: { type: Date, default: Date.now },
-    reason: String,
-    details: Schema.Types.Mixed // Flexible field for action-specific data
-  }]
+  patientFeedback: String
 
 }, {
   timestamps: true,
@@ -192,171 +283,73 @@ const ConsultationSchema = new Schema({
   toObject: { virtuals: true }
 });
 
-// ============ VIRTUAL FIELDS ============
+// ═══════════════════════════════════════════════════════════
+// INDEXES
+// ═══════════════════════════════════════════════════════════
+ConsultationSchema.index({ patientId: 1, scheduledAt: -1 });
+ConsultationSchema.index({ providerId: 1, scheduledAt: -1 });
+ConsultationSchema.index({ status: 1, scheduledAt: 1 });
+ConsultationSchema.index({ providerType: 1, sessionType: 1 });
+ConsultationSchema.index({ 'therapyData.doctorId': 1 });
 
-// Calculate remaining time for active sessions
-ConsultationSchema.virtual('remainingTime').get(function() {
-  if (this.sessionStatus === 'in_progress' && this.sessionStartTime) {
-    const elapsed = Date.now() - this.sessionStartTime.getTime();
-    const estimated = this.estimatedDuration * 60 * 1000; // Convert to ms
-    return Math.max(0, estimated - elapsed);
-  }
-  return null;
-});
+// ═══════════════════════════════════════════════════════════
+// METHODS
+// ═══════════════════════════════════════════════════════════
 
-// Check if session is currently active
-ConsultationSchema.virtual('isActiveSession').get(function() {
-  return ['in_progress', 'paused'].includes(this.sessionStatus);
-});
-
-// Get current active participant count
-// ✅ FIXED: Safe handling of undefined activeParticipants
-ConsultationSchema.virtual('activeParticipantCount').get(function() {
-  // Add null/undefined check
-  if (!this.activeParticipants || !Array.isArray(this.activeParticipants)) {
-    return 0;
-  }
-  return this.activeParticipants.filter(p => p.isActive && !p.leftAt).length;
-});
-
-// ============ INDEXES FOR PERFORMANCE ============
-ConsultationSchema.index({ patientId: 1, sessionStatus: 1 });
-ConsultationSchema.index({ providerId: 1, scheduledAt: 1 });
-ConsultationSchema.index({ providerType: 1, sessionStatus: 1 });
-ConsultationSchema.index({ sessionStatus: 1, scheduledAt: 1 });
-ConsultationSchema.index({ 'activeParticipants.userId': 1, 'activeParticipants.isActive': 1 });
-ConsultationSchema.index({ sessionStartTime: 1, sessionEndTime: 1 });
-
-// ============ PRE-SAVE MIDDLEWARE ============
-ConsultationSchema.pre('save', async function(next) {
-  try {
-    // Validate provider type matches user role
-    const provider = await mongoose.model('User').findById(this.providerId);
-    if (!provider) {
-      throw new Error('Provider not found');
+// Add therapy progress update
+ConsultationSchema.methods.addTherapyProgress = function(stage, notes, percentage) {
+  if (this.sessionType === 'therapy' && this.therapyData) {
+    if (!this.therapyData.progressUpdates) {
+      this.therapyData.progressUpdates = [];
     }
+    this.therapyData.progressUpdates.push({
+      timestamp: new Date(),
+      stage,
+      notes,
+      percentage
+    });
+  }
+  return this.save();
+};
+
+// Add adverse effect
+ConsultationSchema.methods.addAdverseEffect = function(effect, severity, description, actionTaken) {
+  if (this.sessionType === 'therapy' && this.therapyData) {
+    if (!this.therapyData.adverseEffects) {
+      this.therapyData.adverseEffects = [];
+    }
+    this.therapyData.adverseEffects.push({
+      effect,
+      severity,
+      description,
+      occurredAt: new Date(),
+      actionTaken,
+      resolved: false
+    });
     
-    if (provider.role !== this.providerType) {
-      throw new Error(`Provider type mismatch: expected ${this.providerType}, got ${provider.role}`);
+    // Auto-create admin alert for severe/critical effects
+    if (severity === 'severe' || severity === 'critical') {
+      this.therapyData.emergencyReported = true;
+      this.therapyData.emergencyDetails = {
+        type: 'adverse_effect',
+        timestamp: new Date(),
+        actionTaken: actionTaken || 'Pending'
+      };
     }
-
-    // Calculate actual duration when session completes
-    if (this.sessionStatus === 'completed' && this.sessionStartTime && this.sessionEndTime) {
-      this.actualDuration = Math.round((this.sessionEndTime - this.sessionStartTime) / (1000 * 60));
-    }
-
-    // Update last activity timestamp
-    if (this.isModified('sessionStatus') || this.isModified('sessionNotes')) {
-      this.sessionMetadata.lastActivity = new Date();
-    }
-
-    next();
-  } catch (error) {
-    next(error);
   }
-});
-
-// ============ ✅ ENHANCED INSTANCE METHODS ============
-
-// Check if consultation can be cancelled
-ConsultationSchema.methods.canBeCancelled = function() {
-  const hoursBefore = (this.scheduledAt - new Date()) / (1000 * 60 * 60);
-  return ['scheduled', 'patient_arrived'].includes(this.sessionStatus) && hoursBefore >= 2;
-};
-
-// Check if consultation is upcoming
-ConsultationSchema.methods.isUpcoming = function() {
-  return this.scheduledAt > new Date() && this.sessionStatus === 'scheduled';
-};
-
-// Update session status with history tracking
-ConsultationSchema.methods.updateSessionStatus = function(newStatus, userId, reason = '') {
-  const previousStatus = this.sessionStatus;
-  this.sessionStatus = newStatus;
-  
-  // Add to status history
-  this.statusHistory.push({
-    status: newStatus,
-    updatedBy: userId,
-    reason,
-    previousStatus
-  });
-  
-  // Update session timing
-  if (newStatus === 'in_progress' && !this.sessionStartTime) {
-    this.sessionStartTime = new Date();
-  }
-  
-  if (newStatus === 'completed' && !this.sessionEndTime) {
-    this.sessionEndTime = new Date();
-  }
-
-  // Sync basic status field
-  if (['completed', 'cancelled'].includes(newStatus)) {
-    this.status = newStatus;
-  } else if (newStatus === 'in_progress') {
-    this.status = 'in_progress';
-  }
-  
   return this.save();
 };
 
-// Add participant to active session
-ConsultationSchema.methods.addParticipant = function(userId, role) {
-  // Remove existing entry if present
-  this.activeParticipants = this.activeParticipants.filter(p => !p.userId.equals(userId));
-  
-  // Add new active participant
-  this.activeParticipants.push({
-    userId,
-    role,
-    joinedAt: new Date(),
-    isActive: true
-  });
-  
-  return this.save();
-};
-
-// Remove participant from active session
-ConsultationSchema.methods.removeParticipant = function(userId) {
-  const participant = this.activeParticipants.find(p => p.userId.equals(userId) && p.isActive);
-  if (participant) {
-    participant.leftAt = new Date();
-    participant.isActive = false;
+// Update therapy vitals
+ConsultationSchema.methods.updateVitals = function(vitals) {
+  if (this.sessionType === 'therapy' && this.therapyData) {
+    this.therapyData.vitals = {
+      ...this.therapyData.vitals,
+      ...vitals,
+      measuredAt: new Date()
+    };
   }
-  
   return this.save();
-};
-
-// Add session note
-ConsultationSchema.methods.addSessionNote = function(note, userId, type = 'general') {
-  this.sessionNotes.push({
-    note,
-    addedBy: userId,
-    type,
-    timestamp: new Date()
-  });
-  
-  return this.save();
-};
-
-// Get session summary for admin/reports
-ConsultationSchema.methods.getSessionSummary = function() {
-  return {
-    id: this._id,
-    patient: this.patientId,
-    provider: this.providerId,
-    sessionType: this.sessionType,
-    scheduledAt: this.scheduledAt,
-    sessionStatus: this.sessionStatus,
-    duration: {
-      estimated: this.estimatedDuration,
-      actual: this.actualDuration
-    },
-    participants: this.activeParticipantCount,
-    notes: this.sessionNotes.length,
-    statusChanges: this.statusHistory.length
-  };
 };
 
 module.exports = mongoose.model('Consultation', ConsultationSchema);

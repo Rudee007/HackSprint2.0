@@ -18,9 +18,11 @@ import {
   Shield,
   Plus,
   X,
+  Pill, // 🔥 NEW: Added for prescriptions
 } from "lucide-react";
 import axios from "axios";
 import ConsultationHistory from "../components/ConsultationHistory";
+import PatientPrescriptions from "../components/PatientPrescriptions"; // 🔥 NEW IMPORT
 
 // Components
 import PatientProfileForm from "../components/PatientProfileForm";
@@ -30,7 +32,7 @@ import Footer from "../components/Footer";
 
 // 🔥 UPDATED API Configuration
 const api = axios.create({
-  baseURL: "http://localhost:3003/api", // Match your backend port
+  baseURL: "http://localhost:3003/api",
   timeout: 10000,
 });
 
@@ -42,19 +44,6 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
-// Handle auth errors
-// api.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     if (error.response?.status === 401) {
-//       localStorage.removeItem("accessToken");
-//       localStorage.removeItem("user");
-//       window.location.href = "/login";
-//     }
-//     return Promise.reject(error);
-//   }
-// );
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
@@ -71,12 +60,15 @@ const PatientDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [consultations, setConsultations] = useState([]);
   const [feedback, setFeedback] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]); // 🔥 NEW: Prescription state
   const [stats, setStats] = useState({
     totalConsultations: 0,
     completedConsultations: 0,
     wellnessScore: 0,
     upcomingConsultations: 0,
-    pendingFeedback: 0
+    pendingFeedback: 0,
+    totalPrescriptions: 0, // 🔥 NEW
+    activePrescriptions: 0 // 🔥 NEW
   });
 
   // 🔥 UPDATED: Initialize Dashboard with Proper APIs
@@ -89,11 +81,6 @@ const PatientDashboard = () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
 
-      // if (!token) {
-      //   navigate("/patient-login");
-      //   return;
-      // }
-
       // 🔥 Get user profile from auth
       const profileResponse = await api.get("/auth/profile");
       if (profileResponse.data.success) {
@@ -104,7 +91,8 @@ const PatientDashboard = () => {
         await Promise.all([
           fetchConsultations(userData.id || userData._id),
           fetchFeedback(userData.id || userData._id),
-          fetchPatientProfile(userData.id || userData._id)
+          fetchPatientProfile(userData.id || userData._id),
+          fetchPrescriptions(userData.id || userData._id) // 🔥 NEW
         ]);
       }
     } catch (err) {
@@ -120,14 +108,12 @@ const PatientDashboard = () => {
     try {
       console.log('🔄 Fetching consultations for patient:', userId);
       
-      // Using the correct backend endpoint
       const response = await api.get(`/consultations/patient/${userId}?page=1&limit=50`);
       
       if (response.data.success) {
         const consultationsData = response.data.data || [];
         setConsultations(consultationsData);
         
-        // Calculate stats from real data
         const totalConsultations = consultationsData.length;
         const completedConsultations = consultationsData.filter(c => c.status === 'completed').length;
         const upcomingConsultations = consultationsData.filter(c => 
@@ -145,11 +131,37 @@ const PatientDashboard = () => {
       }
     } catch (err) {
       console.error("Error fetching consultations:", err);
-      // Don't fail silently - show user-friendly error
       if (err.response?.status === 404) {
         console.log('No consultations found for this patient');
         setConsultations([]);
       }
+    }
+  };
+
+  // 🔥 NEW: Fetch Patient Prescriptions
+  const fetchPrescriptions = async (userId) => {
+    try {
+      console.log('🔄 Fetching prescriptions for patient:', userId);
+      
+      const response = await api.get(`/prescriptions/patient/${userId}?page=1&limit=50`);
+      
+      if (response.data.success) {
+        const prescriptionsData = response.data.data.prescriptions || [];
+        setPrescriptions(prescriptionsData);
+        
+        const totalPrescriptions = prescriptionsData.length;
+        const activePrescriptions = prescriptionsData.filter(p => p.status === 'active').length;
+
+        setStats(prev => ({
+          ...prev,
+          totalPrescriptions,
+          activePrescriptions
+        }));
+
+        console.log('✅ Prescriptions loaded:', prescriptionsData.length);
+      }
+    } catch (err) {
+      console.error("Error fetching prescriptions:", err);
     }
   };
 
@@ -158,14 +170,12 @@ const PatientDashboard = () => {
     try {
       console.log('🔄 Fetching feedback for patient:', userId);
       
-      // Get patient's own feedback
       const response = await api.get('/feedback/me?page=1&limit=20');
       
       if (response.data.success) {
         const feedbackData = response.data.data || [];
         setFeedback(feedbackData);
         
-        // Calculate pending feedback (consultations without feedback)
         const pendingFeedback = consultations.filter(consultation => 
           consultation.status === 'completed' && 
           !feedbackData.some(fb => fb.sessionId === consultation._id)
@@ -186,7 +196,6 @@ const PatientDashboard = () => {
   // 🔥 NEW: Fetch Patient Profile from Backend
   const fetchPatientProfile = async (userId) => {
     try {
-      // This would need a patient profile endpoint in your backend
       const response = await api.get(`http://localhost:3003/api/users/${userId}/profile`);
       
       if (response.data.success) {
@@ -194,7 +203,6 @@ const PatientDashboard = () => {
       }
     } catch (err) {
       console.error("Error fetching patient profile:", err);
-      // Fallback to localStorage if backend doesn't have profile
       const savedProfile = localStorage.getItem('user');
       if (savedProfile) {
         setProfile(JSON.parse(savedProfile));
@@ -205,7 +213,6 @@ const PatientDashboard = () => {
   // 🔥 UPDATED: Handle Profile Update with Backend
   const handleProfileUpdate = async (updatedProfile) => {
     try {
-      // Try to save to backend first
       const response = await api.put(`http://localhost:3003/patients/${user.id}/profile`, updatedProfile);
       
       if (response.data.success) {
@@ -214,7 +221,6 @@ const PatientDashboard = () => {
       }
     } catch (err) {
       console.error("Error updating profile:", err);
-      // Fallback to localStorage
       localStorage.setItem('patientProfile', JSON.stringify(updatedProfile));
       setProfile(updatedProfile);
       setSuccess("Profile updated locally!");
@@ -233,7 +239,6 @@ const PatientDashboard = () => {
         setSuccess("Feedback submitted successfully!");
         setIsFeedbackModalOpen(false);
         
-        // Refresh feedback data
         await fetchFeedback(user.id);
       }
     } catch (err) {
@@ -253,17 +258,14 @@ const PatientDashboard = () => {
       if (response.data.success) {
         setSuccess("Appointment booked successfully!");
         
-        // Refresh consultations
         await fetchConsultations(user.id);
       }
     } catch (err) {
       console.error("Error booking appointment:", err);
       
-      // Handle conflict errors with alternative slots
       if (err.response?.status === 409 && err.response?.data?.conflictInfo) {
         const conflictData = err.response.data;
         setError(`Time slot conflicts. ${conflictData.alternativeMessage}`);
-        // You could show alternative slots UI here
       } else {
         setError("Failed to book appointment. Please try again.");
       }
@@ -369,7 +371,7 @@ const PatientDashboard = () => {
                 </motion.p>
               </div>
 
-              {/* 🔥 UPDATED: Quick Stats with Real Data */}
+              {/* 🔥 UPDATED: Quick Stats with Real Data INCLUDING PRESCRIPTIONS */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-12">
                 {[
                   {
@@ -387,9 +389,9 @@ const PatientDashboard = () => {
                     bg: "bg-emerald-100",
                   },
                   {
-                    label: "Upcoming",
-                    value: stats.upcomingConsultations,
-                    icon: Bell,
+                    label: "My Prescriptions", // 🔥 NEW
+                    value: stats.totalPrescriptions,
+                    icon: Pill,
                     color: "text-purple-600",
                     bg: "bg-purple-100",
                   },
@@ -428,7 +430,7 @@ const PatientDashboard = () => {
                 ))}
               </div>
 
-              {/* Action Cards - Same as before but with updated handlers */}
+              {/* 🔥 UPDATED: Action Cards - Added Prescriptions Card */}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                 {[
                   {
@@ -455,6 +457,15 @@ const PatientDashboard = () => {
                     gradient: "from-amber-500 to-orange-600",
                     action: () => setActiveSection("consultations"),
                   },
+                  // 🔥 NEW: Prescriptions Card
+                  {
+                    id: "prescriptions",
+                    title: "My Prescriptions",
+                    description: "View and download your medication prescriptions",
+                    icon: Pill,
+                    gradient: "from-purple-500 to-pink-600",
+                    action: () => setActiveSection("prescriptions"),
+                  },
                   {
                     id: "wellness",
                     title: "Wellness Tracker",
@@ -468,7 +479,7 @@ const PatientDashboard = () => {
                     title: "Give Feedback",
                     description: "Share your experience and help us improve",
                     icon: MessageSquare,
-                    gradient: "from-purple-500 to-violet-600",
+                    gradient: "from-indigo-500 to-purple-600",
                     action: openFeedbackModal,
                   },
                   {
@@ -493,7 +504,7 @@ const PatientDashboard = () => {
                     <div
                       className={`w-14 h-14 bg-gradient-to-br ${card.gradient} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
                     >
-                      <card.icon className="w-7 h-7 text-white" />
+                      {/* ard.icon className="w-7 h-7 text-white" /> */}
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-gray-700">
                       {card.title}
@@ -507,7 +518,7 @@ const PatientDashboard = () => {
                 ))}
               </div>
 
-              {/* 🔥 UPDATED: Recent Activity with Real Consultation Data */}
+              {/* Recent Activity with Real Consultation Data */}
               {consultations.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -618,18 +629,33 @@ const PatientDashboard = () => {
             </motion.div>
           )}
 
-          {/* 🔥 NEW: Consultations History Section */}
+          {/* Consultations History Section */}
           {activeSection === "consultations" && (
-  <ConsultationHistory
-    patientId={user?.id || user?._id}
-    onBookFirst={() => setActiveSection("book-appointment")}
-  />
-)}
+            <ConsultationHistory
+              patientId={user?.id || user?._id}
+              onBookFirst={() => setActiveSection("book-appointment")}
+            />
+          )}
+
+          {/* 🔥 NEW: Prescriptions Section */}
+          {activeSection === "prescriptions" && (
+            <motion.div
+              key="prescriptions"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <PatientPrescriptions
+                patientId={user?.id || user?._id}
+                onBack={() => setActiveSection("dashboard")}
+              />
+            </motion.div>
+          )}
 
         </AnimatePresence>
       </div>
 
-      {/* 🔥 UPDATED: Feedback Modal with Backend Integration */}
+      {/* Feedback Modal with Backend Integration */}
       <AnimatePresence>
         {isFeedbackModalOpen && (
           <motion.div
