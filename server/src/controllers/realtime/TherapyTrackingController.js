@@ -44,7 +44,8 @@ updateVitals = asyncHandler(async (req, res) => {
       timestamp: new Date()
     });
   }
-  
+  // clean checkpoint updated
+
   res.json({
     success: true,
     message: 'Vitals updated successfully',
