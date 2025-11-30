@@ -1,6 +1,6 @@
 // src/components/therapist/feedback/FeedbackCard.jsx
 import React from 'react';
-import { Star, User, Calendar } from 'lucide-react';
+import { Star, Calendar } from 'lucide-react';
 
 const FeedbackCard = ({ feedback }) => {
   return (

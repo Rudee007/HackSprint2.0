@@ -5,7 +5,6 @@ import { Star, User, Calendar, MessageSquare } from 'lucide-react';
 import FeedbackCard from './FeedbackCard';
 
 const FeedbackList = () => {
-  // Sample feedback data - replace with API call
   const feedbackList = [
     {
       id: 1,

@@ -2,8 +2,8 @@
 import React from 'react';
 import { Star, TrendingUp } from 'lucide-react';
 
+
 const FeedbackCharts = () => {
-  // Sample data - replace with real data
   const ratingDistribution = [
     { stars: 5, count: 85, percentage: 66 },
     { stars: 4, count: 30, percentage: 23 },
