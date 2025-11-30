@@ -1,4 +1,5 @@
 // src/components/therapist/Shared file/TherapistSidebar.jsx
+
 import React from 'react';
 import { 
   LayoutDashboard, Calendar, Users, MessageSquare, 
@@ -27,7 +28,6 @@ const TherapistSidebar = ({ activeView, onViewChange }) => {
             <p className="text-xs text-gray-500">Therapist Portal</p>
           </div>
         </div>
-
         <nav className="space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -50,6 +50,7 @@ const TherapistSidebar = ({ activeView, onViewChange }) => {
           })}
         </nav>
       </div>
+
     </aside>
   );
 };
