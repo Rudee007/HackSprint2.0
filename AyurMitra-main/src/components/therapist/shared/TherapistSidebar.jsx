@@ -1,4 +1,4 @@
-// src/components/therapist/shared/TherapistSidebar.jsx
+// src/components/therapist/Shared file/TherapistSidebar.jsx
 import React from 'react';
 import { 
   LayoutDashboard, Calendar, Users, MessageSquare, 

@@ -23,7 +23,7 @@ const TherapistLayout = ({ children, activeView, onViewChange }) => {
       />
 
       <div className="flex h-[calc(100vh-64px)]">
-        {/* Desktop Sidebar */}
+        {/* Desktop Sidebarfffff */}
         <AnimatePresence>
           {isSidebarOpen && (
             <motion.div
