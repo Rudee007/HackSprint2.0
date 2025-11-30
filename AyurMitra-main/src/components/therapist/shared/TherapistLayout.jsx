@@ -14,7 +14,7 @@ const TherapistLayout = ({ children, activeView, onViewChange }) => {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
       <Toaster position="top-right" />
       
-      {/* Header */}
+      {/* Headerf */}
       <TherapistHeader 
         onMenuClick={() => {
           setIsSidebarOpen(!isSidebarOpen);

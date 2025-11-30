@@ -18,7 +18,7 @@ const TherapistHeader = ({ onMenuClick }) => {
   return (
     <header className="bg-white border-b shadow-sm sticky top-0 z-30">
       <div className="flex items-center justify-between px-4 lg:px-6 py-4">
-        {/* Left Section */}
+        {/* Left Sectionf */}
         <div className="flex items-center space-x-4">
           <button
             onClick={onMenuClick}

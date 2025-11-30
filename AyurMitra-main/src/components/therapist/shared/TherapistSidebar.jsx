@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   LayoutDashboard, Calendar, Users, MessageSquare, 
-  BarChart3, User, Activity, FileText
+  BarChart3, User, Activity
 } from 'lucide-react';
 
 const TherapistSidebar = ({ activeView, onViewChange }) => {
