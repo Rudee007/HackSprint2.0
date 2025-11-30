@@ -412,7 +412,7 @@ completeSession = asyncHandler(async (req, res) => {
       await consultation.save();
     }
     
-    // Broadcast join event
+    // Broadcaste join event
     const wsService = req.app.get('wsService');
     if (wsService) {
       wsService.emitSessionStatusUpdate(sessionId, {
