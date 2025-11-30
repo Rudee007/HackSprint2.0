@@ -1,7 +1,6 @@
 // src/components/therapist/feedback/FeedbackList.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, User, Calendar, MessageSquare } from 'lucide-react';
 import FeedbackCard from './FeedbackCard';
 
 const FeedbackList = () => {

@@ -2,7 +2,6 @@
 import React from 'react';
 import { Star, TrendingUp } from 'lucide-react';
 
-
 const FeedbackCharts = () => {
   const ratingDistribution = [
     { stars: 5, count: 85, percentage: 66 },
