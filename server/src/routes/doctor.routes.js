@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctor.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const { body, param, query } = require('express-validator');
+const { body, query, param, validationResult } = require('express-validator');
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -403,30 +403,73 @@ router.post('/treatment-plans',
     body('patientId')
       .isMongoId()
       .withMessage('Valid patient ID is required'),
+    
     body('consultationId')
       .isMongoId()
       .withMessage('Valid consultation ID is required'),
-    body('treatmentType')
-      .notEmpty()
-      .withMessage('Treatment type is required'),
-    body('treatmentPlan')
-      .isLength({ min: 10, max: 2000 })
-      .withMessage('Treatment plan must be between 10-2000 characters'),
-    body('duration')
-      .notEmpty()
-      .withMessage('Treatment duration is required'),
-    body('preInstructions')
+    
+    body('assignedTherapistId')
+      .isMongoId()
+      .withMessage('Valid therapist ID is required'),
+    
+    body('courseTemplateId')
+      .optional({values: 'null'})
+      .isMongoId()
+      .withMessage('Valid course template ID required if provided'),
+    
+    body('panchakarmaType')
+      .isIn(['vamana', 'virechana', 'basti', 'nasya', 'raktamokshana'])
+      .withMessage('Invalid Panchakarma type'),
+    
+    body('treatmentName')
+      .optional()
+      .isLength({ min: 3, max: 200 })
+      .withMessage('Treatment name must be 3-200 characters'),
+    
+    body('duration.value')
+      .isInt({ min: 1 })
+      .withMessage('Duration value must be positive'),
+    
+    body('duration.unit')
+      .isIn(['days', 'weeks', 'months'])
+      .withMessage('Duration unit must be days, weeks, or months'),
+    
+    body('phases')
+      .optional()
+      .isArray()
+      .withMessage('Phases must be an array'),
+    
+    body('phases.*.phaseName')
+      .isIn(['purvakarma', 'pradhanakarma', 'paschatkarma'])
+      .withMessage('Invalid phase name'),
+    
+    body('phases.*.therapySessions')
+      .isArray({ min: 1 })
+      .withMessage('Each phase must have at least one therapy session'),
+    
+    body('schedulingPreferences.startDate')
+      .isISO8601()
+      .withMessage('Valid start date is required'),
+    
+    body('prePanchakarmaInstructions')
+      .optional()
+      .isLength({ max: 2000 })
+      .withMessage('Pre-Panchakarma instructions cannot exceed 2000 characters'),
+    
+    body('postPanchakarmaInstructions')
+      .optional()
+      .isLength({ max: 2000 })
+      .withMessage('Post-Panchakarma instructions cannot exceed 2000 characters'),
+    
+    body('treatmentNotes')
+      .optional()
+      .isLength({ max: 2000 })
+      .withMessage('Treatment notes cannot exceed 2000 characters'),
+    
+    body('safetyNotes')
       .optional()
       .isLength({ max: 1000 })
-      .withMessage('Pre-instructions cannot exceed 1000 characters'),
-    body('postInstructions')
-      .optional()
-      .isLength({ max: 1000 })
-      .withMessage('Post-instructions cannot exceed 1000 characters'),
-    body('notes')
-      .optional()
-      .isLength({ max: 500 })
-      .withMessage('Notes cannot exceed 500 characters')
+      .withMessage('Safety notes cannot exceed 1000 characters')
   ],
   doctorController.createTreatmentPlan
 );
@@ -442,20 +485,26 @@ router.get('/treatment-plans',
       .optional()
       .isInt({ min: 1 })
       .withMessage('Page must be a positive integer'),
+    
     query('limit')
       .optional()
       .isInt({ min: 1, max: 100 })
       .withMessage('Limit must be between 1 and 100'),
+    
     query('status')
       .optional()
-      .isIn(['active', 'completed', 'paused', 'cancelled'])
-      .withMessage('Invalid status value')
-  ],[
-    body('patientId').isMongoId().withMessage('Valid patient ID is required'),
-    body('consultationId').isMongoId().withMessage('Valid consultation ID is required'),
-    body('treatmentType').notEmpty().withMessage('Treatment type is required'),
-    body('treatmentPlan').isLength({ min: 10, max: 2000 }).withMessage('Treatment plan must be between 10-2000 characters'),
-    body('duration').notEmpty().withMessage('Treatment duration is required')
+      .isIn(['active', 'completed', 'paused', 'cancelled', 'deleted'])
+      .withMessage('Invalid status value'),
+    
+    query('panchakarmaType')
+      .optional()
+      .isIn(['vamana', 'virechana', 'basti', 'nasya', 'raktamokshana'])
+      .withMessage('Invalid Panchakarma type'),
+    
+    query('schedulingStatus')
+      .optional()
+      .isIn(['pending', 'scheduled', 'partial', 'failed'])
+      .withMessage('Invalid scheduling status')
   ],
   doctorController.getDoctorTreatmentPlans
 );
@@ -474,6 +523,7 @@ router.get('/treatment-plans/:id',
   doctorController.getTreatmentPlanDetails
 );
 
+
 /**
  * Update treatment plan
  * PUT /api/doctors/treatment-plans/:id
@@ -483,10 +533,26 @@ router.put('/treatment-plans/:id',
   [
     param('id')
       .isMongoId()
-      .withMessage('Valid treatment plan ID is required')
+      .withMessage('Valid treatment plan ID is required'),
+    
+    body('treatmentName')
+      .optional()
+      .isLength({ min: 3, max: 200 })
+      .withMessage('Treatment name must be 3-200 characters'),
+    
+    body('duration.value')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Duration value must be positive'),
+    
+    body('status')
+      .optional()
+      .isIn(['active', 'completed', 'paused', 'cancelled'])
+      .withMessage('Invalid status value')
   ],
   doctorController.updateTreatmentPlan
 );
+
 
 /**
  * Delete treatment plan
@@ -501,6 +567,17 @@ router.delete('/treatment-plans/:id',
   ],
   doctorController.deleteTreatmentPlan
 );
+
+router.post('/treatment-plans/:id/schedule',
+  authenticate,
+  [
+    param('id')
+      .isMongoId()
+      .withMessage('Valid treatment plan ID is required')
+  ],
+  doctorController.triggerAutoScheduling
+);
+
 
 router.get('/patients/:patientId',authenticate,doctorController.getPatientDetails)
 

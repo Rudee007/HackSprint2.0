@@ -1202,6 +1202,77 @@ async function updateTreatmentPlanProgress(req, res) {
   }
 }
 
+/**
+ * @desc    Get available therapists for treatment assignment
+ * @route   GET /api/therapists/available
+ * @access  Private (doctor only)
+ */
+async function getAvailableTherapists(req, res) {
+  console.log('🔥 [CONTROLLER] getAvailableTherapists - START');
+  console.log('📋 Query params:', req.query);
+  
+  try {
+    const filters = {
+      specialization: req.query.specialization,
+      therapy: req.query.therapy,
+      skillLevel: req.query.skillLevel,
+      date: req.query.date
+    };
+
+    console.log('🔍 Filters applied:', filters);
+
+    // Build query
+    const query = {
+      isActive: true,
+      verificationStatus: 'approved'
+    };
+
+    // Filter by specialization
+    if (filters.specialization) {
+      query.specialization = { $in: [filters.specialization] };
+    }
+
+    // Filter by therapy certification
+    if (filters.therapy) {
+      query['certifications.therapy'] = filters.therapy;
+    }
+
+    // Filter by skill level
+    if (filters.skillLevel) {
+      query['certifications.level'] = filters.skillLevel;
+    }
+
+    console.log('📊 Query:', JSON.stringify(query, null, 2));
+
+    const therapists = await Therapist.find(query)
+      .populate('userId', 'name email phone')
+      .select('userId certifications availability metrics specialization experienceYears bio isActive')
+      .sort({ 'metrics.averageRating': -1, experienceYears: -1 })
+      .limit(50)
+      .lean();
+
+    console.log(`✅ [CONTROLLER] Found ${therapists.length} available therapists`);
+
+    res.json({
+      success: true,
+      data: therapists,
+      count: therapists.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ [CONTROLLER] Get available therapists error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+
+// ... rest of your code ...
+
+// ═══════════════════════════════════════════════════════════
+
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -1319,6 +1390,7 @@ module.exports = {
   addMaterialUsed,
   getPatientTreatmentPlans,
   getTreatmentPlanDetails,
-  updateTreatmentPlanProgress
+  updateTreatmentPlanProgress,
+  getAvailableTherapists, // 🔥 ADD THIS
 
 };

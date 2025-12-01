@@ -379,11 +379,11 @@ async getDoctorConsultations (req, res) {
 
 async createTreatmentPlan(req, res, next) {
   try {
-    console.log('🔄 Controller: Creating treatment plan');
-    console.log('📋 Request body:', req.body);
-    console.log('👤 User from token:', req.user._id);
+    console.log('🔄 Controller: Creating Panchakarma treatment plan');
+    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('👤 Doctor from token:', req.user._id);
     
-    // ✅ FIXED: Proper validation error handling
+    // Validation
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('❌ Validation errors:', errors.array());
@@ -398,17 +398,17 @@ async createTreatmentPlan(req, res, next) {
       });
     }
 
-    // ✅ FIXED: Add doctorId from authenticated user
+    // Add doctorId from authenticated user
     const treatmentData = {
       ...req.body,
-      doctorId: req.user._id  // This comes from JWT token
+      doctorId: req.user._id
     };
 
-    console.log('📋 Sending to service:', treatmentData);
+    console.log('📋 Sending to service with doctorId:', treatmentData.doctorId);
     
     const result = await doctorService.createTreatmentPlan(treatmentData);
 
-    console.log('✅ Treatment plan created successfully');
+    console.log('✅ Treatment plan created successfully:', result.treatmentPlan._id);
 
     return res.status(201).json({
       success: true,
@@ -419,7 +419,34 @@ async createTreatmentPlan(req, res, next) {
 
   } catch (error) {
     console.error('❌ Create treatment plan error:', error);
-    logger.error('Create treatment plan error:', error);
+    logger.error('Create treatment plan error:', {
+      error: error.message,
+      stack: error.stack,
+      doctorId: req.user?._id
+    });
+    
+    // Handle specific errors
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: error.message
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    if (error.message.includes('Template') || error.message.includes('Therapy')) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_REFERENCE',
+          message: error.message
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
     
     return res.status(500).json({
       success: false,
@@ -430,7 +457,8 @@ async createTreatmentPlan(req, res, next) {
       timestamp: new Date().toISOString()
     });
   }
-}  
+}
+
   /**
    * Get doctor's treatment plans
    * GET /api/doctors/treatment-plans
@@ -460,50 +488,171 @@ async createTreatmentPlan(req, res, next) {
    * Get treatment plan details
    * GET /api/doctors/treatment-plans/:id
    */
-  async getTreatmentPlanDetails  (req, res) {
+async getTreatmentPlanDetails(req, res, next) {
+  try {
     const doctorId = req.user._id;
     const { id } = req.params;
-  
+    
+    console.log(`🔄 Getting treatment plan details: ${id} for doctor: ${doctorId}`);
+
     const treatmentPlan = await doctorService.getTreatmentPlanDetails(id, doctorId);
-  
+
+    console.log('✅ Treatment plan details retrieved');
+
     return res.json({
       success: true,
-      data: treatmentPlan
+      data: treatmentPlan,
+      timestamp: new Date().toISOString()
     });
-  };
+    
+  } catch (error) {
+    console.error('❌ Get treatment plan details error:', error);
+    logger.error('Get treatment plan details error:', error);
+    
+    if (error.message.includes('not found') || error.message.includes('unauthorized')) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: error.message
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    next(error);
+  }
+}
   
   /**
    * Update treatment plan
    * PUT /api/doctors/treatment-plans/:id
    */
-  async updateTreatmentPlan (req, res){
-    const doctorId = req.user._id;
-    const { id } = req.params;
+  async updateTreatmentPlan(req, res, next) {
+    try {
+      const doctorId = req.user._id;
+      const { id } = req.params;
+      
+      console.log(`🔄 Updating treatment plan: ${id}`);
+      console.log('📋 Update data:', JSON.stringify(req.body, null, 2));
   
-    const treatmentPlan = await doctorService.updateTreatmentPlan(id, doctorId, req.body);
+      // Validation
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Validation failed',
+            details: errors.array()
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
   
-    return res.json({
-      success: true,
-      message: 'Treatment plan updated successfully',
-      data: treatmentPlan
-    });
-  };
+      const treatmentPlan = await doctorService.updateTreatmentPlan(id, doctorId, req.body);
   
+      console.log('✅ Treatment plan updated successfully');
+  
+      return res.json({
+        success: true,
+        message: 'Treatment plan updated successfully',
+        data: treatmentPlan,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Update treatment plan error:', error);
+      logger.error('Update treatment plan error:', error);
+      
+      if (error.message.includes('not found') || error.message.includes('unauthorized')) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      next(error);
+    }
+  }
+    
   /**
    * Delete treatment plan
    * DELETE /api/doctors/treatment-plans/:id
    */
- async deleteTreatmentPlan (req, res) {
-    const doctorId = req.user._id;
-    const { id } = req.params;
+  async deleteTreatmentPlan(req, res, next) {
+    try {
+      const doctorId = req.user._id;
+      const { id } = req.params;
+      
+      console.log(`🔄 Deleting treatment plan: ${id}`);
   
-    const result = await doctorService.deleteTreatmentPlan(id, doctorId);
+      const result = await doctorService.deleteTreatmentPlan(id, doctorId);
   
-    return res.json({
-      success: true,
-      message: result.message
-    });
-  };
+      console.log('✅ Treatment plan deleted successfully');
+  
+      return res.json({
+        success: true,
+        message: result.message,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Delete treatment plan error:', error);
+      logger.error('Delete treatment plan error:', error);
+      
+      if (error.message.includes('not found') || error.message.includes('unauthorized')) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      next(error);
+    }
+  }
+  async triggerAutoScheduling(req, res, next) {
+    try {
+      const doctorId = req.user._id;
+      const { id } = req.params;
+      
+      console.log(`🔄 Triggering auto-scheduling for plan: ${id}`);
+  
+      const result = await doctorService.triggerAutoScheduling(id, doctorId);
+  
+      console.log('✅ Auto-scheduling completed');
+  
+      return res.json({
+        success: true,
+        message: 'Treatment plan scheduled successfully',
+        data: result,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Auto-scheduling error:', error);
+      logger.error('Auto-scheduling error:', error);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'SCHEDULING_FAILED',
+          message: error.message
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+  
+  
   /**
    * Book consultation
    * POST /api/consultations/book

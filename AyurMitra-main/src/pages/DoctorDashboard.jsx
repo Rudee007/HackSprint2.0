@@ -1,5 +1,5 @@
 // src/pages/DoctorDashboard.jsx
-// 🔥 PRODUCTION-READY v3.0 - COMPLETE WITH THERAPY TRACKING INTEGRATION
+// 🔥 PRODUCTION-READY v3.1 - PANCHAKARMA TREATMENT PLANNING INTEGRATED
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, Users, Activity, TrendingUp, DollarSign, LogOut,
   Loader2, WifiOff, Bell, Circle, Menu, ChevronRight, Sparkles, Zap, AlertCircle,
-  BarChart3, Stethoscope, Settings, Heart
+  BarChart3, Stethoscope, Settings, Heart, FileText
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -15,7 +15,6 @@ import { useRealTime } from "../context/RealTimeContext";
 import doctorApiService from "../services/doctorApiService";
 import websocketService from "../services/websocketService";
 
-// Components
 import RealTimeSessionDashboard from "../components/realtime/RealTimeSessionDashboard";
 import ProviderStatusWidget from "../components/realtime/ProviderStatusWidget";
 import SessionNotifications from "../components/realtime/SessionNotifications";
@@ -36,33 +35,20 @@ const DoctorDashboard = () => {
     forceRefresh
   } = useRealTime();
 
-  // Refs
   const consultationIds = useRef(new Set());
   const dataLoadedOnce = useRef(false);
   const websocketConnected = useRef(false);
 
-  // UI state
   const [activeSection, setActiveSection] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // Data state
   const [doctorInfo, setDoctorInfo] = useState(null);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentConsultations, setRecentConsultations] = useState([]);
   const [allConsultations, setAllConsultations] = useState([]);
-
-  // Treatment state
   const [treatmentPlans, setTreatmentPlans] = useState([]);
-  const [treatmentForm, setTreatmentForm] = useState({
-    patientName: "",
-    treatmentType: "",
-    treatmentPlan: "",
-    appointmentDate: "",
-    appointmentTime: "",
-    detailedProtocol: ""
-  });
 
   // ═══════════════════════════════════════════════════════════
   // 🔥 WEBSOCKET CONNECTION
@@ -105,10 +91,11 @@ const DoctorDashboard = () => {
 
         console.log('🔄 Loading initial dashboard data...');
 
-        const [profileRes, consultRes, statsRes] = await Promise.all([
+        const [profileRes, consultRes, statsRes, plansRes] = await Promise.all([
           doctorApiService.getDoctorProfile(),
           doctorApiService.getDoctorConsultations({ page: 1, limit: 10 }),
           doctorApiService.getDoctorStats("30d"),
+          doctorApiService.getTreatmentPlans({ page: 1, limit: 20 })
         ]);
 
         const consults = consultRes.data.data?.consultations || [];
@@ -124,6 +111,7 @@ const DoctorDashboard = () => {
         setRecentConsultations(unique);
         setAllConsultations(unique);
         setDashboardStats(statsRes.data.data);
+        setTreatmentPlans(plansRes.data.data?.treatmentPlans || []);
 
         dataLoadedOnce.current = true;
         console.log('✅ Initial dashboard data loaded');
@@ -179,10 +167,11 @@ const DoctorDashboard = () => {
     },
     { 
       id: "treatment", 
-      label: "Treatments", 
+      label: "Treatment Plans", 
       icon: Stethoscope, 
-      description: "Treatment planning", 
-      color: "teal" 
+      description: "Panchakarma planning", 
+      color: "teal",
+      badge: treatmentPlans.filter(p => p.status === 'active').length || 0
     },
     { 
       id: "settings", 
@@ -191,7 +180,7 @@ const DoctorDashboard = () => {
       description: "Profile settings", 
       color: "slate" 
     },
-  ]), [activeSessions?.size]);
+  ]), [activeSessions?.size, treatmentPlans]);
 
   // Title maps
   const titleMap = useMemo(() => ({
@@ -199,7 +188,7 @@ const DoctorDashboard = () => {
     realtime: "🔄 Real-Time Sessions",
     "therapy-tracking": "🌿 Panchakarma Therapy Tracker",
     patients: "👥 Patient Management",
-    treatment: "🌿 Treatment Planning",
+    treatment: "🌿 Panchakarma Treatment Planning",
     settings: "⚙️ Profile Settings",
   }), [displayName]);
 
@@ -208,28 +197,30 @@ const DoctorDashboard = () => {
     realtime: "Monitor live sessions, track participants, and manage real-time consultations",
     "therapy-tracking": "Real-time Panchakarma therapy progress, milestones, and session monitoring",
     patients: "Comprehensive patient care and consultation management",
-    treatment: "Create personalized healing journeys with Ayurvedic protocols",
+    treatment: "Create and manage Panchakarma treatment protocols with template-based planning",
     settings: "Customize your profile and practice preferences",
   };
 
-  // ✅ Stats
+  // ✅ Stats - Enhanced with Treatment Plans
   const stats = useMemo(() => {
+    const activePlans = treatmentPlans.filter(p => p.status === 'active').length;
+    const completedPlans = treatmentPlans.filter(p => p.status === 'completed').length;
+    
     if (!dashboardStats) {
       return [
         { label: "Today's Patients", value: "0", icon: Users, color: "emerald", bgGradient: "from-emerald-50 via-emerald-100 to-green-50" },
+        { label: "Active Plans", value: String(activePlans), icon: FileText, color: "teal", bgGradient: "from-teal-50 via-teal-100 to-cyan-50" },
         { label: "Active Sessions", value: String(activeSessions?.size || 0), icon: Activity, color: "blue", bgGradient: "from-blue-50 via-blue-100 to-cyan-50", realTime: true },
-        { label: "Active Therapies", value: "0", icon: Heart, color: "rose", bgGradient: "from-rose-50 via-rose-100 to-pink-50", realTime: true },
         { label: "Success Rate", value: "0%", icon: TrendingUp, color: "purple", bgGradient: "from-purple-50 via-purple-100 to-violet-50" },
-        { label: "Revenue (30d)", value: "₹0", icon: DollarSign, color: "amber", bgGradient: "from-amber-50 via-amber-100 to-yellow-50" },
       ];
     }
     return [
       { label: "Today's Patients", value: String(dashboardStats.totalConsultations || 0), icon: Users, color: "emerald", bgGradient: "from-emerald-50 via-emerald-100 to-green-50" },
+      { label: "Active Plans", value: String(activePlans), icon: FileText, color: "teal", bgGradient: "from-teal-50 via-teal-100 to-cyan-50", subtitle: `${completedPlans} completed` },
       { label: "Active Sessions", value: String(activeSessions?.size || 0), icon: Activity, color: "blue", bgGradient: "from-blue-50 via-blue-100 to-cyan-50", realTime: true },
       { label: "Success Rate", value: `${dashboardStats.completionRate || 0}%`, icon: TrendingUp, color: "purple", bgGradient: "from-purple-50 via-purple-100 to-violet-50" },
-      { label: "Revenue (30d)", value: `₹${(dashboardStats.totalRevenue || 0).toLocaleString()}`, icon: DollarSign, color: "amber", bgGradient: "from-amber-50 via-amber-100 to-yellow-50" },
     ];
-  }, [dashboardStats, activeSessions]);
+  }, [dashboardStats, activeSessions, treatmentPlans]);
 
   // Handlers
   const handleNavClick = useCallback((sectionId) => {
@@ -261,6 +252,15 @@ const DoctorDashboard = () => {
       setAllConsultations(prev => prev.map(c => c._id === id ? { ...c, status } : c));
       setRecentConsultations(prev => prev.map(c => c._id === id ? { ...c, status } : c));
     } catch {}
+  }, []);
+
+  const refreshTreatmentPlans = useCallback(async () => {
+    try {
+      const plansRes = await doctorApiService.getTreatmentPlans({ page: 1, limit: 100 });
+      setTreatmentPlans(plansRes.data.data?.treatmentPlans || []);
+    } catch (err) {
+      console.error('❌ Error refreshing treatment plans:', err);
+    }
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -512,6 +512,9 @@ const DoctorDashboard = () => {
                               {stat.realTime && <Circle className="w-2 h-2 text-emerald-500 fill-current animate-pulse flex-shrink-0" />}
                             </p>
                             <p className={`text-xl lg:text-3xl font-bold text-${stat.color}-900 mb-1`}>{stat.value}</p>
+                            {stat.subtitle && (
+                              <p className={`text-xs text-${stat.color}-600`}>{stat.subtitle}</p>
+                            )}
                           </div>
                           <div className={`w-10 h-10 lg:w-14 lg:h-14 bg-${stat.color}-500 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform flex-shrink-0 ml-2`}>
                             <stat.icon className="w-5 h-5 lg:w-7 lg:h-7 text-white" />
@@ -586,7 +589,6 @@ const DoctorDashboard = () => {
                 </motion.div>
               )}
 
-              {/* ✅ THERAPY TRACKING - PRODUCTION READY */}
               {activeSection === "therapy-tracking" && (
                 <motion.div 
                   key="therapy-tracking" 
@@ -614,10 +616,7 @@ const DoctorDashboard = () => {
                 <motion.div key="treatment" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                   <TreatmentPlanning
                     doctorInfo={doctorInfo}
-                    appointments={allConsultations}
-                    treatmentPlans={treatmentPlans}
-                    treatmentForm={treatmentForm}
-                    setTreatmentForm={setTreatmentForm}
+                    onSuccess={refreshTreatmentPlans}
                   />
                 </motion.div>
               )}

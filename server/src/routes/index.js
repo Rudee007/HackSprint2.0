@@ -65,6 +65,15 @@ router.use('/feedback', require('./feedback.routes'));
 // Admin panel routes
 router.use('/admin', require('./admin.routes'));
 
+
+// Therapy master catalog (read-only for doctors, admin creates)
+router.use('/therapies', require('./therapy.routes'));
+
+// Course template protocols (read-only for doctors, admin creates)
+router.use('/course-templates', require('./courseTemplate.routes'));
+
+// Prescription routes (medicines)
+router.use('/prescriptions', require('./prescription.routes'));
 /**
  * ═══════════════════════════════════════════════════════════
  * API HEALTH CHECK

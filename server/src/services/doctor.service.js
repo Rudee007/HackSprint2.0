@@ -5,7 +5,9 @@ const mongoose = require('mongoose');
 const TreatmentPlan = require('../models/TreatmentPlan'); // ✅ Add this line
 // At the top of your doctor.service.js
 const Consultation = require('../models/Consultation');
-
+const Therapy = require('../models/Therapy')
+const CourseTemplate = require('../models/CourseTemplate')
+const Therapist = require('../models/Therapist')
 class DoctorService {
   
   /**
@@ -722,106 +724,204 @@ async getPatientDetails(patientId) {
 
 async createTreatmentPlan(treatmentData) {
   try {
+    console.log('🔄 Service: Creating treatment plan');
+    console.log('📋 Treatment data:', JSON.stringify(treatmentData, null, 2));
+
+
     const {
       doctorId,
       patientId,
       consultationId,
-      treatmentType,
-      treatmentPlan,
+      assignedTherapistId,
+      courseTemplateId,
+      panchakarmaType,
+      treatmentName,
+      isCustomPlan,
       duration,
-      scheduledDate,
-      scheduledTime,
-      preInstructions,
-      postInstructions,
-      notes
+      phases,
+      schedulingPreferences,
+      prePanchakarmaInstructions,
+      postPanchakarmaInstructions,
+      treatmentNotes,
+      safetyNotes
     } = treatmentData;
 
+
+    // ═══════════════════════════════════════════════════════════
+    // VALIDATION
+    // ═══════════════════════════════════════════════════════════
+
+
     // Validate doctor exists
-     const doctor = await User.findById(doctorId);
-    if(!doctorId){
-      throw new Error('ee laudee doctor id dee');
-    }
+    const doctor = await User.findOne({ _id: doctorId, role: 'doctor' });
     if (!doctor) {
       throw new Error('Doctor not found');
     }
 
+
     // Validate patient exists
-    const patient = await User.findById(patientId);
+    const patient = await User.findOne({ _id: patientId, role: 'patient' });
     if (!patient) {
       throw new Error('Patient not found');
     }
 
-    // Create scheduled datetime
-    let scheduledFor = null;
-    if (scheduledDate && scheduledTime) {
-      scheduledFor = new Date(`${scheduledDate}T${scheduledTime}`);
+
+    // Validate consultation exists
+    const consultation = await Consultation.findById(consultationId);
+    if (!consultation) {
+      throw new Error('Consultation not found');
     }
 
-    // Create treatment plan document
-    const TreatmentPlan = mongoose.model('TreatmentPlan');
+
+    // Validate therapist exists
+    // const therapist = await User.findOne({ _id: assignedTherapistId, role: 'therapist' });
+    
+    const therapist = await Therapist.findOne({_id: assignedTherapistId,isActive: true});
+    if (!therapist) {
+      throw new Error('Assigned therapist not found');
+    }
+
+
+    // Validate template if provided
+    let template = null;
+    if (courseTemplateId) {
+      template = await CourseTemplate.findById(courseTemplateId);
+      if (!template) {
+        throw new Error('Course template not found');
+      }
+      console.log(`✅ Using template: ${template.templateName}`);
+    }
+
+
+    // 🔥 CALCULATE TOTAL DAYS
+    let totalDays = 0;
+
+    // Validate all therapy IDs in phases
+    if (phases && phases.length > 0) {
+      for (const phase of phases) {
+        // 🔥 ADD PHASE TOTAL DAYS
+        totalDays += phase.totalDays || 0;
+        
+        for (const session of phase.therapySessions) {
+          const therapy = await Therapy.findById(session.therapyId);
+          if (!therapy) {
+            throw new Error(`Therapy not found: ${session.therapyId}`);
+          }
+          
+          // Auto-populate therapy details if not provided
+          if (!session.therapyName) session.therapyName = therapy.therapyName;
+          if (!session.therapyType) session.therapyType = therapy.panchakarmaType;
+          if (!session.durationMinutes) session.durationMinutes = therapy.standardDuration;
+        }
+      }
+    }
+
+    // 🔥 FALLBACK: If no phases or totalDays is 0, use duration
+    if (totalDays === 0 && duration) {
+      totalDays = duration.value || 21;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════
+    // CREATE TREATMENT PLAN
+    // ═══════════════════════════════════════════════════════════
+
+
     const newTreatmentPlan = new TreatmentPlan({
       doctorId,
       patientId,
       consultationId,
-      treatmentType,
-      treatmentPlan,
-      duration,
-      scheduledFor,
-      preInstructions,
-      postInstructions,
-      notes,
-      status: 'active'
+      assignedTherapistId,
+      courseTemplateId: courseTemplateId || null,
+      
+      treatmentCategory: 'Panchakarma',
+      panchakarmaType,
+      treatmentName: treatmentName || `${panchakarmaType.charAt(0).toUpperCase() + panchakarmaType.slice(1)} Treatment`,
+      
+      isCustomPlan: isCustomPlan || !courseTemplateId,
+      isTemplateModified: courseTemplateId && phases && phases.length > 0,
+      
+      duration: duration || { value: 21, unit: 'days' },
+      totalDays: totalDays,  // 🔥 ADD THIS
+      phases: phases || [],
+      
+      schedulingPreferences: schedulingPreferences || {
+        startDate: new Date(),
+        preferredTimeSlot: 'morning',
+        skipWeekends: false,
+        requireSameTherapist: true
+      },
+      
+      prePanchakarmaInstructions,
+      postPanchakarmaInstructions,
+      treatmentNotes,
+      safetyNotes,
+      
+      status: 'active',
+      schedulingStatus: 'pending'
     });
 
-    await newTreatmentPlan.save();
-    logger.info(`Treatment plan created: ${newTreatmentPlan._id}`, { doctorId, patientId });
 
-    // Track notification results
+    await newTreatmentPlan.save();
+    
+    logger.info(`Treatment plan created: ${newTreatmentPlan._id}`, {
+      doctorId,
+      patientId,
+      panchakarmaType,
+      isCustomPlan: newTreatmentPlan.isCustomPlan
+    });
+
+
+    // ═══════════════════════════════════════════════════════════
+    // POPULATE FOR RESPONSE
+    // ═══════════════════════════════════════════════════════════
+
+
+    await newTreatmentPlan.populate([
+      { path: 'patientId', select: 'name email phone' },
+      { path: 'doctorId', select: 'name email' },
+      { path: 'assignedTherapistId', select: 'name email' },
+      { path: 'consultationId', select: 'type scheduledAt status' },
+      { path: 'courseTemplateId', select: 'templateName displayName' },
+      { path: 'phases.therapySessions.therapyId', select: 'therapyName therapyCode standardDuration' }
+    ]);
+
+
+    // ═══════════════════════════════════════════════════════════
+    // SEND NOTIFICATIONS (Optional)
+    // ═══════════════════════════════════════════════════════════
+
+
     const notificationResults = {
-      preInstructionsSent: false,
-      postInstructionsSent: false,
+      preTreatmentSent: false,
+      postTreatmentSent: false,
       errors: []
     };
 
-    // Send pre-treatment notifications if enabled
-    if (preInstructions && preInstructions.trim()) {
+
+    if (prePanchakarmaInstructions && prePanchakarmaInstructions.trim()) {
       try {
         const NotificationService = require('./notification.service');
-        await NotificationService.sendPreTherapyInstructions({
+        await NotificationService.sendPreTreatmentInstructions({
           patientEmail: patient.email,
           patientName: patient.name,
-          therapyType: treatmentType,
-          scheduledAt: scheduledFor
+          treatmentType: panchakarmaType,
+          startDate: schedulingPreferences?.startDate || new Date()
         });
-        notificationResults.preInstructionsSent = true;
-        logger.info(`Pre-therapy instructions sent for plan: ${newTreatmentPlan._id}`);
+        notificationResults.preTreatmentSent = true;
+        logger.info(`Pre-treatment instructions sent for plan: ${newTreatmentPlan._id}`);
       } catch (notifyError) {
-        logger.error('Failed to send pre-therapy instructions:', notifyError);
-        notificationResults.errors.push('Failed to send pre-therapy instructions');
+        logger.error('Failed to send pre-treatment instructions:', notifyError);
+        notificationResults.errors.push('Failed to send pre-treatment instructions');
       }
     }
 
-    // Send post-treatment notifications if enabled  
-    if (postInstructions && postInstructions.trim()) {
-      try {
-        const NotificationService = require('./notification.service');
-        await NotificationService.sendPostTherapyCare({
-          patientEmail: patient.email,
-          patientName: patient.name,
-          therapyType: treatmentType
-        });
-        notificationResults.postInstructionsSent = true;
-        logger.info(`Post-therapy instructions sent for plan: ${newTreatmentPlan._id}`);
-      } catch (notifyError) {
-        logger.error('Failed to send post-therapy care instructions:', notifyError);
-        notificationResults.errors.push('Failed to send post-therapy care instructions');
-      }
-    }
 
     return {
       treatmentPlan: newTreatmentPlan,
       notifications: notificationResults
     };
+
 
   } catch (error) {
     logger.error('Create treatment plan error:', error);
@@ -834,22 +934,35 @@ async createTreatmentPlan(treatmentData) {
  */
 async getDoctorTreatmentPlans(doctorId, options = {}) {
   try {
-    const { page = 1, limit = 20, status, patientId } = options;
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      patientId,
+      panchakarmaType,
+      schedulingStatus
+    } = options;
     
-    const TreatmentPlan = mongoose.model('TreatmentPlan');
-    
+    // Build query
     let query = { doctorId };
     if (status) query.status = status;
     if (patientId) query.patientId = patientId;
+    if (panchakarmaType) query.panchakarmaType = panchakarmaType;
+    if (schedulingStatus) query.schedulingStatus = schedulingStatus;
     
     const treatmentPlans = await TreatmentPlan.find(query)
-      .populate('patientId', 'name email phone')
-      .populate('consultationId', 'type scheduledFor')
+      .populate('patientId', 'name email phone profile.dateOfBirth profile.gender')
+      .populate('assignedTherapistId', 'name email')
+      .populate('consultationId', 'type scheduledAt status')
+      .populate('courseTemplateId', 'templateName displayName')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     const total = await TreatmentPlan.countDocuments(query);
+
+    logger.info(`Retrieved ${treatmentPlans.length} treatment plans for doctor: ${doctorId}`);
 
     return {
       treatmentPlans,
@@ -872,34 +985,52 @@ async getDoctorTreatmentPlans(doctorId, options = {}) {
  */
 async updateTreatmentPlan(treatmentPlanId, doctorId, updateData) {
   try {
-    const TreatmentPlan = mongoose.model('TreatmentPlan');
-    
-    const treatmentPlan = await TreatmentPlan.findOne({ 
-      _id: treatmentPlanId, 
-      doctorId 
+    const treatmentPlan = await TreatmentPlan.findOne({
+      _id: treatmentPlanId,
+      doctorId
     });
 
     if (!treatmentPlan) {
       throw new Error('Treatment plan not found or unauthorized');
     }
 
-    // Update allowed fields only
+    // Allowed fields for update
     const allowedUpdates = [
-      'treatmentPlan', 'duration', 'scheduledFor', 
-      'preInstructions', 'postInstructions', 'notes', 'status'
+      'treatmentName',
+      'duration',
+      'phases',
+      'schedulingPreferences',
+      'prePanchakarmaInstructions',
+      'postPanchakarmaInstructions',
+      'treatmentNotes',
+      'safetyNotes',
+      'status',
+      'assignedTherapistId'
     ];
 
+    // Apply updates
     allowedUpdates.forEach(field => {
       if (updateData[field] !== undefined) {
         treatmentPlan[field] = updateData[field];
       }
     });
 
-    treatmentPlan.updatedAt = new Date();
+    // Mark as modified if template was used
+    if (treatmentPlan.courseTemplateId && (updateData.phases || updateData.duration)) {
+      treatmentPlan.isTemplateModified = true;
+    }
+
     await treatmentPlan.save();
 
     logger.info(`Treatment plan updated: ${treatmentPlanId}`, { doctorId });
     
+    // Populate and return
+    await treatmentPlan.populate([
+      { path: 'patientId', select: 'name email' },
+      { path: 'assignedTherapistId', select: 'name email' },
+      { path: 'phases.therapySessions.therapyId', select: 'therapyName' }
+    ]);
+
     return treatmentPlan;
     
   } catch (error) {
@@ -908,24 +1039,30 @@ async updateTreatmentPlan(treatmentPlanId, doctorId, updateData) {
   }
 }
 
+
 /**
  * Get treatment plan details
  */
 async getTreatmentPlanDetails(treatmentPlanId, doctorId) {
   try {
-    const TreatmentPlan = mongoose.model('TreatmentPlan');
-    
-    const treatmentPlan = await TreatmentPlan.findOne({ 
-      _id: treatmentPlanId, 
-      doctorId 
+    const treatmentPlan = await TreatmentPlan.findOne({
+      _id: treatmentPlanId,
+      doctorId
     })
-    .populate('patientId', 'name email phone dateOfBirth gender')
-    .populate('consultationId', 'type scheduledFor status notes')
-    .populate('doctorId', 'userId');
+    .populate('patientId', 'name email phone profile')
+    .populate('doctorId', 'name email')
+    .populate('assignedTherapistId', 'name email phone')
+    .populate('consultationId', 'type scheduledAt status notes')
+    .populate('courseTemplateId')
+    .populate('phases.therapySessions.therapyId')
+    .populate('generatedSessions.consultationId')
+    .populate('generatedSessions.therapyId');
 
     if (!treatmentPlan) {
       throw new Error('Treatment plan not found or unauthorized');
     }
+
+    logger.info(`Retrieved treatment plan details: ${treatmentPlanId}`);
 
     return treatmentPlan;
     
@@ -934,34 +1071,71 @@ async getTreatmentPlanDetails(treatmentPlanId, doctorId) {
     throw error;
   }
 }
-
 /**
  * Delete treatment plan (soft delete)
  */
 async deleteTreatmentPlan(treatmentPlanId, doctorId) {
   try {
-    const TreatmentPlan = mongoose.model('TreatmentPlan');
-    
-    const treatmentPlan = await TreatmentPlan.findOne({ 
-      _id: treatmentPlanId, 
-      doctorId 
+    const treatmentPlan = await TreatmentPlan.findOne({
+      _id: treatmentPlanId,
+      doctorId
     });
 
     if (!treatmentPlan) {
       throw new Error('Treatment plan not found or unauthorized');
     }
 
-    // Soft delete by setting status
+    // Soft delete
     treatmentPlan.status = 'deleted';
     treatmentPlan.deletedAt = new Date();
     await treatmentPlan.save();
 
     logger.info(`Treatment plan deleted: ${treatmentPlanId}`, { doctorId });
     
-    return { success: true, message: 'Treatment plan deleted successfully' };
+    return {
+      success: true,
+      message: 'Treatment plan deleted successfully'
+    };
     
   } catch (error) {
     logger.error('Delete treatment plan error:', error);
+    throw error;
+  }
+}
+
+
+async triggerAutoScheduling(treatmentPlanId, doctorId) {
+  try {
+    const treatmentPlan = await TreatmentPlan.findOne({
+      _id: treatmentPlanId,
+      doctorId
+    }).populate('phases.therapySessions.therapyId');
+
+    if (!treatmentPlan) {
+      throw new Error('Treatment plan not found or unauthorized');
+    }
+
+    if (!treatmentPlan.isReadyForScheduling()) {
+      throw new Error('Treatment plan is not ready for scheduling. Please complete all required fields.');
+    }
+
+    // This would call your scheduling algorithm
+    // For now, just mark as scheduled
+    await treatmentPlan.markSchedulingCompleted({
+      algorithmUsed: 'manual',
+      scheduledBy: doctorId,
+      scheduledAt: new Date()
+    });
+
+    logger.info(`Auto-scheduling triggered for plan: ${treatmentPlanId}`);
+
+    return {
+      treatmentPlan,
+      message: 'Scheduling initiated successfully'
+    };
+    
+  } catch (error) {
+    logger.error('Trigger auto-scheduling error:', error);
     throw error;
   }
 }

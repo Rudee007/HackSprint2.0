@@ -39,7 +39,7 @@ app.use(errorHandler);
 // Mount routes
 app.use('/api/therapists', therapistRoutes);
 
-app.use('/api/prescriptions', prescriptionRoutes);
+// app.use('/api/prescriptions', prescriptionRoutes);
 
 console.log('✅ Therapist routes mounted at /api/therapists');
 

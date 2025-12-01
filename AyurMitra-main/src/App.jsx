@@ -74,7 +74,7 @@ function AppContent() {
         <Route
           path="/patient-dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['patient']}>
               <PatientDashboard />
             </ProtectedRoute>
           }
