@@ -1,10 +1,10 @@
 // src/components/CustomPlanBuilder.jsx
-// 🔥 CUSTOM PANCHAKARMA PLAN BUILDER - ENHANCED UX
+// 🔥 SMART CUSTOM PANCHAKARMA PLAN BUILDER - AUTO-CALCULATING UX
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Loader2, CheckCircle, AlertCircle, Plus, Trash2, X, Check
+  Loader2, CheckCircle, AlertCircle, Plus, Trash2, X, Check, Calculator
 } from 'lucide-react';
 import doctorApiService from '../services/doctorApiService';
 
@@ -41,24 +41,69 @@ const CustomPlanBuilder = ({
   });
 
   // ═══════════════════════════════════════════════════════════
+  // 🧮 SMART AUTO-CALCULATIONS
+  // ═══════════════════════════════════════════════════════════
+
+  // Calculate total days from all phases
+  const totalDays = customForm.phases.reduce((sum, phase) => sum + Number(phase.totalDays || 0), 0);
+
+  // Calculate total sessions from all therapies
+  const totalSessions = customForm.phases.reduce((sum, phase) =>
+    sum + phase.therapySessions.reduce((s, t) => s + Number(t.sessionCount || 0), 0), 0);
+
+  // Calculate estimated total minutes
+  const totalMinutes = customForm.phases.reduce((sum, phase) =>
+    sum + phase.therapySessions.reduce((s, t) => 
+      s + (Number(t.sessionCount || 0) * Number(t.durationMinutes || 0)), 0), 0);
+
+  // Smart calculation: suggest durationDays based on frequency
+  const calculateDurationDays = (sessionCount, frequency, phaseTotalDays) => {
+    const sessions = Number(sessionCount) || 1;
+    const maxDays = Number(phaseTotalDays) || 7;
+
+    switch (frequency) {
+      case 'daily':
+        return Math.min(sessions, maxDays);
+      case 'alternate':
+        return Math.min(sessions * 2, maxDays);
+      case 'weekly':
+        return Math.min(sessions * 7, maxDays);
+      case 'twice_daily':
+        return Math.min(Math.ceil(sessions / 2), maxDays);
+      default:
+        return Math.min(sessions, maxDays);
+    }
+  };
+
+  // Auto-sync treatment duration with phase total
+  useEffect(() => {
+    if (totalDays > 0 && customForm.duration.unit === 'days') {
+      setCustomForm(prev => ({
+        ...prev,
+        duration: { ...prev.duration, value: totalDays }
+      }));
+    }
+  }, [totalDays]);
+
+  // ═══════════════════════════════════════════════════════════
   // PHASE/THERAPY MANAGEMENT
   // ═══════════════════════════════════════════════════════════
 
   const addPhase = () => {
-    setCustomForm(prev => ({
-      ...prev,
-      phases: [...prev.phases, {
+    setCustomForm(prev => {
+      const newPhases = [...prev.phases, {
         phaseName: '',
         sequenceNumber: prev.phases.length + 1,
-        totalDays: '',
+        totalDays: 7, // Default 7 days
         therapySessions: [],
         phaseInstructions: '',
         dietPlan: '',
         lifestyleGuidelines: '',
         minGapDaysAfterPhase: 0,
         isCustom: true,
-      }],
-    }));
+      }];
+      return { ...prev, phases: newPhases };
+    });
   };
 
   const removePhase = (idx) => {
@@ -66,16 +111,27 @@ const CustomPlanBuilder = ({
       alert('Treatment plan must have at least one phase');
       return;
     }
-    setCustomForm(prev => ({
-      ...prev,
-      phases: prev.phases.filter((_, i) => i !== idx),
-    }));
+    setCustomForm(prev => {
+      const updated = prev.phases
+        .filter((_, i) => i !== idx)
+        .map((p, i) => ({ ...p, sequenceNumber: i + 1 })); // Auto-renumber
+      return { ...prev, phases: updated };
+    });
   };
 
   const updatePhase = (phaseIdx, field, value) => {
     setCustomForm(prev => {
       const updated = [...prev.phases];
       updated[phaseIdx][field] = value;
+
+      // Smart update: recalculate therapy durationDays when phase totalDays changes
+      if (field === 'totalDays') {
+        updated[phaseIdx].therapySessions = updated[phaseIdx].therapySessions.map(therapy => ({
+          ...therapy,
+          durationDays: calculateDurationDays(therapy.sessionCount, therapy.frequency, value)
+        }));
+      }
+
       return { ...prev, phases: updated };
     });
   };
@@ -87,15 +143,23 @@ const CustomPlanBuilder = ({
     }
     setCustomForm(prev => {
       const updated = [...prev.phases];
+      const phaseTotalDays = updated[phaseIdx].totalDays || 7;
       updated[phaseIdx].therapySessions.push({
         therapyId: '',
         therapyName: '',
         therapyType: '',
-        sessionCount: '',
+        sessionCount: 1,
         frequency: 'daily',
-        durationMinutes: '',
+        durationMinutes: 60,
+        durationDays: 1, // Default
         instructions: '',
         isCustom: true,
+        requiresPreviousPhaseComplete: false,
+        minimumDaysSincePreviousSession: 0,
+        allowsParallelSessions: true,
+        materials: [],
+        preConditions: '',
+        stopCriteria: '',
       });
       return { ...prev, phases: updated };
     });
@@ -113,17 +177,31 @@ const CustomPlanBuilder = ({
     setCustomForm(prev => {
       const updated = [...prev.phases];
       const therapy = updated[phaseIdx].therapySessions[tIdx];
+      const phaseTotalDays = updated[phaseIdx].totalDays || 7;
+
       if (field === 'therapyId' && value) {
         const found = availableTherapies.find(t => t._id === value);
         if (found) {
           therapy.therapyId = found._id;
           therapy.therapyName = found.therapyName;
           therapy.therapyType = found.therapyType;
-          therapy.durationMinutes = found.standardDuration || '';
+          therapy.durationMinutes = found.standardDuration || 60;
+          // Auto-calculate durationDays
+          therapy.durationDays = calculateDurationDays(therapy.sessionCount, therapy.frequency, phaseTotalDays);
         }
       } else {
         therapy[field] = value;
+
+        // Smart recalculation: update durationDays when sessionCount or frequency changes
+        if (field === 'sessionCount' || field === 'frequency') {
+          therapy.durationDays = calculateDurationDays(
+            field === 'sessionCount' ? value : therapy.sessionCount,
+            field === 'frequency' ? value : therapy.frequency,
+            phaseTotalDays
+          );
+        }
       }
+
       return { ...prev, phases: updated };
     });
   };
@@ -139,18 +217,17 @@ const CustomPlanBuilder = ({
       if (!customForm.assignedTherapistId) errors.push('Please assign a therapist');
       if (!customForm.treatmentName.trim()) errors.push('Please enter a treatment name');
       if (!customForm.panchakarmaType) errors.push('Please choose Panchakarma type');
-      if (!(parseInt(customForm.duration.value) > 0)) errors.push('Treatment duration must be > 0');
     }
     if (wizardStep === 2) {
       if (customForm.phases.length === 0) errors.push('Please add at least one phase');
       customForm.phases.forEach((phase, i) => {
         if (!phase.phaseName) errors.push(`Phase ${i + 1}: Select phase type`);
-        if (!(parseInt(phase.totalDays) > 0)) errors.push(`Phase ${i + 1}: Enter valid total days`);
+        if (!(Number(phase.totalDays) > 0)) errors.push(`Phase ${i + 1}: Enter valid total days`);
         if (phase.therapySessions.length === 0) errors.push(`Phase ${i + 1}: Add at least one therapy`);
         phase.therapySessions.forEach((t, tIdx) => {
           if (!t.therapyId) errors.push(`Phase ${i + 1} Therapy ${tIdx + 1}: Select a therapy`);
-          if (!(parseInt(t.sessionCount) > 0)) errors.push(`Phase ${i + 1} Therapy ${tIdx + 1}: Enter sessions`);
-          if (!(parseInt(t.durationMinutes) > 0)) errors.push(`Phase ${i + 1} Therapy ${tIdx + 1}: Enter duration`);
+          if (!(Number(t.sessionCount) > 0)) errors.push(`Phase ${i + 1} Therapy ${tIdx + 1}: Enter sessions`);
+          if (!(Number(t.durationMinutes) > 0)) errors.push(`Phase ${i + 1} Therapy ${tIdx + 1}: Enter duration minutes`);
         });
       });
     }
@@ -163,10 +240,6 @@ const CustomPlanBuilder = ({
   // ═══════════════════════════════════════════════════════════
   // SUBMISSION
   // ═══════════════════════════════════════════════════════════
-
-  const totalDays = customForm.phases.reduce((sum, phase) => sum + Number(phase.totalDays || 0), 0);
-  const totalSessions = customForm.phases.reduce((sum, phase) =>
-    sum + phase.therapySessions.reduce((s, t) => s + Number(t.sessionCount || 0), 0), 0);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -184,6 +257,7 @@ const CustomPlanBuilder = ({
       isCustomPlan: true,
       treatmentCategory: 'Panchakarma',
       totalDays: totalDays,
+      duration: { value: totalDays, unit: 'days' },
     };
     delete submissionData.courseTemplateId;
 
@@ -195,7 +269,7 @@ const CustomPlanBuilder = ({
         onBack();
       }
     } catch (err) {
-      const errorMsg = err?.response?.data?.error?.message || err.message;
+      const errorMsg = err?.response?.data?.error || err?.response?.data?.message || err.message;
       setValidationErrors([errorMsg]);
       alert(`Failed to create treatment plan:\n${errorMsg}`);
     } finally {
@@ -211,12 +285,12 @@ const CustomPlanBuilder = ({
     const errors = validate();
     if (errors.length > 0) {
       setValidationErrors(errors);
-      alert('⚠️ Please fix errors:\n' + errors.join('\n'));
       return;
     }
     setValidationErrors([]);
     setWizardStep(prev => prev + 1);
   };
+
   const prevStep = () => {
     setValidationErrors([]);
     setWizardStep(prev => prev - 1);
@@ -233,25 +307,56 @@ const CustomPlanBuilder = ({
       exit={{ opacity: 0, x: 20 }}
       className="space-y-6"
     >
-      {/* Validation Errors */}
-      {validationErrors.length > 0 && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-          <div className="flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-bold text-red-800 mb-2">Validation Errors</h4>
-              <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-                {validationErrors.map((error, idx) => (
-                  <li key={idx}>{error}</li>
-                ))}
-              </ul>
+      {/* Smart Stats Bar */}
+      <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl shadow-lg p-4 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Calculator className="w-5 h-5" />
+            <span className="font-semibold">Smart Calculations</span>
+          </div>
+          <div className="flex items-center space-x-6 text-sm">
+            <div>
+              <span className="opacity-80">Total Days:</span>
+              <span className="ml-2 font-bold text-lg">{totalDays}</span>
             </div>
-            <button onClick={() => setValidationErrors([])} className="text-red-600 hover:text-red-800">
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <span className="opacity-80">Sessions:</span>
+              <span className="ml-2 font-bold text-lg">{totalSessions}</span>
+            </div>
+            <div>
+              <span className="opacity-80">Est. Time:</span>
+              <span className="ml-2 font-bold text-lg">{Math.round(totalMinutes / 60)}h {totalMinutes % 60}m</span>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Validation Errors */}
+      <AnimatePresence>
+        {validationErrors.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-red-50 border-2 border-red-200 rounded-xl p-4"
+          >
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-bold text-red-800 mb-2">Validation Errors</h4>
+                <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                  {validationErrors.map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+              <button onClick={() => setValidationErrors([])} className="text-red-600 hover:text-red-800">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Wizard Progress */}
       <div className="bg-white rounded-2xl shadow-lg border border-emerald-100/50 p-6">
@@ -279,7 +384,7 @@ const CustomPlanBuilder = ({
           </h3>
           <p className="text-slate-600">
             {wizardStep === 1 && 'Enter patient, therapist, and treatment details'}
-            {wizardStep === 2 && 'Add phases and therapy sessions manually'}
+            {wizardStep === 2 && 'Add phases and therapies - duration auto-calculates'}
             {wizardStep === 3 && 'Set treatment start date and preferences'}
             {wizardStep === 4 && 'Review all details before creating the plan'}
           </p>
@@ -345,52 +450,30 @@ const CustomPlanBuilder = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Panchakarma Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={customForm.panchakarmaType}
-                  onChange={e => setCustomForm(prev => ({ ...prev, panchakarmaType: e.target.value }))}
-                  className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">Select Type</option>
-                  <option value="vamana">Vamana (Emesis)</option>
-                  <option value="virechana">Virechana (Purgation)</option>
-                  <option value="basti">Basti (Enema)</option>
-                  <option value="nasya">Nasya (Nasal)</option>
-                  <option value="raktamokshana">Raktamokshana (Bloodletting)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Treatment Duration <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={customForm.duration.value}
-                    onChange={e => setCustomForm(prev => ({
-                      ...prev,
-                      duration: { ...prev.duration, value: e.target.value }
-                    }))}
-                    placeholder="21"
-                    className="flex-1 px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                  />
-                  <select
-                    value={customForm.duration.unit}
-                    onChange={e => setCustomForm(prev => ({
-                      ...prev,
-                      duration: { ...prev.duration, unit: e.target.value }
-                    }))}
-                    className="w-32 px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="days">Days</option>
-                    <option value="weeks">Weeks</option>
-                    <option value="months">Months</option>
-                  </select>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Panchakarma Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={customForm.panchakarmaType}
+                onChange={e => setCustomForm(prev => ({ ...prev, panchakarmaType: e.target.value }))}
+                className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">Select Type</option>
+                <option value="vamana">Vamana (Emesis)</option>
+                <option value="virechana">Virechana (Purgation)</option>
+                <option value="basti">Basti (Enema)</option>
+                <option value="nasya">Nasya (Nasal)</option>
+                <option value="raktamokshana">Raktamokshana (Bloodletting)</option>
+              </select>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start space-x-3">
+                <Calculator className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold">Auto-Calculated Duration</p>
+                  <p>Treatment duration will be calculated automatically from your phases (Currently: <strong>{totalDays || 0} days</strong>)</p>
                 </div>
               </div>
             </div>
@@ -413,8 +496,8 @@ const CustomPlanBuilder = ({
               <div className="flex items-start space-x-3">
                 <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-amber-800">
-                  <p className="font-semibold mb-1">Build Your Phases</p>
-                  <p>Add phases manually. Each phase must have at least one therapy session with all required details.</p>
+                  <p className="font-semibold mb-1">🧮 Smart Auto-Calculation Enabled</p>
+                  <p>When you select a therapy, duration is auto-filled. When you change session count or frequency, therapy days auto-update!</p>
                 </div>
               </div>
             </div>
@@ -432,11 +515,14 @@ const CustomPlanBuilder = ({
                       Phase {phase.sequenceNumber}: {phase.phaseName || 'Unnamed Phase'}
                       {phase.therapySessions.length === 0 && (
                         <span className="ml-2 text-xs bg-red-500 text-white px-2 py-1 rounded-full">
-                          ⚠️ Empty Phase
+                          ⚠️ Empty
                         </span>
                       )}
                     </h4>
-                    <p className="text-sm text-slate-600">Duration: {phase.totalDays || 0} days</p>
+                    <p className="text-sm text-slate-600">
+                      Duration: <strong>{phase.totalDays || 0} days</strong> | 
+                      Sessions: <strong>{phase.therapySessions.reduce((s, t) => s + Number(t.sessionCount || 0), 0)}</strong>
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
@@ -455,7 +541,7 @@ const CustomPlanBuilder = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">Phase Name *</label>
                     <select
@@ -470,7 +556,10 @@ const CustomPlanBuilder = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Total Days *</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Total Days * 
+                      <span className="ml-2 text-emerald-600 font-normal">(affects therapy day calculations)</span>
+                    </label>
                     <input
                       type="number"
                       min="1"
@@ -479,22 +568,12 @@ const CustomPlanBuilder = ({
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Sequence Number</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={phase.sequenceNumber}
-                      onChange={e => updatePhase(phaseIdx, 'sequenceNumber', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    />
-                  </div>
                 </div>
 
                 {/* Therapies */}
                 <div className="space-y-3">
                   {phase.therapySessions.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
+                    <div className="text-center py-8 text-slate-500 bg-white rounded-lg">
                       <AlertCircle className="w-12 h-12 mx-auto mb-2 text-red-400" />
                       <p className="font-medium">No therapies in this phase</p>
                       <p className="text-sm">Click "Add Therapy" to add sessions</p>
@@ -502,9 +581,11 @@ const CustomPlanBuilder = ({
                   ) : (
                     phase.therapySessions.map((therapy, tIdx) => (
                       <div key={tIdx} className="bg-white border border-slate-200 rounded-lg p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Therapy *</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                          <div className="lg:col-span-2">
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                              Therapy * <span className="text-emerald-600">(auto-fills duration)</span>
+                            </label>
                             <select
                               value={therapy.therapyId}
                               onChange={e => updateTherapy(phaseIdx, tIdx, 'therapyId', e.target.value)}
@@ -513,13 +594,15 @@ const CustomPlanBuilder = ({
                               <option value="">Select Therapy</option>
                               {availableTherapies.map(t => (
                                 <option key={t._id} value={t._id}>
-                                  {t.therapyName} - {t.therapyType}
+                                  {t.therapyName} ({t.therapyType})
                                 </option>
                               ))}
                             </select>
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Sessions *</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                              Sessions * <span className="text-blue-600">(auto-updates days)</span>
+                            </label>
                             <input
                               type="number"
                               min="1"
@@ -529,20 +612,22 @@ const CustomPlanBuilder = ({
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Frequency</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                              Frequency <span className="text-blue-600">(auto-updates days)</span>
+                            </label>
                             <select
                               value={therapy.frequency}
                               onChange={e => updateTherapy(phaseIdx, tIdx, 'frequency', e.target.value)}
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             >
                               <option value="daily">Daily</option>
-                              <option value="alternate">Alternate Days</option>
+                              <option value="alternate">Alternate</option>
                               <option value="weekly">Weekly</option>
                               <option value="twice_daily">Twice Daily</option>
                             </select>
                           </div>
                           <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Duration (mins) *</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Duration (min) *</label>
                             <input
                               type="number"
                               min="15"
@@ -552,26 +637,32 @@ const CustomPlanBuilder = ({
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             />
                           </div>
-                          <div className="flex items-end">
-                            <button
-                              onClick={() => removeTherapy(phaseIdx, tIdx)}
-                              className="w-full px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
-                            >
-                              <Trash2 className="w-4 h-4 inline mr-1" />
-                              Remove
-                            </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                            <div className="text-xs text-blue-700 mb-1">🧮 Auto-Calculated Duration Days:</div>
+                            <div className="text-lg font-bold text-blue-900">{therapy.durationDays || 0} days</div>
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Instructions (Optional)</label>
+                            <textarea
+                              value={therapy.instructions}
+                              onChange={e => updateTherapy(phaseIdx, tIdx, 'instructions', e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                              rows="2"
+                              placeholder="Special instructions..."
+                            />
                           </div>
                         </div>
-                        <div className="mt-3">
-                          <label className="block text-xs font-semibold text-slate-600 mb-1">Instructions (Optional)</label>
-                          <textarea
-                            value={therapy.instructions}
-                            onChange={e => updateTherapy(phaseIdx, tIdx, 'instructions', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                            rows="2"
-                            placeholder="Special instructions for this therapy..."
-                          />
-                        </div>
+
+                        <button
+                          onClick={() => removeTherapy(phaseIdx, tIdx)}
+                          className="mt-3 w-full px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+                        >
+                          <Trash2 className="w-4 h-4 inline mr-1" />
+                          Remove Therapy
+                        </button>
                       </div>
                     ))
                   )}
@@ -699,7 +790,10 @@ const CustomPlanBuilder = ({
         {wizardStep === 4 && (
           <div className="space-y-6">
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
-              <h4 className="font-bold text-emerald-900 mb-4">Plan Summary</h4>
+              <h4 className="font-bold text-emerald-900 mb-4 flex items-center">
+                <Calculator className="w-5 h-5 mr-2" />
+                Auto-Calculated Plan Summary
+              </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-slate-600">Treatment:</span>
@@ -707,19 +801,23 @@ const CustomPlanBuilder = ({
                 </div>
                 <div>
                   <span className="text-slate-600">Panchakarma Type:</span>
-                  <p className="font-semibold">{customForm.panchakarmaType || '--'}</p>
+                  <p className="font-semibold capitalize">{customForm.panchakarmaType || '--'}</p>
                 </div>
                 <div>
                   <span className="text-slate-600">Total Phases:</span>
                   <p className="font-semibold">{customForm.phases.length}</p>
                 </div>
                 <div>
-                  <span className="text-slate-600">Duration:</span>
-                  <p className="font-semibold">{totalDays} days</p>
+                  <span className="text-slate-600">Total Days:</span>
+                  <p className="font-semibold text-emerald-600">{totalDays} days (auto)</p>
                 </div>
                 <div>
                   <span className="text-slate-600">Total Sessions:</span>
-                  <p className="font-semibold">{totalSessions}</p>
+                  <p className="font-semibold text-emerald-600">{totalSessions} (auto)</p>
+                </div>
+                <div>
+                  <span className="text-slate-600">Est. Total Time:</span>
+                  <p className="font-semibold text-emerald-600">{Math.round(totalMinutes / 60)}h {totalMinutes % 60}m (auto)</p>
                 </div>
                 <div>
                   <span className="text-slate-600">Start Date:</span>
