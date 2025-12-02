@@ -1,20 +1,21 @@
 /* eslint-disable react/prop-types */
-import React, { useState, useEffect } from "react";
-import { 
-  ArrowLeft, Star, MapPin, Clock, Award, 
-  Phone, Mail, Calendar, CheckCircle, 
-  Users, BookOpen, Heart, Loader2
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  ArrowLeft, Star, MapPin, Clock, Award,
+  Phone, Mail, Calendar, CheckCircle,
+  Users, BookOpen, Heart, Loader2, X,
+  ChevronLeft, ChevronRight, User, AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 
 // API Configuration - safe access to environment variables
 const getEnvVar = (key, defaultValue) => {
-  try {
-    return process?.env?.[key] || defaultValue;
-  } catch {
-    return defaultValue;
+  const value = import.meta.env?.[key];
+  if (!value && defaultValue) {
+    console.warn(`Environment variable ${key} not found, using default: ${defaultValue}`);
   }
+  return value || defaultValue;
 };
 
 const API_CONFIG = {
@@ -37,143 +38,275 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-export default function DoctorDetails({ doctor, onBack, onSchedule }) {
+// Generate mock data for doctor details fallback
+const generateMockData = (doctorId, doctorName) => {
+  return {
+    _id: doctorId || 'mock-id',
+    name: doctorName || 'Doctor',
+    location: 'Not specified',
+    specializations: ['Ayurvedic Medicine'],
+    consultationSettings: {
+      availability: {
+        workingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        workingHours: { start: "09:00", end: "17:00" },
+        consultationDuration: 30
+      },
+      fees: {
+        videoConsultation: 500,
+        inPersonConsultation: 800,
+        followUpConsultation: 300
+      },
+      preferences: {
+        languages: ["english", "hindi"]
+      }
+    },
+    metrics: {
+      averageRating: 4.5,
+      totalPatients: 150,
+      totalReviews: 45,
+      successRate: 90,
+      patientSatisfactionScore: 9.2
+    },
+    experience: { totalYears: 8 },
+    professionalInfo: {
+      bio: `Dr. ${doctorName || 'Doctor'} is a dedicated Ayurvedic practitioner with extensive experience in holistic healthcare and patient wellness.`
+    },
+    qualifications: {
+      bams: {
+        degree: "Bachelor of Ayurvedic Medicine and Surgery (BAMS)",
+        university: "Rajiv Gandhi University of Health Sciences",
+        yearOfCompletion: 2016
+      }
+    }
+  };
+};
+
+export default function DoctorDetails({ doctor, onBack, onSchedule, quickAppointmentData }) {
   const [doctorData, setDoctorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showTimeSlots, setShowTimeSlots] = useState(false);
+  const [showBookingFlow, setShowBookingFlow] = useState(false);
+  const [currentStep, setCurrentStep] = useState('confirm'); // 'confirm' or 'schedule'
+  const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [alternativeSlots, setAlternativeSlots] = useState([]);
+  const [showAlternativesModal, setShowAlternativesModal] = useState(false);
+  const [conflictMessage, setConflictMessage] = useState('');
 
-  const timeSlots = [
-    "09:00 AM - 10:00 AM",
-    "11:00 AM - 12:00 PM",
-    "01:00 PM - 02:00 PM",
-    "03:00 PM - 04:00 PM",
-    "05:00 PM - 06:00 PM",
-  ];
+  const doctorId = doctor?.doctorId;
 
-  useEffect(() => {
-    if (doctor?.doctorId) {
-      fetchDoctorDetails();
-    }
-  }, [doctor?.doctorId]);
-
-  // Generate unique mock data for each doctor
-  const generateMockData = (doctorId, doctorName) => {
-    const hash = doctorId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    const specializations = [
-      ["Panchakarma", "Lifestyle Disorders", "Stress & Mental Health"],
-      ["Ayurvedic Cardiology", "Diabetes Management", "Hypertension Care"],
-      ["Women's Health", "Fertility Treatment", "Prenatal Care"],
-      ["Digestive Disorders", "IBS Treatment", "Liver Care"],
-      ["Skin & Hair Care", "Dermatology", "Cosmetic Ayurveda"]
-    ];
-    
-    const universities = [
-      "Rajiv Gandhi University of Health Sciences",
-      "Gujarat Ayurved University", 
-      "Banaras Hindu University",
-      "Jamia Hamdard University",
-      "National Institute of Ayurveda"
-    ];
-    
-    const workingDaysOptions = [
-      ["monday", "tuesday", "wednesday", "thursday", "friday"],
-      ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
-      ["tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-      ["monday", "wednesday", "friday", "saturday", "sunday"]
-    ];
-    
-    const languageOptions = [
-      ["english", "hindi", "marathi"],
-      ["english", "hindi", "gujarati"],
-      ["english", "tamil", "telugu"],
-      ["english", "hindi", "bengali"],
-      ["english", "kannada", "hindi"]
-    ];
-    
-    const idx = Math.abs(hash) % specializations.length;
-    const experience = 3 + (Math.abs(hash) % 15);
-    const rating = 4.2 + (Math.abs(hash) % 8) / 10;
-    const patients = 100 + (Math.abs(hash) % 300);
-    const reviews = 20 + (Math.abs(hash) % 80);
-    
-    return {
-      specializations: specializations[idx],
-      experience: { totalYears: experience },
-      metrics: {
-        averageRating: Math.round(rating * 10) / 10,
-        totalPatients: patients,
-        totalReviews: reviews,
-        successRate: 85 + (Math.abs(hash) % 15),
-        patientSatisfactionScore: 8.5 + (Math.abs(hash) % 15) / 10
-      },
-      professionalInfo: {
-        bio: `Dr. ${doctorName} is a dedicated Ayurvedic practitioner with ${experience} years of experience specializing in ${specializations[idx][0]} and holistic wellness. Known for personalized treatment approaches and excellent patient care.`
-      },
-      qualifications: {
-        bams: {
-          degree: "Bachelor of Ayurvedic Medicine and Surgery (BAMS)",
-          university: universities[idx],
-          yearOfCompletion: 2024 - experience - 2
-        },
-        postGraduation: experience > 5 ? {
-          degree: "MD (Ayurveda)",
-          specialization: specializations[idx][0],
-          university: universities[(idx + 1) % universities.length],
-          yearOfCompletion: 2024 - experience + 3
-        } : null
-      },
-      consultationSettings: {
-        availability: {
-          workingDays: workingDaysOptions[idx % workingDaysOptions.length],
-          workingHours: { 
-            start: idx % 2 === 0 ? "09:00" : "10:00", 
-            end: idx % 2 === 0 ? "17:00" : "18:00" 
-          },
-          consultationDuration: 30 + (idx % 3) * 15
-        },
-        fees: {
-          videoConsultation: 500 + (Math.abs(hash) % 500),
-          inPersonConsultation: 800 + (Math.abs(hash) % 700),
-          followUpConsultation: 300 + (Math.abs(hash) % 300)
-        },
-        preferences: {
-          languages: languageOptions[idx % languageOptions.length]
-        }
-      }
-    };
-  };
-
-  const fetchDoctorDetails = async () => {
+  const fetchDoctorDetails = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // API Configuration - Update this when you get the endpoint
-      const API_BASE_URL = getEnvVar('REACT_APP_API_BASE_URL', 'http://localhost:3003/api');
-      const USE_MOCK_DATA = !getEnvVar('REACT_APP_API_BASE_URL', null);
-      
-      if (USE_MOCK_DATA) {
-        // Generate unique mock data for each doctor
-        setTimeout(() => {
-          const mockData = generateMockData(doctor.doctorId, doctor.name);
-          setDoctorData(mockData);
-          setLoading(false);
-        }, 1000);
+
+      // Real API call to get doctor details
+      const response = await apiClient.get(`/users/${doctor.doctorId}`);
+
+      if (response.data && response.data.success) {
+        // Transform backend user data to expected format
+        const userData = response.data.data;
+        const transformedData = {
+          _id: userData._id,
+          name: userData.name,
+          location: userData.address?.city || doctor.location,
+          specializations: userData.profile?.specializations || [doctor.speciality],
+          consultationSettings: {
+            availability: {
+              workingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+              workingHours: { start: "09:00", end: "17:00" },
+              consultationDuration: 30
+            },
+            fees: {
+              videoConsultation: 500,
+              inPersonConsultation: 800,
+              followUpConsultation: 300
+            },
+            preferences: {
+              languages: ["english", "hindi"]
+            }
+          },
+          metrics: {
+            averageRating: 4.5,
+            totalPatients: 150,
+            totalReviews: 45,
+            successRate: 90,
+            patientSatisfactionScore: 9.2
+          },
+          experience: { totalYears: 8 },
+          professionalInfo: {
+            bio: `Dr. ${userData.name} is a dedicated Ayurvedic practitioner with extensive experience in holistic healthcare and patient wellness.`
+          },
+          qualifications: {
+            bams: {
+              degree: "Bachelor of Ayurvedic Medicine and Surgery (BAMS)",
+              university: "Rajiv Gandhi University of Health Sciences",
+              yearOfCompletion: 2016
+            }
+          }
+        };
+        setDoctorData(transformedData);
       } else {
-        // Real API call - this will work when you have the endpoint
-        const response = await apiClient.get(`/doctors/${doctor.doctorId}`);
-        setDoctorData(response.data);
-        setLoading(false);
+        // Fallback to mock data if API fails
+        const mockData = generateMockData(doctor.doctorId, doctor.name);
+        setDoctorData(mockData);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching doctor details:", err);
+      // Use mock data as fallback
+      const mockData = generateMockData(doctor.doctorId, doctor.name);
+      setDoctorData(mockData);
+      setLoading(false);
+    }
+  }, [doctor.doctorId, doctor.location, doctor.speciality, doctor.name]);
+
+  useEffect(() => {
+    if (doctorId) {
+      fetchDoctorDetails();
+    }
+  }, [doctorId, fetchDoctorDetails]);
+
+
+
+  const fetchAvailableSlots = async (date) => {
+    try {
+      setLoadingSlots(true);
+      const response = await apiClient.get(`/booking/provider/${doctor.doctorId}/bookings`, {
+        params: { date: date.toISOString().split('T')[0] }
+      });
+
+      // Generate available slots based on doctor's working hours and existing bookings
+      const workingHours = doctorData?.consultationSettings?.availability?.workingHours || { start: "09:00", end: "17:00" };
+      const duration = doctorData?.consultationSettings?.availability?.consultationDuration || 30;
+      const existingBookings = response.data?.data?.bookings || [];
+
+      const slots = generateTimeSlots(workingHours, duration, existingBookings);
+      setAvailableSlots(slots);
+    } catch (err) {
+      console.error("Error fetching slots:", err);
+      // Generate mock slots as fallback
+      const mockSlots = [
+        { startTime: "09:00", start: "9:00 AM", end: "9:30 AM", available: true },
+        { startTime: "10:00", start: "10:00 AM", end: "10:30 AM", available: true },
+        { startTime: "11:30", start: "11:30 AM", end: "12:00 PM", available: true },
+        { startTime: "14:00", start: "2:00 PM", end: "2:30 PM", available: true },
+        { startTime: "15:30", start: "3:30 PM", end: "4:00 PM", available: false },
+        { startTime: "16:00", start: "4:00 PM", end: "4:30 PM", available: true }
+      ];
+      setAvailableSlots(mockSlots);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const generateTimeSlots = (workingHours, duration, existingBookings) => {
+    const slots = [];
+    const startHour = parseInt(workingHours.start.split(':')[0]);
+    const endHour = parseInt(workingHours.end.split(':')[0]);
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += duration) {
+        const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const endMinute = minute + duration;
+        const endHour = endMinute >= 60 ? hour + 1 : hour;
+        const adjustedEndMinute = endMinute >= 60 ? endMinute - 60 : endMinute;
+        const endTime = `${endHour.toString().padStart(2, '0')}:${adjustedEndMinute.toString().padStart(2, '0')}`;
+
+        const isBooked = existingBookings.some(booking => {
+          const bookingTime = new Date(booking.scheduledAt).toTimeString().slice(0, 5);
+          return bookingTime === startTime;
+        });
+
+        slots.push({
+          startTime,
+          start: formatTime(startTime),
+          end: formatTime(endTime),
+          available: !isBooked
+        });
+      }
+    }
+
+    return slots;
+  };
+
+  const formatTime = (time24) => {
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    setSelectedSlot(null);
+    fetchAvailableSlots(date);
+  };
+
+  const handleBookAppointment = async () => {
+    if (!selectedDate || !selectedSlot) {
+      setError('Please select both date and time slot');
+      return;
+    }
+
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      setError('User not authenticated. Please log in to book appointments.');
+      return;
+    }
+
+    try {
+      const appointmentDateTime = new Date(selectedDate);
+      const [hours, minutes] = selectedSlot.startTime.split(':');
+      appointmentDateTime.setHours(parseInt(hours), parseInt(minutes));
+
+      const bookingData = {
+        providerId: doctor.doctorId,
+        patientId: userId,
+        startTime: appointmentDateTime.toISOString(),
+        duration: doctorData?.consultationSettings?.availability?.consultationDuration || 30,
+        type: 'in_person',
+        providerType: 'doctor',
+        fee: doctorData?.consultationSettings?.fees?.inPersonConsultation || 1000,
+        sessionType: 'consultation',
+        notes: `Quick appointment for: ${quickAppointmentData?.symptoms || 'General consultation'}`
+      };
+
+      const response = await apiClient.post('/booking/create', bookingData);
+
+      if (response.data.success) {
+        onSchedule({
+          ...doctor,
+          appointmentDetails: {
+            date: selectedDate,
+            slot: selectedSlot,
+            bookingId: response.data.data.consultationId
+          }
+        });
       }
     } catch (err) {
-      setError("Failed to load doctor details");
-      console.error("Error fetching doctor details:", err);
-      setLoading(false);
+      if (err.response?.status === 409) {
+        // Handle slot conflict with alternative slots
+        // Backend error structure: err.response.data.error contains the conflict data
+        const errorData = err.response.data.error || err.response.data.data || {};
+        const alternatives = errorData.suggestedAlternatives || [];
+
+        if (alternatives.length > 0) {
+          // Show alternatives modal
+          setAlternativeSlots(alternatives);
+          setConflictMessage(errorData.alternativeMessage || errorData.conflictInfo?.conflictReason || 'Slot unavailable');
+          setShowAlternativesModal(true);
+        } else {
+          setError(`Slot unavailable: ${errorData.conflictInfo?.conflictReason || errorData.message || 'This time slot is already booked'}`);
+          // Refresh slots
+          fetchAvailableSlots(selectedDate);
+        }
+      } else {
+        console.error('Booking error:', err);
+        setError(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to book appointment. Please try again.');
+      }
     }
   };
 
@@ -185,6 +318,52 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
   const formatLanguages = (languages) => {
     if (!languages || languages.length === 0) return "English";
     return languages.map(lang => lang.charAt(0).toUpperCase() + lang.slice(1)).join(", ");
+  };
+
+  const handleAlternativeSlotSelect = async (alternativeSlot) => {
+    try {
+      setShowAlternativesModal(false);
+      setError('');
+
+      // Parse the alternative slot date and time
+      const altDate = new Date(alternativeSlot.startTime);
+      const [hours, minutes] = alternativeSlot.start.split(':');
+      const ampm = alternativeSlot.start.includes('PM') && parseInt(hours) !== 12 ? 12 : 0;
+      const hour24 = (parseInt(hours) % 12) + ampm;
+      altDate.setHours(hour24, parseInt(minutes.split(' ')[0]));
+
+      const bookingData = {
+        providerId: doctor.doctorId,
+        patientId: localStorage.getItem('userId'),
+        startTime: altDate.toISOString(),
+        duration: doctorData?.consultationSettings?.availability?.consultationDuration || 30,
+        type: 'in_person',
+        providerType: 'doctor',
+        fee: doctorData?.consultationSettings?.fees?.inPersonConsultation || 1000,
+        sessionType: 'consultation',
+        notes: `Quick appointment for: ${quickAppointmentData?.symptoms || 'General consultation'}`
+      };
+
+      const response = await apiClient.post('/booking/create', bookingData);
+
+      if (response.data.success) {
+        onSchedule({
+          ...doctor,
+          appointmentDetails: {
+            date: altDate,
+            slot: {
+              startTime: alternativeSlot.startTime,
+              start: alternativeSlot.start,
+              end: alternativeSlot.end
+            },
+            bookingId: response.data.data.consultationId
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error booking alternative slot:', err);
+      setError(err.response?.data?.message || 'Failed to book alternative slot. Please try again.');
+    }
   };
 
   if (loading) {
@@ -216,8 +395,8 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
       {/* Header */}
       <header className="bg-emerald-600 text-white py-4 shadow-md">
         <div className="max-w-2xl mx-auto flex items-center gap-3 px-4">
-          <button 
-            onClick={onBack} 
+          <button
+            onClick={onBack}
             className="hover:text-emerald-200 flex items-center gap-2 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -287,69 +466,15 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
               </div>
             </div>
 
-            {/* Schedule Button and Time Slots */}
+            {/* Book Appointment Button */}
             <div className="p-6">
-              <AnimatePresence mode="wait">
-                {!showTimeSlots ? (
-                  <motion.button
-                    key="schedule-button"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => setShowTimeSlots(true)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                  >
-                    <Calendar className="w-5 h-5" />
-                    Schedule Appointment
-                  </motion.button>
-                ) : (
-                  <motion.div
-                    key="time-slots"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="space-y-4 pt-4 border-t border-gray-100"
-                  >
-                    <h3 className="text-lg font-bold text-gray-800 text-center flex items-center justify-center gap-2">
-                      <Clock className="w-5 h-5 text-emerald-600" />
-                      Select a Time Slot
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {timeSlots.map((slot, index) => (
-                        <motion.button
-                          key={slot}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: index * 0.05 }}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`p-3 rounded-lg text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 border-2 ${
-                            selectedSlot === slot
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-lg scale-105"
-                              : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
-                          }`}
-                        >
-                          {slot}
-                        </motion.button>
-                      ))}
-                    </div>
-                    <motion.button
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: timeSlots.length * 0.05 }}
-                      onClick={() => {
-                        if (selectedSlot) {
-                          onSchedule({ ...doctor, selectedSlot });
-                        }
-                      }}
-                      disabled={!selectedSlot}
-                      className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white py-3 px-6 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed disabled:shadow-none"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      Book Now
-                    </motion.button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <motion.button
+                onClick={() => setShowBookingFlow(true)}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              >
+                <Calendar className="w-5 h-5" />
+                Book Appointment
+              </motion.button>
             </div>
           </div>
 
@@ -360,8 +485,8 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
               About Dr. {doctor.name}
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              {doctorData?.professionalInfo?.bio || 
-               `Dr. ${doctor.name} is a highly experienced Ayurvedic practitioner with ${doctorData?.experience?.totalYears || doctor.experience} years of dedicated service in holistic healthcare.`}
+              {doctorData?.professionalInfo?.bio ||
+                `Dr. ${doctor.name} is a highly experienced Ayurvedic practitioner with ${doctorData?.experience?.totalYears || doctor.experience} years of dedicated service in holistic healthcare.`}
             </p>
           </div>
 
@@ -384,7 +509,7 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
                   <p className="text-sm text-emerald-600">Years</p>
                 </div>
               </div>
-              
+
               {doctorData?.qualifications && (
                 <div className="grid grid-cols-1 gap-3">
                   {doctorData.qualifications.bams && (
@@ -425,7 +550,7 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
                 <div className="p-3 bg-gray-50 rounded-lg">
                   <p className="font-medium text-gray-700 text-sm">Working Hours</p>
                   <p className="text-sm text-gray-600">
-                    {doctorData?.consultationSettings?.availability?.workingHours?.start || "09:00"} - 
+                    {doctorData?.consultationSettings?.availability?.workingHours?.start || "09:00"} -
                     {doctorData?.consultationSettings?.availability?.workingHours?.end || "17:00"}
                   </p>
                 </div>
@@ -468,7 +593,7 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
                 </p>
               </div>
             </div>
-            
+
             {/* Consultation Fees */}
             <div className="mt-4 pt-4 border-t border-emerald-200">
               <p className="font-medium text-emerald-700 mb-2">Consultation Fees</p>
@@ -490,6 +615,516 @@ export default function DoctorDetails({ doctor, onBack, onSchedule }) {
           </div>
         </motion.div>
       </main>
+
+      {/* Booking Flow Modal */}
+      <AnimatePresence>
+        {showBookingFlow && (
+          <BookingFlowModal
+            doctor={doctor}
+            doctorData={doctorData}
+            quickAppointmentData={quickAppointmentData}
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+            selectedDate={selectedDate}
+            selectedSlot={selectedSlot}
+            availableSlots={availableSlots}
+            loadingSlots={loadingSlots}
+            onDateSelect={handleDateSelect}
+            onSlotSelect={setSelectedSlot}
+            onBook={handleBookAppointment}
+            onClose={() => {
+              setShowBookingFlow(false);
+              setCurrentStep('confirm');
+              setSelectedDate(null);
+              setSelectedSlot(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Alternative Slots Modal */}
+      <AnimatePresence>
+        {showAlternativesModal && (
+          <AlternativeSlotsModal
+            conflictMessage={conflictMessage}
+            alternativeSlots={alternativeSlots}
+            onSelect={handleAlternativeSlotSelect}
+            onClose={() => {
+              setShowAlternativesModal(false);
+              setAlternativeSlots([]);
+              setConflictMessage('');
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// Booking Flow Modal Component
+function BookingFlowModal({
+  doctor,
+  doctorData,
+  quickAppointmentData,
+  currentStep,
+  setCurrentStep,
+  selectedDate,
+  selectedSlot,
+  availableSlots,
+  loadingSlots,
+  onDateSelect,
+  onSlotSelect,
+  onBook,
+  onClose
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+      animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+      exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
+        {/* Header */}
+        <div className="bg-emerald-600 text-white p-6 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">
+              {currentStep === 'confirm' ? 'Confirm Details' : 'Select Date & Time'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {currentStep === 'confirm' ? (
+            <ConfirmationStep
+              doctor={doctor}
+              quickAppointmentData={quickAppointmentData}
+              onNext={() => setCurrentStep('schedule')}
+            />
+          ) : (
+            <SchedulingStep
+              doctor={doctor}
+              doctorData={doctorData}
+              selectedDate={selectedDate}
+              selectedSlot={selectedSlot}
+              availableSlots={availableSlots}
+              loadingSlots={loadingSlots}
+              onDateSelect={onDateSelect}
+              onSlotSelect={onSlotSelect}
+              onBook={onBook}
+              onBack={() => setCurrentStep('confirm')}
+            />
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Confirmation Step Component
+function ConfirmationStep({ doctor, quickAppointmentData, onNext }) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-emerald-600" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Quick Appointment Details</h3>
+        <p className="text-gray-600">Please verify your information before scheduling</p>
+      </div>
+
+      {/* Doctor Info */}
+      <div className="bg-emerald-50 rounded-xl p-4">
+        <h4 className="font-semibold text-emerald-800 mb-2">Selected Doctor</h4>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+            {doctor.name?.[0]?.toUpperCase()}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-800">Dr. {doctor.name}</p>
+            <p className="text-sm text-gray-600">{doctor.speciality}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Appointment Data */}
+      {quickAppointmentData && (
+        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+          <h4 className="font-semibold text-gray-800 mb-3">Your Information</h4>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Age</p>
+              <p className="text-gray-800">{quickAppointmentData.age} years</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Gender</p>
+              <p className="text-gray-800 capitalize">{quickAppointmentData.gender}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-600 mb-1">Symptoms</p>
+            <p className="text-gray-800 text-sm bg-white p-3 rounded-lg">
+              {quickAppointmentData.symptoms}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-600">Severity</p>
+            <p className="text-gray-800 capitalize">
+              {quickAppointmentData.severity === 'always' && 'Severe / Constant'}
+              {quickAppointmentData.severity === 'often' && 'Moderate / Frequent'}
+              {quickAppointmentData.severity === 'sometimes' && 'Mild / Occasional'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={onNext}
+          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-xl font-semibold transition-colors"
+        >
+          Proceed to Schedule
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Scheduling Step Component
+function SchedulingStep({
+  doctor,
+  doctorData,
+  selectedDate,
+  selectedSlot,
+  availableSlots,
+  loadingSlots,
+  onDateSelect,
+  onSlotSelect,
+  onBook,
+  onBack
+}) {
+  const today = new Date();
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (month, year) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const isDateAvailable = (date) => {
+    const dayOfWeek = date.getDay();
+    const workingDays = doctorData?.consultationSettings?.availability?.workingDays ||
+      ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return workingDays.includes(dayNames[dayOfWeek]) && date >= today;
+  };
+
+  const renderCalendar = useMemo(() => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+    const days = [];
+
+    // Empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="p-2"></div>);
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      const isAvailable = isDateAvailable(date);
+      const isSelected = selectedDate &&
+        selectedDate.getDate() === day &&
+        selectedDate.getMonth() === currentMonth &&
+        selectedDate.getFullYear() === currentYear;
+
+      days.push(
+        <button
+          key={day}
+          onClick={() => isAvailable && onDateSelect(date)}
+          disabled={!isAvailable}
+          className={`p-2 text-sm rounded-lg transition-colors ${isSelected
+            ? 'bg-emerald-600 text-white'
+            : isAvailable
+              ? 'hover:bg-emerald-100 text-gray-800'
+              : 'text-gray-300 cursor-not-allowed'
+            }`}
+        >
+          {day}
+        </button>
+      );
+    }
+
+    return days;
+  }, [currentMonth, currentYear, selectedDate, doctorData?.consultationSettings?.availability?.workingDays, today]);
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Calendar */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Date</h3>
+        <div className="bg-gray-50 rounded-xl p-4">
+          {/* Calendar Header */}
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => {
+                const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+                const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+                const prevDate = new Date(prevYear, prevMonth, 1);
+                const currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+                if (prevDate >= currentDate) {
+                  setCurrentMonth(prevMonth);
+                  setCurrentYear(prevYear);
+                }
+              }}
+              disabled={currentYear === today.getFullYear() && currentMonth === today.getMonth()}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h4 className="text-lg font-semibold">
+              {monthNames[currentMonth]} {currentYear}
+            </h4>
+            <button
+              onClick={() => {
+                const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+                const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+                const maxDate = new Date(today.getFullYear() + 1, today.getMonth(), 1);
+                const nextDate = new Date(nextYear, nextMonth, 1);
+
+                if (nextDate <= maxDate) {
+                  setCurrentMonth(nextMonth);
+                  setCurrentYear(nextYear);
+                }
+              }}
+              disabled={currentYear >= today.getFullYear() + 1 && currentMonth >= today.getMonth()}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Days of week */}
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar days */}
+          <div className="grid grid-cols-7 gap-1">
+            {renderCalendar}
+          </div>
+        </div>
+      </div>
+
+      {/* Time Slots */}
+      {selectedDate && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Time Slot</h3>
+          <div className="bg-gray-50 rounded-xl p-4">
+            {loadingSlots ? (
+              <div className="text-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-600 mb-2" />
+                <p className="text-gray-600">Loading available slots...</p>
+              </div>
+            ) : availableSlots.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-600">No slots available for this date</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {availableSlots.map((slot) => (
+                  <button
+                    key={slot.startTime}
+                    onClick={() => slot.available && onSlotSelect(slot)}
+                    disabled={!slot.available}
+                    className={`p-3 rounded-lg text-sm font-medium transition-colors ${selectedSlot?.startTime === slot.startTime
+                      ? 'bg-emerald-600 text-white'
+                      : slot.available
+                        ? 'bg-white border border-gray-200 hover:bg-emerald-50 text-gray-800'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                  >
+                    {slot.start} - {slot.end}
+                    {!slot.available && <div className="text-xs mt-1">Booked</div>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={onBack}
+          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+        >
+          Back
+        </button>
+        <button
+          onClick={onBook}
+          disabled={!selectedDate || !selectedSlot}
+          className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-6 rounded-xl font-semibold transition-colors"
+        >
+          Book Appointment
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Alternative Slots Modal Component
+function AlternativeSlotsModal({ conflictMessage, alternativeSlots, onSelect, onClose }) {
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Date not available';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+      animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+      exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-6 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold mb-1">Alternative Time Slots Available</h2>
+              <p className="text-white/90 text-sm">{conflictMessage}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-800 mb-1">Slot Conflict Detected</p>
+                <p className="text-sm text-amber-700">
+                  The selected time slot is already booked. Please choose one of the alternative slots below.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {alternativeSlots.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No alternative slots available at this time.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-800 mb-3">
+                Suggested Alternatives ({alternativeSlots.length})
+              </h3>
+              {alternativeSlots.map((slot, index) => (
+                <motion.button
+                  key={index}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onSelect(slot)}
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                          <Calendar className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800 group-hover:text-emerald-700">
+                            {formatDate(slot.date || slot.startTime)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {slot.start} - {slot.end}
+                          </p>
+                        </div>
+                      </div>
+                      {slot.reason && (
+                        <p className="text-xs text-gray-500 ml-13">{slot.reason}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {slot.rank && (
+                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded">
+                          #{slot.rank}
+                        </span>
+                      )}
+                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-600" />
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

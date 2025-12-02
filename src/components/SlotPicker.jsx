@@ -44,7 +44,18 @@ export default function SlotPicker({ provider, onClose, onBooked }) {
       toast.success("Appointment booked!");
       onBooked(slot);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Booking failed");
+      // Handle conflict with alternative slots
+      // Backend error structure: err.response.data.error contains the conflict data
+      const errorData = err.response?.data?.error || err.response?.data?.data || {};
+      if (err.response?.status === 409 && errorData.suggestedAlternatives) {
+        const alternatives = errorData.suggestedAlternatives;
+        const message = errorData.alternativeMessage ||
+          `Slot unavailable. ${alternatives.length} alternative slots available.`;
+        toast.error(message, { autoClose: 5000 });
+        // Note: Could show a modal with alternatives here if needed
+      } else {
+        toast.error(errorData.message || err.response?.data?.message || "Booking failed");
+      }
     }
   };
 

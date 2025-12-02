@@ -4,7 +4,7 @@ import { ArrowLeft, Star, MapPin, Clock, User, Award, ArrowRight } from "lucide-
 import { motion, AnimatePresence } from "framer-motion";
 import DoctorDetails from "./DoctorDetails";
 
-export default function DoctorRecommendations({ doctors, onBack, onSchedule }) {
+export default function DoctorRecommendations({ doctors, onBack, onSchedule, quickAppointmentData }) {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
 
   if (selectedDoctor) {
@@ -13,6 +13,7 @@ export default function DoctorRecommendations({ doctors, onBack, onSchedule }) {
         doctor={selectedDoctor}
         onBack={() => setSelectedDoctor(null)}
         onSchedule={onSchedule}
+        quickAppointmentData={quickAppointmentData}
       />
     );
   }

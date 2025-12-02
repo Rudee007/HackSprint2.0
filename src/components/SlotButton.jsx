@@ -16,22 +16,33 @@ export default function SlotButton({ slot, providerId, therapyType, onBooked }) 
 
   const handleClick = async () => {
     try {
-      await api.post("/bookings/create", {
+      await api.post("/booking/create", {
         providerId,
-        patientId   : user.id,
-        startTime   : slot.startTime,
-        duration    : 30,
-        type        : "in_person",
+        patientId: user.id,
+        startTime: slot.startTime,
+        duration: 30,
+        type: "in_person",
         providerType: "doctor",
-        fee         : 0,
-        sessionType : therapyType || "therapy",
-        meetingLink : "",
-        notes       : ""
+        fee: 0,
+        sessionType: therapyType || "therapy",
+        meetingLink: "",
+        notes: ""
       });
       toast.success("Appointment booked!");
       onBooked?.(slot);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Booking failed, try another slot");
+      // Handle conflict with alternative slots
+      // Backend error structure: err.response.data.error contains the conflict data
+      const errorData = err.response?.data?.error || err.response?.data?.data || {};
+      if (err.response?.status === 409 && errorData.suggestedAlternatives) {
+        const alternatives = errorData.suggestedAlternatives;
+        const message = errorData.alternativeMessage ||
+          `Slot unavailable. ${alternatives.length} alternative slots available.`;
+        toast.error(message, { autoClose: 5000 });
+        // Could trigger a modal to show alternatives here
+      } else {
+        toast.error(errorData.message || err.response?.data?.message || "Booking failed, try another slot");
+      }
     }
   };
 

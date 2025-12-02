@@ -10,35 +10,35 @@ import { useAuth } from "../context/AuthContext";
 import DoctorRecommendations from "./DoctorRecommendations";
 
 /* ───────── API  ─────────────────────────────────────────────── */
-const api = axios.create({ baseURL:"http://localhost:3003/api" });
-api.interceptors.request.use((c)=>{
+const api = axios.create({ baseURL: "http://localhost:3003/api" });
+api.interceptors.request.use((c) => {
   const t = localStorage.getItem("accessToken");
   if (t) c.headers.Authorization = `Bearer ${t}`;
   return c;
 });
 
-const fetchSlots = (pid,date)=>
+const fetchSlots = (pid, date) =>
   api.get(`/scheduling/providers/${pid}/availability`,
-    { params:{ date,therapyType:"consultation" } }
-  ).then(r=>r.data.data.slots);
+    { params: { date, therapyType: "consultation" } }
+  ).then(r => r.data.data.slots);
 
-const bookSlot = (data)=>api.post("/booking/create",data);
+const bookSlot = (data) => api.post("/booking/create", data);
 
 /* ───────── constants ───────────────────────────────────────── */
-const SEVERITY=[
-  { value:"always",    label:"Severe / Constant"},
-  { value:"often",     label:"Moderate / Frequent"},
-  { value:"sometimes", label:"Mild / Occasional"}
+const SEVERITY = [
+  { value: "always", label: "Severe / Constant" },
+  { value: "often", label: "Moderate / Frequent" },
+  { value: "sometimes", label: "Mild / Occasional" }
 ];
 
 /* ───────── Slot-picker modal ───────────────────────────────── */
-const SlotPicker=({provider,onClose,onBooked})=>{
+const SlotPicker = ({ provider, onClose, onBooked }) => {
   const { user } = useAuth();
-  const [slots,setSlots]=useState([]);
-  const [busy,setBusy]=useState(true);
-  const today=new Date().toISOString().slice(0,10);
+  const [slots, setSlots] = useState([]);
+  const [busy, setBusy] = useState(true);
+  const today = new Date().toISOString().slice(0, 10);
 
-  useEffect(()=>{
+  useEffect(() => {
     // Simulate loading fake slots for development
     setTimeout(() => {
       const fakeSlots = [
@@ -52,21 +52,21 @@ const SlotPicker=({provider,onClose,onBooked})=>{
       setSlots(fakeSlots);
       setBusy(false);
     }, 800);
-    
+
     // Original API call (commented out for development)
     /*
     fetchSlots(provider.doctorId,today)
       .then(setSlots)
       .finally(()=>setBusy(false));
     */
-  },[provider]);
+  }, [provider]);
 
-  const handleBook=async(slot)=>{
+  const handleBook = async (slot) => {
     // Simulate booking for development
     setTimeout(() => {
       onBooked(slot);
     }, 500);
-    
+
     // Original API call (commented out for development)
     /*
     try{
@@ -84,20 +84,29 @@ const SlotPicker=({provider,onClose,onBooked})=>{
       });
       onBooked(slot);
     }catch(e){
-      alert(e.response?.data?.message||"Booking failed");
+      // Handle conflict with alternative slots
+      if (e.response?.status === 409 && e.response?.data?.data?.suggestedAlternatives) {
+        const alternatives = e.response.data.data.suggestedAlternatives;
+        const message = e.response.data.data.alternativeMessage || 
+          `Slot unavailable. ${alternatives.length} alternative slots available.`;
+        alert(message);
+        // Could show alternatives modal here
+      } else {
+        alert(e.response?.data?.message || "Booking failed");
+      }
     }
     */
   };
 
   return (
     <motion.div
-      initial={{opacity:0,backdropFilter:"blur(0px)"}}
-      animate={{opacity:1,backdropFilter:"blur(4px)"}}
-      exit={{opacity:0,backdropFilter:"blur(0px)"}}
+      initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+      animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+      exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
     >
       <motion.div
-        initial={{scale:.9}} animate={{scale:1}} exit={{scale:.9}}
+        initial={{ scale: .9 }} animate={{ scale: 1 }} exit={{ scale: .9 }}
         className="bg-white rounded-2xl shadow-xl w-96 p-6 relative"
       >
         <button
@@ -114,14 +123,14 @@ const SlotPicker=({provider,onClose,onBooked})=>{
 
         {busy ? (
           <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-600" />
-        ): slots.length===0 ? (
+        ) : slots.length === 0 ? (
           <p className="text-center text-sm text-gray-600">No slots today.</p>
-        ): (
+        ) : (
           <div className="space-y-2">
-            {slots.map(s=>(
+            {slots.map(s => (
               <button
                 key={s.startTime}
-                onClick={()=>handleBook(s)}
+                onClick={() => handleBook(s)}
                 className="w-full px-4 py-2 border rounded-lg text-left
                            hover:bg-emerald-50 active:scale-[.98]
                            transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -137,28 +146,28 @@ const SlotPicker=({provider,onClose,onBooked})=>{
 };
 
 /* ───────── Main component ─────────────────────────────────── */
-export default function AppointmentBooking({ onBack }){
-  const [form,setForm]=useState({
-    age:"28",
-    gender:"female",
-    symptoms:"persistent headache, nausea, and fatigue for the past week. Also experiencing difficulty sleeping and mild joint pain.",
-    severity:"often"
+export default function AppointmentBooking({ onBack }) {
+  const [form, setForm] = useState({
+    age: "28",
+    gender: "female",
+    symptoms: "persistent headache, nausea, and fatigue for the past week. Also experiencing difficulty sleeping and mild joint pain.",
+    severity: "often"
   });
-  const [loading,setLoading]=useState(false);
-  const [doctors,setDoctors]=useState([]);
-  const [error,setError]=useState("");
-  const [selectedDoc,setSelectedDoc]=useState(null);
-  const [showRecommendations,setShowRecommendations]=useState(false);
+  const [loading, setLoading] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+  const [error, setError] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
-  const change=(k,v)=>{ setForm({...form,[k]:v}); setError(""); };
+  const change = (k, v) => { setForm({ ...form, [k]: v }); setError(""); };
 
-  const submit=async e=>{
+  const submit = async e => {
     e.preventDefault();
-    if(!form.age||!form.gender||!form.symptoms.trim()){
+    if (!form.age || !form.gender || !form.symptoms.trim()) {
       setError("Fill age, gender and at least one symptom"); return;
     }
     setLoading(true); setDoctors([]); setError("");
-    
+
     // Simulate API delay
     setTimeout(() => {
       // Fake doctor data for development
@@ -172,7 +181,7 @@ export default function AppointmentBooking({ onBack }){
           location: "Mumbai"
         },
         {
-          doctorId: "doc_002", 
+          doctorId: "doc_002",
           name: "Rajesh Kumar",
           speciality: "Panchakarma Specialist",
           rating: "4.6",
@@ -188,12 +197,12 @@ export default function AppointmentBooking({ onBack }){
           location: "Bangalore"
         }
       ];
-      
+
       setDoctors(fakeDoctors);
       setShowRecommendations(true);
       setLoading(false);
     }, 1500);
-    
+
     // Original API call (commented out for development)
     /*
     try{
@@ -214,12 +223,13 @@ export default function AppointmentBooking({ onBack }){
   };
 
   /* ───────── JSX ─────────────────────────────────────────── */
-  
+
   // Show recommendations if doctors are found
   if (showRecommendations && doctors.length > 0) {
     return (
       <DoctorRecommendations
         doctors={doctors}
+        quickAppointmentData={form}
         onBack={() => {
           setShowRecommendations(false);
           setDoctors([]);
@@ -231,7 +241,7 @@ export default function AppointmentBooking({ onBack }){
     );
   }
 
-  return(
+  return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
       {/* Page Header */}
       <header
@@ -279,14 +289,14 @@ export default function AppointmentBooking({ onBack }){
       {/* Enhanced Content */}
       <main className="max-w-lg mx-auto px-6 py-12">
         {/* Welcome Section */}
-        <motion.div 
-          initial={{opacity:0,y:30}} 
-          animate={{opacity:1,y:0}}
-          transition={{delay:0.4, duration:0.8}}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.8 }}
           className="text-center mb-10"
         >
-          <motion.div 
-            whileHover={{scale:1.1, rotate:5}}
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
             className="w-20 h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl border-4 border-white/50"
           >
             <User className="w-10 h-10 text-white" />
@@ -301,62 +311,62 @@ export default function AppointmentBooking({ onBack }){
 
         {/* Enhanced Form Card */}
         <motion.form
-          initial={{opacity:0,y:30}} 
-          animate={{opacity:1,y:0}} 
-          transition={{delay:0.2}}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
           onSubmit={submit}
           className="space-y-8 bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20"
         >
           {/* Age Field */}
-          <motion.div whileHover={{scale:1.02}} transition={{type:"spring",stiffness:300}}>
-            <EnhancedInput 
-              label="Age" 
-              type="number" 
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+            <EnhancedInput
+              label="Age"
+              type="number"
               value={form.age}
-              onChange={e=>change("age",e.target.value)}
+              onChange={e => change("age", e.target.value)}
               icon={<User className="w-5 h-5" />}
               required
             />
           </motion.div>
 
           {/* Gender Field */}
-          <motion.div whileHover={{scale:1.02}} transition={{type:"spring",stiffness:300}}>
-            <EnhancedSelect 
-              label="Gender" 
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+            <EnhancedSelect
+              label="Gender"
               value={form.gender}
-              onChange={e=>change("gender",e.target.value)}
-              options={[["","Select your gender"],["male","Male"],["female","Female"],["other","Other"]]}
+              onChange={e => change("gender", e.target.value)}
+              options={[["", "Select your gender"], ["male", "Male"], ["female", "Female"], ["other", "Other"]]}
               required
             />
           </motion.div>
 
           {/* Symptoms Field */}
-          <motion.div whileHover={{scale:1.02}} transition={{type:"spring",stiffness:300}}>
-            <EnhancedTextarea 
-              label="Describe Your Symptoms" 
-              rows={4} 
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+            <EnhancedTextarea
+              label="Describe Your Symptoms"
+              rows={4}
               value={form.symptoms}
-              onChange={e=>change("symptoms",e.target.value)}
+              onChange={e => change("symptoms", e.target.value)}
               placeholder="Please describe your symptoms in detail (e.g., persistent headache, nausea, fatigue...)"
               required
             />
           </motion.div>
 
           {/* Severity Field */}
-          <motion.div whileHover={{scale:1.02}} transition={{type:"spring",stiffness:300}}>
-            <EnhancedSelect 
-              label="Symptom Severity" 
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+            <EnhancedSelect
+              label="Symptom Severity"
               value={form.severity}
-              onChange={e=>change("severity",e.target.value)}
-              options={SEVERITY.map(o=>[o.value,o.label])}
+              onChange={e => change("severity", e.target.value)}
+              options={SEVERITY.map(o => [o.value, o.label])}
               required
             />
           </motion.div>
 
           {/* Enhanced Submit Button */}
           <motion.button
-            whileHover={{scale:1.02,boxShadow:"0 20px 40px rgba(16,185,129,0.3)"}}
-            whileTap={{scale:0.98}}
+            whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(16,185,129,0.3)" }}
+            whileTap={{ scale: 0.98 }}
             disabled={loading}
             className="w-full py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xl hover:shadow-2xl disabled:opacity-60 flex items-center justify-center gap-3 transition-all duration-300 border-2 border-transparent hover:border-emerald-300"
           >
@@ -376,11 +386,11 @@ export default function AppointmentBooking({ onBack }){
 
         {/* Enhanced Error Alert */}
         <AnimatePresence>
-          {error&&(
+          {error && (
             <motion.div
-              initial={{opacity:0,y:-20,scale:0.9}} 
-              animate={{opacity:1,y:0,scale:1}}
-              exit={{opacity:0,y:-20,scale:0.9}}
+              initial={{ opacity: 0, y: -20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
               className="mt-6 flex items-center gap-3 bg-red-50 border-2 border-red-200 text-red-700 p-4 rounded-2xl shadow-lg backdrop-blur-sm"
             >
               <div className="p-1 bg-red-100 rounded-full">
@@ -392,11 +402,11 @@ export default function AppointmentBooking({ onBack }){
         </AnimatePresence>
 
         {/* Enhanced Slot Picker */}
-        {selectedDoc&&(
+        {selectedDoc && (
           <EnhancedSlotPicker
             provider={selectedDoc}
-            onClose={()=>setSelectedDoc(null)}
-            onBooked={slot=>{
+            onClose={() => setSelectedDoc(null)}
+            onBooked={slot => {
               alert(`Booked • ${slot.start}`);
               setSelectedDoc(null);
               setShowRecommendations(false);
@@ -410,8 +420,8 @@ export default function AppointmentBooking({ onBack }){
 }
 
 /* ───────── Enhanced field components ─────────────────────── */
-function EnhancedInput({label,icon,required,...rest}){
-  return(
+function EnhancedInput({ label, icon, required, ...rest }) {
+  return (
     <div className="space-y-2">
       <label className="font-semibold text-gray-700 flex items-center gap-2">
         {icon}
@@ -427,8 +437,8 @@ function EnhancedInput({label,icon,required,...rest}){
   );
 }
 
-function EnhancedTextarea({label,required,...rest}){
-  return(
+function EnhancedTextarea({ label, required, ...rest }) {
+  return (
     <div className="space-y-2">
       <label className="font-semibold text-gray-700 flex items-center gap-2">
         <AlertCircle className="w-5 h-5" />
@@ -442,8 +452,8 @@ function EnhancedTextarea({label,required,...rest}){
   );
 }
 
-function EnhancedSelect({label,options,required,...rest}){
-  return(
+function EnhancedSelect({ label, options, required, ...rest }) {
+  return (
     <div className="space-y-2">
       <label className="font-semibold text-gray-700 flex items-center gap-2">
         <ChevronDown className="w-5 h-5" />
@@ -454,7 +464,7 @@ function EnhancedSelect({label,options,required,...rest}){
           {...rest}
           className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-white/50 backdrop-blur-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition-all duration-300 text-gray-800 appearance-none cursor-pointer"
         >
-          {options.map(([value,text])=>(
+          {options.map(([value, text]) => (
             <option key={value} value={value}>{text}</option>
           ))}
         </select>
@@ -465,12 +475,12 @@ function EnhancedSelect({label,options,required,...rest}){
 }
 
 /* ───────── Enhanced Slot Picker ─────────────────────── */
-function EnhancedSlotPicker({provider,onClose,onBooked}){
-  const [slots,setSlots]=useState([]);
-  const [busy,setBusy]=useState(true);
-  const today=new Date().toISOString().slice(0,10);
+function EnhancedSlotPicker({ provider, onClose, onBooked }) {
+  const [slots, setSlots] = useState([]);
+  const [busy, setBusy] = useState(true);
+  const today = new Date().toISOString().slice(0, 10);
 
-  useEffect(()=>{
+  useEffect(() => {
     setTimeout(() => {
       const fakeSlots = [
         { startTime: "09:00", start: "9:00 AM", end: "9:30 AM" },
@@ -483,23 +493,23 @@ function EnhancedSlotPicker({provider,onClose,onBooked}){
       setSlots(fakeSlots);
       setBusy(false);
     }, 800);
-  },[provider]);
+  }, [provider]);
 
-  const handleBook=async(slot)=>{
+  const handleBook = async (slot) => {
     setTimeout(() => onBooked(slot), 500);
   };
 
   return (
     <motion.div
-      initial={{opacity:0,backdropFilter:"blur(0px)"}}
-      animate={{opacity:1,backdropFilter:"blur(8px)"}}
-      exit={{opacity:0,backdropFilter:"blur(0px)"}}
+      initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+      animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
+      exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
       <motion.div
-        initial={{scale:.8,y:50}} 
-        animate={{scale:1,y:0}} 
-        exit={{scale:.8,y:50}}
+        initial={{ scale: .8, y: 50 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: .8, y: 50 }}
         className="bg-white rounded-3xl shadow-2xl w-96 p-8 relative border border-gray-100"
       >
         <button
@@ -529,18 +539,18 @@ function EnhancedSlotPicker({provider,onClose,onBooked}){
             <Loader2 className="w-8 h-8 animate-spin mx-auto text-emerald-600 mb-4" />
             <p className="text-gray-600">Loading available slots...</p>
           </div>
-        ): slots.length===0 ? (
+        ) : slots.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-600">No slots available today.</p>
           </div>
-        ): (
+        ) : (
           <div className="space-y-3">
-            {slots.map(s=>(
+            {slots.map(s => (
               <motion.button
                 key={s.startTime}
-                whileHover={{scale:1.02,backgroundColor:"rgb(16 185 129 / 0.1)"}}
-                whileTap={{scale:0.98}}
-                onClick={()=>handleBook(s)}
+                whileHover={{ scale: 1.02, backgroundColor: "rgb(16 185 129 / 0.1)" }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleBook(s)}
                 className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl text-left hover:border-emerald-300 transition-all duration-300 bg-white/50 backdrop-blur-sm group"
               >
                 <div className="flex items-center justify-between">
