@@ -41,6 +41,7 @@ router.use('/booking', require('./booking.routes'));
 // Scheduling routes (calendar management)
 router.use('/scheduling', require('./scheduling.routes'));
 
+router.use('/auto-scheduling', require('./autoScheduling.routes'))
 /**
  * ═══════════════════════════════════════════════════════════
  * REAL-TIME & COMMUNICATION ROUTES

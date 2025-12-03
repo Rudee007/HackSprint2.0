@@ -1,10 +1,11 @@
 // src/components/CustomPlanBuilder.jsx
-// 🔥 SMART CUSTOM PANCHAKARMA PLAN BUILDER - AUTO-CALCULATING UX
+// 🔥 SMART CUSTOM PANCHAKARMA PLAN BUILDER - FIXED 21-DAY SCHEDULING
+// ✅ BUG FIX: Corrected durationDays calculation to respect phase boundaries
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Loader2, CheckCircle, AlertCircle, Plus, Trash2, X, Check, Calculator
+  Loader2, CheckCircle, AlertCircle, Plus, Trash2, X, Check, Calculator, Info
 } from 'lucide-react';
 import doctorApiService from '../services/doctorApiService';
 
@@ -56,22 +57,51 @@ const CustomPlanBuilder = ({
     sum + phase.therapySessions.reduce((s, t) => 
       s + (Number(t.sessionCount || 0) * Number(t.durationMinutes || 0)), 0), 0);
 
-  // Smart calculation: suggest durationDays based on frequency
+  // ═══════════════════════════════════════════════════════════
+  // ✅ FIXED: Smart calculation respects phase boundaries
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * 🔥 CRITICAL FIX: Calculate durationDays for parallel scheduling
+   * 
+   * BEFORE (BUGGY): If 5 daily sessions in 7-day phase → returned 5 days
+   * AFTER (FIXED): If 5 daily sessions in 7-day phase → returns 7 days
+   * 
+   * WHY: For parallel therapies, durationDays should span the full phase.
+   * The backend scheduler distributes sessions across these days based on frequency.
+   * 
+   * @param {number} sessionCount - Number of therapy sessions
+   * @param {string} frequency - Session frequency (daily, alternate, etc.)
+   * @param {number} phaseTotalDays - Total days in the phase
+   * @returns {number} Duration in days for this therapy
+   */
   const calculateDurationDays = (sessionCount, frequency, phaseTotalDays) => {
     const sessions = Number(sessionCount) || 1;
     const maxDays = Number(phaseTotalDays) || 7;
 
     switch (frequency) {
       case 'daily':
-        return Math.min(sessions, maxDays);
+        // ✅ FIX: Use full phase duration for parallel scheduling
+        // Sessions will be distributed: Day 1, 2, 3, 4, 5 (remaining days available for other therapies)
+        return maxDays;
+        
       case 'alternate':
-        return Math.min(sessions * 2, maxDays);
+        // ✅ FIX: Use full phase duration, backend handles alternate-day spacing
+        return maxDays;
+        
       case 'weekly':
-        return Math.min(sessions * 7, maxDays);
+        // Weekly: calculate minimum required days, cap at phase duration
+        const minWeeklyDays = sessions * 7;
+        return Math.min(minWeeklyDays, maxDays);
+        
       case 'twice_daily':
-        return Math.min(Math.ceil(sessions / 2), maxDays);
+        // Twice daily: calculate minimum required days, cap at phase duration
+        const minTwiceDailyDays = Math.ceil(sessions / 2);
+        return Math.min(minTwiceDailyDays, maxDays);
+        
       default:
-        return Math.min(sessions, maxDays);
+        // ✅ FIX: Default to full phase duration
+        return maxDays;
     }
   };
 
@@ -82,6 +112,7 @@ const CustomPlanBuilder = ({
         ...prev,
         duration: { ...prev.duration, value: totalDays }
       }));
+      console.log(`✅ Auto-calculated total duration: ${totalDays} days across ${customForm.phases.length} phase(s)`);
     }
   }, [totalDays]);
 
@@ -124,12 +155,17 @@ const CustomPlanBuilder = ({
       const updated = [...prev.phases];
       updated[phaseIdx][field] = value;
 
-      // Smart update: recalculate therapy durationDays when phase totalDays changes
+      // ✅ Smart update: recalculate therapy durationDays when phase totalDays changes
       if (field === 'totalDays') {
-        updated[phaseIdx].therapySessions = updated[phaseIdx].therapySessions.map(therapy => ({
-          ...therapy,
-          durationDays: calculateDurationDays(therapy.sessionCount, therapy.frequency, value)
-        }));
+        console.log(`📅 Phase ${phaseIdx + 1} duration changed to ${value} days - recalculating therapy durations...`);
+        updated[phaseIdx].therapySessions = updated[phaseIdx].therapySessions.map(therapy => {
+          const newDuration = calculateDurationDays(therapy.sessionCount, therapy.frequency, value);
+          console.log(`  ✅ ${therapy.therapyName || 'Therapy'}: ${therapy.durationDays} → ${newDuration} days`);
+          return {
+            ...therapy,
+            durationDays: newDuration
+          };
+        });
       }
 
       return { ...prev, phases: updated };
@@ -144,6 +180,8 @@ const CustomPlanBuilder = ({
     setCustomForm(prev => {
       const updated = [...prev.phases];
       const phaseTotalDays = updated[phaseIdx].totalDays || 7;
+      
+      // ✅ New therapy defaults to full phase duration
       updated[phaseIdx].therapySessions.push({
         therapyId: '',
         therapyName: '',
@@ -151,12 +189,12 @@ const CustomPlanBuilder = ({
         sessionCount: 1,
         frequency: 'daily',
         durationMinutes: 60,
-        durationDays: 1, // Default
+        durationDays: phaseTotalDays, // ✅ FIX: Default to phase duration
         instructions: '',
         isCustom: true,
         requiresPreviousPhaseComplete: false,
         minimumDaysSincePreviousSession: 0,
-        allowsParallelSessions: true,
+        allowsParallelSessions: true, // ✅ Enable parallel scheduling
         materials: [],
         preConditions: '',
         stopCriteria: '',
@@ -186,19 +224,22 @@ const CustomPlanBuilder = ({
           therapy.therapyName = found.therapyName;
           therapy.therapyType = found.therapyType;
           therapy.durationMinutes = found.standardDuration || 60;
-          // Auto-calculate durationDays
+          // ✅ FIX: Auto-calculate using corrected function
           therapy.durationDays = calculateDurationDays(therapy.sessionCount, therapy.frequency, phaseTotalDays);
+          console.log(`✅ Selected ${found.therapyName}: ${therapy.durationDays} days in ${phaseTotalDays}-day phase`);
         }
       } else {
         therapy[field] = value;
 
-        // Smart recalculation: update durationDays when sessionCount or frequency changes
+        // ✅ Smart recalculation: update durationDays when sessionCount or frequency changes
         if (field === 'sessionCount' || field === 'frequency') {
+          const oldDuration = therapy.durationDays;
           therapy.durationDays = calculateDurationDays(
             field === 'sessionCount' ? value : therapy.sessionCount,
             field === 'frequency' ? value : therapy.frequency,
             phaseTotalDays
           );
+          console.log(`🔄 ${therapy.therapyName || 'Therapy'} ${field} changed: ${oldDuration} → ${therapy.durationDays} days`);
         }
       }
 
@@ -261,10 +302,25 @@ const CustomPlanBuilder = ({
     };
     delete submissionData.courseTemplateId;
 
+    console.log('📤 Submitting treatment plan:', {
+      totalDays,
+      totalSessions,
+      phases: submissionData.phases.map(p => ({
+        name: p.phaseName,
+        days: p.totalDays,
+        therapies: p.therapySessions.map(t => ({
+          name: t.therapyName,
+          sessions: t.sessionCount,
+          durationDays: t.durationDays, // ✅ Now correct!
+          frequency: t.frequency
+        }))
+      }))
+    });
+
     try {
       const response = await doctorApiService.createTreatmentPlan(submissionData);
       if (response.data.success) {
-        alert('✅ Custom plan created successfully!');
+        alert('✅ Custom plan created successfully!\n\n🎯 Treatment will span ' + totalDays + ' days with ' + totalSessions + ' sessions.');
         onSuccess();
         onBack();
       }
@@ -312,7 +368,7 @@ const CustomPlanBuilder = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Calculator className="w-5 h-5" />
-            <span className="font-semibold">Smart Calculations</span>
+            <span className="font-semibold">✅ Smart Calculations (Fixed)</span>
           </div>
           <div className="flex items-center space-x-6 text-sm">
             <div>
@@ -384,7 +440,7 @@ const CustomPlanBuilder = ({
           </h3>
           <p className="text-slate-600">
             {wizardStep === 1 && 'Enter patient, therapist, and treatment details'}
-            {wizardStep === 2 && 'Add phases and therapies - duration auto-calculates'}
+            {wizardStep === 2 && 'Add phases and therapies - sessions auto-schedule across full phase duration'}
             {wizardStep === 3 && 'Set treatment start date and preferences'}
             {wizardStep === 4 && 'Review all details before creating the plan'}
           </p>
@@ -445,7 +501,7 @@ const CustomPlanBuilder = ({
                 type="text"
                 value={customForm.treatmentName}
                 onChange={e => setCustomForm(prev => ({ ...prev, treatmentName: e.target.value }))}
-                placeholder="e.g., Custom Vamana Protocol"
+                placeholder="e.g., Custom Vamana Protocol - 21 Days"
                 className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -468,12 +524,15 @@ const CustomPlanBuilder = ({
               </select>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
               <div className="flex items-start space-x-3">
-                <Calculator className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <Calculator className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800">
-                  <p className="font-semibold">Auto-Calculated Duration</p>
-                  <p>Treatment duration will be calculated automatically from your phases (Currently: <strong>{totalDays || 0} days</strong>)</p>
+                  <p className="font-semibold mb-1">✅ Smart Auto-Calculation Enabled</p>
+                  <p className="mb-2">Treatment duration is calculated from phase totals. Therapies automatically spread across full phase days based on frequency.</p>
+                  <p className="font-bold text-blue-900">
+                    Currently: <span className="text-xl">{totalDays || 0} days</span> across {customForm.phases.length} phase(s)
+                  </p>
                 </div>
               </div>
             </div>
@@ -492,12 +551,29 @@ const CustomPlanBuilder = ({
         {/* STEP 2: Phases */}
         {wizardStep === 2 && (
           <div className="space-y-6">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            {/* ✅ Updated Helper Box */}
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-4">
               <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <Info className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-amber-800">
-                  <p className="font-semibold mb-1">🧮 Smart Auto-Calculation Enabled</p>
-                  <p>When you select a therapy, duration is auto-filled. When you change session count or frequency, therapy days auto-update!</p>
+                  <p className="font-semibold mb-2">🎯 How 21-Day Scheduling Works (FIXED)</p>
+                  <ul className="list-disc list-inside space-y-1 mb-2">
+                    <li><strong>Phase Days:</strong> Total duration for this phase (e.g., 7 days for Purvakarma)</li>
+                    <li><strong>Therapy Sessions:</strong> Number of therapy sessions to schedule</li>
+                    <li><strong>Duration Days:</strong> Auto-set to full phase duration (therapies run in parallel)</li>
+                    <li><strong>Frequency:</strong> How often sessions occur (daily, alternate days, etc.)</li>
+                  </ul>
+                  <div className="bg-amber-100 border border-amber-300 rounded-lg p-3 mt-2">
+                    <p className="font-bold text-amber-900 mb-1">✅ Example (FIXED):</p>
+                    <p className="text-xs">7-day Purvakarma with 5 daily Snehapana + 5 daily Abhyanga:</p>
+                    <p className="text-xs mt-1">
+                      • Day 1: Snehapana 1/5 + Abhyanga 1/5<br />
+                      • Day 2: Snehapana 2/5 + Abhyanga 2/5<br />
+                      • ...<br />
+                      • Day 5: Snehapana 5/5 + Abhyanga 5/5<br />
+                      • Days 6-7: Rest or other therapies ✅
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -521,7 +597,8 @@ const CustomPlanBuilder = ({
                     </h4>
                     <p className="text-sm text-slate-600">
                       Duration: <strong>{phase.totalDays || 0} days</strong> | 
-                      Sessions: <strong>{phase.therapySessions.reduce((s, t) => s + Number(t.sessionCount || 0), 0)}</strong>
+                      Sessions: <strong>{phase.therapySessions.reduce((s, t) => s + Number(t.sessionCount || 0), 0)}</strong> | 
+                      Therapies: <strong>{phase.therapySessions.length}</strong>
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -558,7 +635,7 @@ const CustomPlanBuilder = ({
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Total Days * 
-                      <span className="ml-2 text-emerald-600 font-normal">(affects therapy day calculations)</span>
+                      <span className="ml-2 text-emerald-600 font-normal">✅ (therapies spread across these days)</span>
                     </label>
                     <input
                       type="number"
@@ -584,7 +661,7 @@ const CustomPlanBuilder = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                           <div className="lg:col-span-2">
                             <label className="block text-xs font-semibold text-slate-600 mb-1">
-                              Therapy * <span className="text-emerald-600">(auto-fills duration)</span>
+                              Therapy * <span className="text-emerald-600">✅ (auto-fills details)</span>
                             </label>
                             <select
                               value={therapy.therapyId}
@@ -601,7 +678,7 @@ const CustomPlanBuilder = ({
                           </div>
                           <div>
                             <label className="block text-xs font-semibold text-slate-600 mb-1">
-                              Sessions * <span className="text-blue-600">(auto-updates days)</span>
+                              Sessions * <span className="text-blue-600">✅ (updates duration)</span>
                             </label>
                             <input
                               type="number"
@@ -613,7 +690,7 @@ const CustomPlanBuilder = ({
                           </div>
                           <div>
                             <label className="block text-xs font-semibold text-slate-600 mb-1">
-                              Frequency <span className="text-blue-600">(auto-updates days)</span>
+                              Frequency <span className="text-blue-600">✅ (updates duration)</span>
                             </label>
                             <select
                               value={therapy.frequency}
@@ -639,10 +716,20 @@ const CustomPlanBuilder = ({
                           </div>
                         </div>
                         
+                        {/* ✅ Enhanced Duration Days Display */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-                            <div className="text-xs text-blue-700 mb-1">🧮 Auto-Calculated Duration Days:</div>
-                            <div className="text-lg font-bold text-blue-900">{therapy.durationDays || 0} days</div>
+                          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-semibold text-emerald-700">✅ Duration Days (FIXED)</span>
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div className="text-2xl font-bold text-emerald-900">{therapy.durationDays || 0} days</div>
+                            <div className="text-xs text-emerald-700 mt-1">
+                              {therapy.durationDays === phase.totalDays ? 
+                                '✅ Full phase span (parallel OK)' : 
+                                `⚠️ ${therapy.durationDays}/${phase.totalDays} days used`
+                              }
+                            </div>
                           </div>
                           <div className="md:col-span-2">
                             <label className="block text-xs font-semibold text-slate-600 mb-1">Instructions (Optional)</label>
@@ -789,43 +876,53 @@ const CustomPlanBuilder = ({
         {/* STEP 4: Review */}
         {wizardStep === 4 && (
           <div className="space-y-6">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
-              <h4 className="font-bold text-emerald-900 mb-4 flex items-center">
-                <Calculator className="w-5 h-5 mr-2" />
-                Auto-Calculated Plan Summary
+            {/* ✅ Enhanced Summary */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-6">
+              <h4 className="font-bold text-emerald-900 mb-4 flex items-center text-lg">
+                <CheckCircle className="w-6 h-6 mr-2" />
+                ✅ Fixed Plan Summary - Correct 21-Day Scheduling
               </h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="text-slate-600">Treatment:</span>
-                  <p className="font-semibold">{customForm.treatmentName || '--'}</p>
+                  <p className="font-semibold text-slate-900">{customForm.treatmentName || '--'}</p>
                 </div>
                 <div>
                   <span className="text-slate-600">Panchakarma Type:</span>
-                  <p className="font-semibold capitalize">{customForm.panchakarmaType || '--'}</p>
+                  <p className="font-semibold text-slate-900 capitalize">{customForm.panchakarmaType || '--'}</p>
                 </div>
                 <div>
                   <span className="text-slate-600">Total Phases:</span>
-                  <p className="font-semibold">{customForm.phases.length}</p>
+                  <p className="font-semibold text-slate-900">{customForm.phases.length}</p>
                 </div>
-                <div>
+                <div className="bg-white rounded-lg p-3 border border-emerald-300">
                   <span className="text-slate-600">Total Days:</span>
-                  <p className="font-semibold text-emerald-600">{totalDays} days (auto)</p>
+                  <p className="font-bold text-2xl text-emerald-600">{totalDays}</p>
+                  <p className="text-xs text-emerald-700">✅ Auto-calculated</p>
                 </div>
-                <div>
+                <div className="bg-white rounded-lg p-3 border border-emerald-300">
                   <span className="text-slate-600">Total Sessions:</span>
-                  <p className="font-semibold text-emerald-600">{totalSessions} (auto)</p>
+                  <p className="font-bold text-2xl text-emerald-600">{totalSessions}</p>
+                  <p className="text-xs text-emerald-700">✅ Auto-calculated</p>
                 </div>
-                <div>
+                <div className="bg-white rounded-lg p-3 border border-emerald-300">
                   <span className="text-slate-600">Est. Total Time:</span>
-                  <p className="font-semibold text-emerald-600">{Math.round(totalMinutes / 60)}h {totalMinutes % 60}m (auto)</p>
+                  <p className="font-bold text-2xl text-emerald-600">{Math.round(totalMinutes / 60)}h {totalMinutes % 60}m</p>
+                  <p className="text-xs text-emerald-700">✅ Auto-calculated</p>
                 </div>
                 <div>
                   <span className="text-slate-600">Start Date:</span>
-                  <p className="font-semibold">{new Date(customForm.schedulingPreferences.startDate).toLocaleDateString()}</p>
+                  <p className="font-semibold text-slate-900">{new Date(customForm.schedulingPreferences.startDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <span className="text-slate-600">Estimated End:</span>
+                  <p className="font-semibold text-slate-900">
+                    {new Date(new Date(customForm.schedulingPreferences.startDate).getTime() + (totalDays - 1) * 86400000).toLocaleDateString()}
+                  </p>
                 </div>
                 <div>
                   <span className="text-slate-600">Time Slot:</span>
-                  <p className="font-semibold capitalize">{customForm.schedulingPreferences.preferredTimeSlot}</p>
+                  <p className="font-semibold text-slate-900 capitalize">{customForm.schedulingPreferences.preferredTimeSlot}</p>
                 </div>
               </div>
             </div>
@@ -886,7 +983,7 @@ const CustomPlanBuilder = ({
                 ) : (
                   <>
                     <CheckCircle className="w-5 h-5" />
-                    <span>Create Custom Plan</span>
+                    <span>✅ Create Fixed Plan ({totalDays} Days)</span>
                   </>
                 )}
               </button>

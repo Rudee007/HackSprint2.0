@@ -6,6 +6,11 @@ const logger = require('../config/logger');
 const User = require('../models/User'); // ← ADD THIS LINE
 const bcrypt = require('bcryptjs'); // ← You'll also need this for password hashing
 const mongoose = require('mongoose');
+const AutoSchedulingService = require('../services/autoScheduling.service');
+
+
+
+
 class DoctorController {
 
   /**
@@ -383,7 +388,9 @@ async createTreatmentPlan(req, res, next) {
     console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
     console.log('👤 Doctor from token:', req.user._id);
     
-    // Validation
+    // ═══════════════════════════════════════════════════════════
+    // STEP 1: VALIDATION
+    // ═══════════════════════════════════════════════════════════
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('❌ Validation errors:', errors.array());
@@ -398,22 +405,197 @@ async createTreatmentPlan(req, res, next) {
       });
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // 🔥 STEP 1.5: VERIFY THERAPIST EXISTS (FIXED)
+    // ═══════════════════════════════════════════════════════════
+    
+    const Therapist = require('../models/Therapist'); // 🔥 Use Therapist model
+    const mongoose = require('mongoose');
+    
+    if (req.body.assignedTherapistId) {
+      console.log('🔍 Verifying therapist ID:', req.body.assignedTherapistId);
+      
+      // Check if valid ObjectId
+      if (!mongoose.Types.ObjectId.isValid(req.body.assignedTherapistId)) {
+        console.log('❌ Invalid therapist ObjectId format');
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_THERAPIST_ID',
+            message: 'Invalid therapist ID format'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // 🔥 Check in therapists collection (not users)
+      const therapist = await Therapist.findById(req.body.assignedTherapistId);
+      
+      if (!therapist) {
+        console.log('❌ Therapist not found in therapists collection');
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'THERAPIST_NOT_FOUND',
+            message: `Therapist with ID ${req.body.assignedTherapistId} not found`
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      console.log('✅ Therapist found:', therapist.name, therapist.email || therapist.userId?.email);
+    } else {
+      console.log('⚠️ No therapist assigned in request');
+    }
+
     // Add doctorId from authenticated user
     const treatmentData = {
       ...req.body,
       doctorId: req.user._id
     };
 
-    console.log('📋 Sending to service with doctorId:', treatmentData.doctorId);
+    console.log('📋 Sending to service with:', {
+      doctorId: treatmentData.doctorId,
+      assignedTherapistId: treatmentData.assignedTherapistId,
+      patientId: treatmentData.patientId
+    });
     
+    // ═══════════════════════════════════════════════════════════
+    // STEP 2: CREATE TREATMENT PLAN
+    // ═══════════════════════════════════════════════════════════
     const result = await doctorService.createTreatmentPlan(treatmentData);
 
     console.log('✅ Treatment plan created successfully:', result.treatmentPlan._id);
+    console.log('📋 Checking what was saved - assignedTherapistId:', result.treatmentPlan.assignedTherapistId);
 
+    // ═══════════════════════════════════════════════════════════
+    // STEP 3: 🔥 RELOAD PLAN WITH FULL DATA
+    // ═══════════════════════════════════════════════════════════
+    
+    const TreatmentPlan = require('../models/TreatmentPlan');
+    
+    const reloadedPlan = await TreatmentPlan.findById(result.treatmentPlan._id)
+      .populate('patientId', 'name email phone profile')
+      .populate('assignedTherapistId', 'name email phone specialization expertise') // 🔥 Populates from Therapist collection
+      .populate('doctorId', 'name email')
+      .populate('phases.therapySessions.therapyId');
+    
+    if (!reloadedPlan) {
+      throw new Error('Failed to reload treatment plan after creation');
+    }
+    
+    console.log('📋 Reloaded plan with full data');
+    console.log('👨‍⚕️ Assigned Therapist (populated):', reloadedPlan.assignedTherapistId);
+    
+    // 🔥 CRITICAL DEBUG: Check raw document
+    const rawPlan = await TreatmentPlan.findById(result.treatmentPlan._id).lean();
+    console.log('🔍 RAW DATABASE CHECK:');
+    console.log('  - assignedTherapistId in DB:', rawPlan.assignedTherapistId);
+    console.log('  - Type:', typeof rawPlan.assignedTherapistId);
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 4: 🔥 AUTO-TRIGGER SCHEDULING
+    // ═══════════════════════════════════════════════════════════
+    
+    const AutoSchedulingService = require('../services/autoScheduling.service');
+    let schedulingResult = null;
+    
+    // Manual readiness check
+    const isReady = reloadedPlan.phases?.length > 0 &&
+                    reloadedPlan.schedulingPreferences?.startDate &&
+                    reloadedPlan.assignedTherapistId;
+    
+    console.log('🔍 Scheduling readiness check:', {
+      hasPhases: reloadedPlan.phases?.length > 0,
+      phasesCount: reloadedPlan.phases?.length || 0,
+      hasStartDate: !!reloadedPlan.schedulingPreferences?.startDate,
+      startDate: reloadedPlan.schedulingPreferences?.startDate,
+      hasTherapist: !!reloadedPlan.assignedTherapistId,
+      therapistId: reloadedPlan.assignedTherapistId?._id || reloadedPlan.assignedTherapistId,
+      therapistName: reloadedPlan.assignedTherapistId?.name,
+      isReady: isReady
+    });
+    
+    if (isReady) {
+      console.log('🚀 Auto-scheduling triggered for plan:', reloadedPlan._id);
+      
+      try {
+        schedulingResult = await AutoSchedulingService.generateDraftSchedule(
+          reloadedPlan._id
+        );
+        
+        // 🔥 FIX: Access correct properties (root level, not .summary)
+        if (schedulingResult.success) {
+          console.log('✅ Auto-scheduling completed successfully');
+          console.log(`📊 Sessions: ${schedulingResult.scheduledCount}/${schedulingResult.totalSessions}`);
+          console.log(`⚠️ Conflicts: ${schedulingResult.conflictCount}`);
+          console.log(`⏱️ Duration: ${schedulingResult.duration}`);
+          console.log(`📧 Therapist notified: ${reloadedPlan.assignedTherapistId.email}`);
+        } else {
+          console.warn('⚠️ Scheduling completed with warnings');
+        }
+        
+      } catch (schedulingError) {
+        console.error('❌ Auto-scheduling failed (non-critical):', schedulingError.message);
+        logger.error('Auto-scheduling error:', {
+          treatmentPlanId: reloadedPlan._id,
+          error: schedulingError.message,
+          stack: schedulingError.stack
+        });
+        
+        schedulingResult = {
+          success: false,
+          error: schedulingError.message
+        };
+      }
+    } else {
+      console.log('⏸️ Plan not ready for auto-scheduling');
+      console.log('Missing requirements:', {
+        phases: !reloadedPlan.phases?.length ? '❌ Missing' : `✅ ${reloadedPlan.phases.length} phases`,
+        startDate: !reloadedPlan.schedulingPreferences?.startDate ? '❌ Missing' : `✅ ${reloadedPlan.schedulingPreferences.startDate}`,
+        therapist: !reloadedPlan.assignedTherapistId ? '❌ Missing therapist in DB' : `✅ ${reloadedPlan.assignedTherapistId.name || reloadedPlan.assignedTherapistId}`
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 5: RETURN RESPONSE
+    // ═══════════════════════════════════════════════════════════
+    
     return res.status(201).json({
       success: true,
       message: 'Treatment plan created successfully',
-      data: result,
+      data: {
+        treatmentPlan: reloadedPlan,
+        
+        // 🔥 FIX: Use correct property names from schedulingResult
+        scheduling: schedulingResult ? {
+          autoScheduled: true,
+          status: reloadedPlan.schedulingStatus || 'pending',
+          summary: schedulingResult.success ? {
+            totalSessions: schedulingResult.totalSessions,              // ✅ Root level
+            scheduledSessions: schedulingResult.scheduledCount,         // ✅ scheduledCount not scheduledSessions
+            conflictedSessions: schedulingResult.conflictCount,         // ✅ conflictCount not conflictsCount
+            successRate: schedulingResult.successRate,                  // ✅ Root level
+            duration: schedulingResult.duration                         // ✅ Root level
+          } : null,
+          error: schedulingResult.error || null,
+          consultationsCreated: schedulingResult.consultationsCreated || 0  // ✅ Number, not array
+        } : {
+          autoScheduled: false,
+          status: 'not_ready',
+          message: 'Scheduling will be triggered once all requirements are met',
+          missingRequirements: [
+            !reloadedPlan.phases?.length && 'phases',
+            !reloadedPlan.schedulingPreferences?.startDate && 'startDate',
+            !reloadedPlan.assignedTherapistId && 'therapist'
+          ].filter(Boolean),
+          debug: {
+            therapistIdInRequest: req.body.assignedTherapistId,
+            therapistIdInDatabase: rawPlan.assignedTherapistId,
+            therapistCollectionUsed: 'therapists'
+          }
+        }
+      },
       timestamp: new Date().toISOString()
     });
 
@@ -425,7 +607,6 @@ async createTreatmentPlan(req, res, next) {
       doctorId: req.user?._id
     });
     
-    // Handle specific errors
     if (error.message.includes('not found')) {
       return res.status(404).json({
         success: false,
@@ -458,6 +639,8 @@ async createTreatmentPlan(req, res, next) {
     });
   }
 }
+
+
 
   /**
    * Get doctor's treatment plans

@@ -1,10 +1,10 @@
-// backend/models/Consultation.js - ENHANCED VERSION
+// backend/models/Consultation.js - FIXED VERSION
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const ConsultationSchema = new Schema({
   // ═══════════════════════════════════════════════════════════
-  // EXISTING FIELDS (Keep as is)
+  // CORE FIELDS
   // ═══════════════════════════════════════════════════════════
   patientId: {
     type: Schema.Types.ObjectId,
@@ -12,33 +12,59 @@ const ConsultationSchema = new Schema({
     required: true,
     index: true
   },
+  
+  // 🔥 FIX: Dynamic reference to Doctor or Therapist
   providerId: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
+    refPath: 'providerModel',  // ✅ Dynamic reference
     required: true,
     index: true
   },
+  providerModel: {
+    type: String,
+    required: true,
+    enum: ['User', 'Doctor', 'Therapist'],  // ✅ Can reference multiple models
+    default: 'User'
+  },
+  
   providerType: {
     type: String,
     enum: ['doctor', 'therapist'],
     required: true
   },
+  
   type: {
     type: String,
     enum: ['video', 'in_person', 'follow_up'],
     required: true
   },
+  
   scheduledAt: {
     type: Date,
     required: true,
     index: true
   },
+  
+  // 🔥 NEW: Add scheduledTime field (missing in original)
+  scheduledTime: {
+    type: String,  // Format: "HH:MM"
+    required: false
+  },
+  
+  // 🔥 NEW: Add scheduledDate field (for easier querying)
+  scheduledDate: {
+    type: Date,
+    required: false,
+    index: true
+  },
+  
   status: {
     type: String,
     enum: ['scheduled', 'in_progress', 'completed', 'cancelled', 'no_show', 'patient_arrived', 'therapist_ready'],
     default: 'scheduled',
     index: true
   },
+  
   fee: Number,
   notes: String,
   meetingLink: String,
@@ -49,18 +75,20 @@ const ConsultationSchema = new Schema({
     enum: ['consultation', 'followup', 'therapy'],
     default: 'consultation'
   },
+  
   sessionStatus: {
     type: String,
     enum: ['scheduled', 'in_progress', 'completed', 'paused', 'cancelled', 'patient_arrived', 'therapist_ready'],
     default: 'scheduled'
   },
+  
   estimatedDuration: {
     type: Number,
     default: 60
   },
 
   // ═══════════════════════════════════════════════════════════
-  // EXISTING SESSION METADATA (Keep as is)
+  // SESSION METADATA
   // ═══════════════════════════════════════════════════════════
   sessionMetadata: {
     totalPauses: { type: Number, default: 0 },
@@ -71,8 +99,7 @@ const ConsultationSchema = new Schema({
   },
 
   // ═══════════════════════════════════════════════════════════
-  // 🔥 NEW: THERAPY-SPECIFIC FIELDS
-  // Only populated when sessionType === 'therapy'
+  // 🔥 THERAPY-SPECIFIC FIELDS (sessionType === 'therapy')
   // ═══════════════════════════════════════════════════════════
   therapyData: {
     // Treatment Plan Reference
@@ -83,6 +110,20 @@ const ConsultationSchema = new Schema({
     doctorId: {
       type: Schema.Types.ObjectId,
       ref: 'User'
+    },
+    therapistId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Therapist'
+    },
+    
+    // 🔥 NEW: Add missing fields from your consultation creation code
+    therapyName: {
+      type: String,
+      required: false
+    },
+    durationMinutes: {
+      type: Number,
+      required: false
     },
     
     // Therapy Details
@@ -222,13 +263,12 @@ const ConsultationSchema = new Schema({
       actionTaken: String
     },
 
-    // Session Feedback
-    patientFeedback: String,
+    // 🔥 REMOVED: Duplicate patientFeedback (moved to root level only)
     nextSessionPrep: String
   },
 
   // ═══════════════════════════════════════════════════════════
-  // EXISTING FIELDS (Keep as is)
+  // SESSION TRACKING
   // ═══════════════════════════════════════════════════════════
   sessionNotes: [{
     timestamp: { type: Date, default: Date.now },
@@ -270,11 +310,14 @@ const ConsultationSchema = new Schema({
   sessionStartTime: Date,
   sessionEndTime: Date,
   actualDuration: Number,
+  
   rating: {
     type: Number,
     min: 1,
     max: 5
   },
+  
+  // ✅ KEPT: Single patientFeedback at root level (duplicate removed from therapyData)
   patientFeedback: String
 
 }, {
@@ -290,7 +333,9 @@ ConsultationSchema.index({ patientId: 1, scheduledAt: -1 });
 ConsultationSchema.index({ providerId: 1, scheduledAt: -1 });
 ConsultationSchema.index({ status: 1, scheduledAt: 1 });
 ConsultationSchema.index({ providerType: 1, sessionType: 1 });
+ConsultationSchema.index({ 'therapyData.treatmentPlanId': 1 });  // ✅ Added index
 ConsultationSchema.index({ 'therapyData.doctorId': 1 });
+ConsultationSchema.index({ scheduledDate: 1, status: 1 });  // ✅ Added index
 
 // ═══════════════════════════════════════════════════════════
 // METHODS
