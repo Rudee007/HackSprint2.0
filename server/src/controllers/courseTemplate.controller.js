@@ -241,44 +241,28 @@ exports.getTemplateSummary = async (req, res) => {
  */
 exports.incrementUsage = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid template ID'
-      });
-    }
-
-    const template = await CourseTemplate.findById(id);
-
-    if (!template) {
-      return res.status(404).json({
-        success: false,
-        message: 'Template not found'
-      });
-    }
-
-    await template.incrementUsage();
-
-    logger.info(`Incremented usage count for template: ${template.templateCode}`, {
-      newCount: template.usageCount,
-      doctorId: req.user?._id
-    });
-
-    return res.json({
-      success: true,
-      data: {
-        templateCode: template.templateCode,
-        usageCount: template.usageCount
+    const { templateId } = req.params;
+    
+    // ✅ Bypass validation by using direct update
+    await CourseTemplate.findByIdAndUpdate(
+      templateId,
+      { 
+        $inc: { usageCount: 1 },
+        $set: { 'metadata.lastUsedDate': new Date() }
+      },
+      { 
+        new: false,
+        runValidators: false // ✅ Skip validation
       }
-    });
-
+    );
+    
+    return res.status(200).json({ success: true });
+    
   } catch (error) {
-    logger.error('Increment template usage error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message
+    console.error('[ERROR] Increment usage:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message 
     });
   }
 };

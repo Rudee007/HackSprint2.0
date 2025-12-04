@@ -1,18 +1,16 @@
-const doctorService = require('../services/doctor.service');
-const NotificationService = require('../services/notification.service');
-const { validationResult } = require('express-validator');
-const TreatmentPlan = require('../models/TreatmentPlan'); // ✅ Add this line
-const logger = require('../config/logger');
-const User = require('../models/User'); // ← ADD THIS LINE
-const bcrypt = require('bcryptjs'); // ← You'll also need this for password hashing
-const mongoose = require('mongoose');
-const AutoSchedulingService = require('../services/autoScheduling.service');
+const doctorService = require("../services/doctor.service");
+const NotificationService = require("../services/notification.service");
+const { validationResult } = require("express-validator");
+const TreatmentPlan = require("../models/TreatmentPlan"); // ✅ Add this line
+const logger = require("../config/logger");
+const User = require("../models/User"); // ← ADD THIS LINE
+const bcrypt = require("bcryptjs"); // ← You'll also need this for password hashing
+const mongoose = require("mongoose");
+const AutoSchedulingService = require("../services/autoScheduling.service");
 
-
-
+const Therapist = require("../models/Therapist"); // 🔥 Use Therapist model
 
 class DoctorController {
-
   /**
    * ═══════════════════════════════════════════════════════════
    * 1. DOCTOR PROFILE MANAGEMENT
@@ -23,222 +21,227 @@ class DoctorController {
    * Register new doctor profile
    * POST /api/doctors/register
    */
-  
+
   async registerDoctor(req, res, next) {
     try {
-      console.log('🟢 Doctor registration started');
-      console.log('🟢 User:', req.user.email, '| Role:', req.user.role, '| ID:', req.user._id);
-      
+      console.log("🟢 Doctor registration started");
+      console.log(
+        "🟢 User:",
+        req.user.email,
+        "| Role:",
+        req.user.role,
+        "| ID:",
+        req.user._id
+      );
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        console.log('❌ Validation errors:', errors.array());
+        console.log("❌ Validation errors:", errors.array());
         return res.status(400).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data provided',
-            details: errors.array()
+            code: "VALIDATION_ERROR",
+            message: "Invalid input data provided",
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-  
-      if (req.user.role !== 'doctor') {
-        console.log('❌ Access denied - user role:', req.user.role);
+
+      if (req.user.role !== "doctor") {
+        console.log("❌ Access denied - user role:", req.user.role);
         return res.status(403).json({
           success: false,
           error: {
-            code: 'INSUFFICIENT_PERMISSIONS',
-            message: 'Only users with doctor role can register doctor profiles'
+            code: "INSUFFICIENT_PERMISSIONS",
+            message: "Only users with doctor role can register doctor profiles",
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-  
+
       const userId = req.user._id.toString(); // Convert ObjectId to string
       const doctorData = req.body;
-  
-      console.log('🟢 Processing doctor registration for userId:', userId);
-      console.log('🟢 Doctor data keys:', Object.keys(doctorData));
-  
+
+      console.log("🟢 Processing doctor registration for userId:", userId);
+      console.log("🟢 Doctor data keys:", Object.keys(doctorData));
+
       // Call service to register doctor
       const doctor = await doctorService.registerDoctor(userId, doctorData);
-  
-      console.log('✅ Doctor registered successfully:', doctor._id);
-      logger.info('Doctor registered successfully', { 
-        userId, 
+
+      console.log("✅ Doctor registered successfully:", doctor._id);
+      logger.info("Doctor registered successfully", {
+        userId,
         doctorId: doctor._id,
-        userEmail: req.user.email 
+        userEmail: req.user.email,
       });
-  
+
       res.status(201).json({
         success: true,
-        message: 'Doctor profile created successfully. Verification pending.',
+        message: "Doctor profile created successfully. Verification pending.",
         data: {
           doctor: {
             id: doctor._id,
             userId: doctor.userId,
-            verificationStatus: doctor.verificationStatus?.status || 'pending',
+            verificationStatus: doctor.verificationStatus?.status || "pending",
             isActive: doctor.isActive || false,
             specializations: doctor.specializations,
-            experience: doctor.experience
-          }
+            experience: doctor.experience,
+          },
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-  
     } catch (error) {
-      console.error('❌ Registration error:', error.message);
-      logger.error('Doctor registration error:', {
+      console.error("❌ Registration error:", error.message);
+      logger.error("Doctor registration error:", {
         error: error.message,
         userId: req.user?._id,
-        userEmail: req.user?.email
+        userEmail: req.user?.email,
       });
-  
+
       // Handle specific errors
-      if (error.message.includes('already exists')) {
+      if (error.message.includes("already exists")) {
         return res.status(409).json({
           success: false,
           error: {
-            code: 'DUPLICATE_PROFILE',
-            message: 'Doctor profile already exists for this user'
+            code: "DUPLICATE_PROFILE",
+            message: "Doctor profile already exists for this user",
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-  
-      if (error.message.includes('doctor role')) {
+
+      if (error.message.includes("doctor role")) {
         return res.status(403).json({
           success: false,
           error: {
-            code: 'INVALID_ROLE',
-            message: 'User must have doctor role to create doctor profile'
+            code: "INVALID_ROLE",
+            message: "User must have doctor role to create doctor profile",
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-  
+
       next(error);
     }
-  };
-  
+  }
 
   /**
- * Get patient details by ID
- * GET /api/doctors/patients/:patientId
- */
-async getPatientDetails(req, res, next) {
-  try {
-    console.log('🔄 Fetching patient details');
-    console.log('👤 Doctor:', req.user.email);
-    console.log('🆔 Patient ID:', req.params.patientId);
+   * Get patient details by ID
+   * GET /api/doctors/patients/:patientId
+   */
+  async getPatientDetails(req, res, next) {
+    try {
+      console.log("🔄 Fetching patient details");
+      console.log("👤 Doctor:", req.user.email);
+      console.log("🆔 Patient ID:", req.params.patientId);
 
-    // Check if user is a doctor
-    if (req.user.role !== 'doctor') {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'INSUFFICIENT_PERMISSIONS',
-          message: 'Only doctors can view patient details'
-        },
-        timestamp: new Date().toISOString()
+      // Check if user is a doctor
+      if (req.user.role !== "doctor") {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: "INSUFFICIENT_PERMISSIONS",
+            message: "Only doctors can view patient details",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const { patientId } = req.params;
+
+      // Validate patientId
+      if (!mongoose.Types.ObjectId.isValid(patientId)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: "INVALID_PATIENT_ID",
+            message: "Invalid patient ID format",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Call service to get patient details
+      const patientDetails = await doctorService.getPatientDetails(
+        patientId,
+        req.user._id
+      );
+
+      if (!patientDetails) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: "PATIENT_NOT_FOUND",
+            message: "Patient not found",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      console.log("✅ Patient details retrieved successfully");
+      logger.info("Patient details viewed", {
+        doctorId: req.user._id,
+        patientId,
+        doctorEmail: req.user.email,
       });
-    }
 
-    const { patientId } = req.params;
-
-    // Validate patientId
-    if (!mongoose.Types.ObjectId.isValid(patientId)) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_PATIENT_ID',
-          message: 'Invalid patient ID format'
-        },
-        timestamp: new Date().toISOString()
+      res.json({
+        success: true,
+        message: "Patient details retrieved successfully",
+        data: patientDetails,
+        timestamp: new Date().toISOString(),
       });
-    }
-
-    // Call service to get patient details
-    const patientDetails = await doctorService.getPatientDetails(patientId, req.user._id);
-
-    if (!patientDetails) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'PATIENT_NOT_FOUND',
-          message: 'Patient not found'
-        },
-        timestamp: new Date().toISOString()
+    } catch (error) {
+      console.error("❌ Get patient details error:", error.message);
+      logger.error("Get patient details error:", {
+        error: error.message,
+        doctorId: req.user?._id,
+        patientId: req.params.patientId,
       });
+      next(error);
     }
-
-    console.log('✅ Patient details retrieved successfully');
-    logger.info('Patient details viewed', {
-      doctorId: req.user._id,
-      patientId,
-      doctorEmail: req.user.email
-    });
-
-    res.json({
-      success: true,
-      message: 'Patient details retrieved successfully',
-      data: patientDetails,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ Get patient details error:', error.message);
-    logger.error('Get patient details error:', {
-      error: error.message,
-      doctorId: req.user?._id,
-      patientId: req.params.patientId
-    });
-    next(error);
   }
-}
 
-/**
- * Get all patients list (for doctor)
- * GET /api/doctors/patients
- */
-async getPatientsList(req, res, next) {
-  try {
-    console.log('🔄 Fetching patients list');
-    
-    if (req.user.role !== 'doctor') {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'INSUFFICIENT_PERMISSIONS',
-          message: 'Only doctors can view patients list'
-        },
-        timestamp: new Date().toISOString()
+  /**
+   * Get all patients list (for doctor)
+   * GET /api/doctors/patients
+   */
+  async getPatientsList(req, res, next) {
+    try {
+      console.log("🔄 Fetching patients list");
+
+      if (req.user.role !== "doctor") {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: "INSUFFICIENT_PERMISSIONS",
+            message: "Only doctors can view patients list",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const options = {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 20,
+        search: req.query.search,
+      };
+
+      const result = await doctorService.getPatientsList(req.user._id, options);
+
+      res.json({
+        success: true,
+        message: "Patients list retrieved successfully",
+        data: result,
+        timestamp: new Date().toISOString(),
       });
+    } catch (error) {
+      console.error("❌ Get patients list error:", error.message);
+      logger.error("Get patients list error:", error);
+      next(error);
     }
-
-    const options = {
-      page: parseInt(req.query.page) || 1,
-      limit: parseInt(req.query.limit) || 20,
-      search: req.query.search
-    };
-
-    const result = await doctorService.getPatientsList(req.user._id, options);
-
-    res.json({
-      success: true,
-      message: 'Patients list retrieved successfully',
-      data: result,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ Get patients list error:', error.message);
-    logger.error('Get patients list error:', error);
-    next(error);
   }
-}
-
 
   /**
    * Get doctor profile
@@ -253,24 +256,23 @@ async getPatientsList(req, res, next) {
         return res.status(404).json({
           success: false,
           error: {
-            code: 'DOCTOR_NOT_FOUND',
-            message: 'Doctor profile not found. Please complete registration.'
+            code: "DOCTOR_NOT_FOUND",
+            message: "Doctor profile not found. Please complete registration.",
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
       res.json({
         success: true,
-        message: 'Doctor profile retrieved successfully',
+        message: "Doctor profile retrieved successfully",
         data: {
-          doctor
+          doctor,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Get doctor profile error:', error);
+      logger.error("Get doctor profile error:", error);
       next(error);
     }
   }
@@ -279,80 +281,115 @@ async getPatientsList(req, res, next) {
    * Update doctor profile
    * PUT /api/doctors/profile
    */
-// In: server/src/controllers/doctor.controller.js
-async updateDoctorProfile(req, res, next) {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Invalid update data', details: errors.array() },
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const userId = req.user.id;
-    let updateData = req.body;
-
-    // 🔍 COMPREHENSIVE LOGGING
-    console.log('=== UPDATE PROFILE DEBUG ===');
-    console.log('User ID:', userId);
-    console.log('User Role:', req.user.role);
-    console.log('Original Request Body:', JSON.stringify(updateData, null, 2));
-    
-    if (updateData.verificationStatus) {
-      console.log('❌ FOUND verificationStatus in request:', updateData.verificationStatus);
-      console.log('❌ verificationStatus.status type:', typeof updateData.verificationStatus.status);
-      console.log('❌ verificationStatus.status value:', updateData.verificationStatus.status);
-    }
-
-    // 🛡️ NUCLEAR OPTION: Always remove verificationStatus
-    if (updateData.verificationStatus) {
-      console.log('🗑️ REMOVING verificationStatus from request');
-      delete updateData.verificationStatus;
-    }
-
-    // 🛡️ Remove ALL system-managed fields
-    const protectedFields = ['_id', 'userId', 'createdAt', 'updatedAt', '__v', 'metrics', 'verificationStatus'];
-    protectedFields.forEach(field => {
-      if (updateData[field]) {
-        console.log(`🗑️ REMOVING protected field: ${field}`);
-        delete updateData[field];
+  // In: server/src/controllers/doctor.controller.js
+  async updateDoctorProfile(req, res, next) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid update data",
+            details: errors.array(),
+          },
+          timestamp: new Date().toISOString(),
+        });
       }
-    });
 
-    console.log('Sanitized Request Body:', JSON.stringify(updateData, null, 2));
-    console.log('=== END DEBUG ===');
+      const userId = req.user.id;
+      let updateData = req.body;
 
-    // Rest of your existing logic...
-    const existingDoctor = await doctorService.getDoctorByUserId(userId);
-    if (!existingDoctor) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'DOCTOR_NOT_FOUND', message: 'Doctor profile not found' },
-        timestamp: new Date().toISOString()
+      // 🔍 COMPREHENSIVE LOGGING
+      console.log("=== UPDATE PROFILE DEBUG ===");
+      console.log("User ID:", userId);
+      console.log("User Role:", req.user.role);
+      console.log(
+        "Original Request Body:",
+        JSON.stringify(updateData, null, 2)
+      );
+
+      if (updateData.verificationStatus) {
+        console.log(
+          "❌ FOUND verificationStatus in request:",
+          updateData.verificationStatus
+        );
+        console.log(
+          "❌ verificationStatus.status type:",
+          typeof updateData.verificationStatus.status
+        );
+        console.log(
+          "❌ verificationStatus.status value:",
+          updateData.verificationStatus.status
+        );
+      }
+
+      // 🛡️ NUCLEAR OPTION: Always remove verificationStatus
+      if (updateData.verificationStatus) {
+        console.log("🗑️ REMOVING verificationStatus from request");
+        delete updateData.verificationStatus;
+      }
+
+      // 🛡️ Remove ALL system-managed fields
+      const protectedFields = [
+        "_id",
+        "userId",
+        "createdAt",
+        "updatedAt",
+        "__v",
+        "metrics",
+        "verificationStatus",
+      ];
+      protectedFields.forEach((field) => {
+        if (updateData[field]) {
+          console.log(`🗑️ REMOVING protected field: ${field}`);
+          delete updateData[field];
+        }
       });
+
+      console.log(
+        "Sanitized Request Body:",
+        JSON.stringify(updateData, null, 2)
+      );
+      console.log("=== END DEBUG ===");
+
+      // Rest of your existing logic...
+      const existingDoctor = await doctorService.getDoctorByUserId(userId);
+      if (!existingDoctor) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: "DOCTOR_NOT_FOUND",
+            message: "Doctor profile not found",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const updatedDoctor = await doctorService.updateDoctorProfile(
+        existingDoctor._id,
+        updateData
+      );
+
+      logger.info("Doctor profile updated", {
+        userId,
+        doctorId: updatedDoctor._id,
+      });
+
+      res.json({
+        success: true,
+        message: "Doctor profile updated successfully",
+        data: { doctor: updatedDoctor },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("❌ UPDATE ERROR:", error);
+      logger.error("Update doctor profile error:", error);
+      next(error);
     }
-
-    const updatedDoctor = await doctorService.updateDoctorProfile(existingDoctor._id, updateData);
-
-    logger.info('Doctor profile updated', { userId, doctorId: updatedDoctor._id });
-
-    res.json({
-      success: true,
-      message: 'Doctor profile updated successfully',
-      data: { doctor: updatedDoctor },
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ UPDATE ERROR:', error);
-    logger.error('Update doctor profile error:', error);
-    next(error);
   }
-}
 
-/**
+  /**
    * ═══════════════════════════════════════════════════════════
    * 2. CONSULTATION MANAGEMENT
    * ═══════════════════════════════════════════════════════════
@@ -362,285 +399,328 @@ async updateDoctorProfile(req, res, next) {
    * Get doctor's consultations
    * GET /api/doctors/consultations
    */
-  
- // In your doctor.controller.js
-async getDoctorConsultations (req, res) {
-  const options = {
-    page: parseInt(req.query.page) || 1,
-    limit: parseInt(req.query.limit) || 20,
-    status: req.query.status,
-    startDate: req.query.startDate,
-    endDate: req.query.endDate
-  };
 
-  // ✅ Pass req object instead of separate doctorId
-  const result = await doctorService.getDoctorConsultations(req, options);
+  // In your doctor.controller.js
+  async getDoctorConsultations(req, res) {
+    const options = {
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20,
+      status: req.query.status,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+    };
 
-  return res.json({
-    success: true,
-    data: result
-  });
-};
+    // ✅ Pass req object instead of separate doctorId
+    const result = await doctorService.getDoctorConsultations(req, options);
 
-async createTreatmentPlan(req, res, next) {
-  try {
-    console.log('🔄 Controller: Creating Panchakarma treatment plan');
-    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
-    console.log('👤 Doctor from token:', req.user._id);
-    
-    // ═══════════════════════════════════════════════════════════
-    // STEP 1: VALIDATION
-    // ═══════════════════════════════════════════════════════════
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.log('❌ Validation errors:', errors.array());
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Validation failed',
-          details: errors.array()
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
+    return res.json({
+      success: true,
+      data: result,
+    });
+  }
 
-    // ═══════════════════════════════════════════════════════════
-    // 🔥 STEP 1.5: VERIFY THERAPIST EXISTS (FIXED)
-    // ═══════════════════════════════════════════════════════════
-    
-    const Therapist = require('../models/Therapist'); // 🔥 Use Therapist model
-    const mongoose = require('mongoose');
-    
-    if (req.body.assignedTherapistId) {
-      console.log('🔍 Verifying therapist ID:', req.body.assignedTherapistId);
-      
-      // Check if valid ObjectId
-      if (!mongoose.Types.ObjectId.isValid(req.body.assignedTherapistId)) {
-        console.log('❌ Invalid therapist ObjectId format');
+  async createTreatmentPlan(req, res, next) {
+    try {
+      console.log("🔄 Controller: Creating Panchakarma treatment plan");
+      console.log("📋 Request body:", JSON.stringify(req.body, null, 2));
+      console.log("👤 Doctor from token:", req.user._id);
+
+      // ═══════════════════════════════════════════════════════════
+      // STEP 1: VALIDATION
+      // ═══════════════════════════════════════════════════════════
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        console.log("❌ Validation errors:", errors.array());
         return res.status(400).json({
           success: false,
           error: {
-            code: 'INVALID_THERAPIST_ID',
-            message: 'Invalid therapist ID format'
+            code: "VALIDATION_ERROR",
+            message: "Validation failed",
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-      
-      // 🔥 Check in therapists collection (not users)
-      const therapist = await Therapist.findById(req.body.assignedTherapistId);
-      
-      if (!therapist) {
-        console.log('❌ Therapist not found in therapists collection');
+
+      // ═══════════════════════════════════════════════════════════
+      // 🔥 STEP 1.5: VERIFY THERAPIST EXISTS (FIXED)
+      // ═══════════════════════════════════════════════════════════
+
+      if (req.body.assignedTherapistId) {
+        console.log("🔍 Verifying therapist ID:", req.body.assignedTherapistId);
+
+        // Check if valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(req.body.assignedTherapistId)) {
+          console.log("❌ Invalid therapist ObjectId format");
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: "INVALID_THERAPIST_ID",
+              message: "Invalid therapist ID format",
+            },
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        // 🔥 Check in therapists collection (not users)
+        const therapist = await Therapist.findById(
+          req.body.assignedTherapistId
+        );
+
+        if (!therapist) {
+          console.log("❌ Therapist not found in therapists collection");
+          return res.status(404).json({
+            success: false,
+            error: {
+              code: "THERAPIST_NOT_FOUND",
+              message: `Therapist with ID ${req.body.assignedTherapistId} not found`,
+            },
+            timestamp: new Date().toISOString(),
+          });
+        }
+
+        console.log(
+          "✅ Therapist found:",
+          therapist.name,
+          therapist.email || therapist.userId?.email
+        );
+      } else {
+        console.log("⚠️ No therapist assigned in request");
+      }
+
+      // Add doctorId from authenticated user
+      const treatmentData = {
+        ...req.body,
+        doctorId: req.user._id,
+      };
+
+      console.log("📋 Sending to service with:", {
+        doctorId: treatmentData.doctorId,
+        assignedTherapistId: treatmentData.assignedTherapistId,
+        patientId: treatmentData.patientId,
+      });
+
+      // ═══════════════════════════════════════════════════════════
+      // STEP 2: CREATE TREATMENT PLAN
+      // ═══════════════════════════════════════════════════════════
+      const result = await doctorService.createTreatmentPlan(treatmentData);
+
+      console.log(
+        "✅ Treatment plan created successfully:",
+        result.treatmentPlan._id
+      );
+      console.log(
+        "📋 Checking what was saved - assignedTherapistId:",
+        result.treatmentPlan.assignedTherapistId
+      );
+
+      // ═══════════════════════════════════════════════════════════
+      // STEP 3: 🔥 RELOAD PLAN WITH FULL DATA
+      // ═══════════════════════════════════════════════════════════
+
+      const reloadedPlan = await TreatmentPlan.findById(
+        result.treatmentPlan._id
+      )
+        .populate("patientId", "name email phone profile")
+        .populate(
+          "assignedTherapistId",
+          "name email phone specialization expertise"
+        ) // 🔥 Populates from Therapist collection
+        .populate("doctorId", "name email")
+        .populate("phases.therapySessions.therapyId");
+
+      if (!reloadedPlan) {
+        throw new Error("Failed to reload treatment plan after creation");
+      }
+
+      console.log("📋 Reloaded plan with full data");
+      console.log(
+        "👨‍⚕️ Assigned Therapist (populated):",
+        reloadedPlan.assignedTherapistId
+      );
+
+      // 🔥 CRITICAL DEBUG: Check raw document
+      const rawPlan = await TreatmentPlan.findById(
+        result.treatmentPlan._id
+      ).lean();
+      console.log("🔍 RAW DATABASE CHECK:");
+      console.log(
+        "  - assignedTherapistId in DB:",
+        rawPlan.assignedTherapistId
+      );
+      console.log("  - Type:", typeof rawPlan.assignedTherapistId);
+
+      // ═══════════════════════════════════════════════════════════
+      // STEP 4: 🔥 AUTO-TRIGGER SCHEDULING
+      // ═══════════════════════════════════════════════════════════
+
+      let schedulingResult = null;
+
+      // Manual readiness check
+      const isReady =
+        reloadedPlan.phases?.length > 0 &&
+        reloadedPlan.schedulingPreferences?.startDate &&
+        reloadedPlan.assignedTherapistId;
+
+      console.log("🔍 Scheduling readiness check:", {
+        hasPhases: reloadedPlan.phases?.length > 0,
+        phasesCount: reloadedPlan.phases?.length || 0,
+        hasStartDate: !!reloadedPlan.schedulingPreferences?.startDate,
+        startDate: reloadedPlan.schedulingPreferences?.startDate,
+        hasTherapist: !!reloadedPlan.assignedTherapistId,
+        therapistId:
+          reloadedPlan.assignedTherapistId?._id ||
+          reloadedPlan.assignedTherapistId,
+        therapistName: reloadedPlan.assignedTherapistId?.name,
+        isReady: isReady,
+      });
+
+      if (isReady) {
+        console.log("🚀 Auto-scheduling triggered for plan:", reloadedPlan._id);
+
+        try {
+          schedulingResult = await AutoSchedulingService.generateDraftSchedule(
+            reloadedPlan._id
+          );
+
+          // 🔥 FIX: Access correct properties (root level, not .summary)
+          if (schedulingResult.success) {
+            console.log("✅ Auto-scheduling completed successfully");
+            console.log(
+              `📊 Sessions: ${schedulingResult.scheduledCount}/${schedulingResult.totalSessions}`
+            );
+            console.log(`⚠️ Conflicts: ${schedulingResult.conflictCount}`);
+            console.log(`⏱️ Duration: ${schedulingResult.duration}`);
+            console.log(
+              `📧 Therapist notified: ${reloadedPlan.assignedTherapistId.email}`
+            );
+          } else {
+            console.warn("⚠️ Scheduling completed with warnings");
+          }
+        } catch (schedulingError) {
+          console.error(
+            "❌ Auto-scheduling failed (non-critical):",
+            schedulingError.message
+          );
+          logger.error("Auto-scheduling error:", {
+            treatmentPlanId: reloadedPlan._id,
+            error: schedulingError.message,
+            stack: schedulingError.stack,
+          });
+
+          schedulingResult = {
+            success: false,
+            error: schedulingError.message,
+          };
+        }
+      } else {
+        console.log("⏸️ Plan not ready for auto-scheduling");
+        console.log("Missing requirements:", {
+          phases: !reloadedPlan.phases?.length
+            ? "❌ Missing"
+            : `✅ ${reloadedPlan.phases.length} phases`,
+          startDate: !reloadedPlan.schedulingPreferences?.startDate
+            ? "❌ Missing"
+            : `✅ ${reloadedPlan.schedulingPreferences.startDate}`,
+          therapist: !reloadedPlan.assignedTherapistId
+            ? "❌ Missing therapist in DB"
+            : `✅ ${
+                reloadedPlan.assignedTherapistId.name ||
+                reloadedPlan.assignedTherapistId
+              }`,
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // STEP 5: RETURN RESPONSE
+      // ═══════════════════════════════════════════════════════════
+
+      return res.status(201).json({
+        success: true,
+        message: "Treatment plan created successfully",
+        data: {
+          treatmentPlan: reloadedPlan,
+
+          // 🔥 FIX: Use correct property names from schedulingResult
+          scheduling: schedulingResult
+            ? {
+                autoScheduled: true,
+                status: reloadedPlan.schedulingStatus || "pending",
+                summary: schedulingResult.success
+                  ? {
+                      totalSessions: schedulingResult.totalSessions, // ✅ Root level
+                      scheduledSessions: schedulingResult.scheduledCount, // ✅ scheduledCount not scheduledSessions
+                      conflictedSessions: schedulingResult.conflictCount, // ✅ conflictCount not conflictsCount
+                      successRate: schedulingResult.successRate, // ✅ Root level
+                      duration: schedulingResult.duration, // ✅ Root level
+                    }
+                  : null,
+                error: schedulingResult.error || null,
+                consultationsCreated:
+                  schedulingResult.consultationsCreated || 0, // ✅ Number, not array
+              }
+            : {
+                autoScheduled: false,
+                status: "not_ready",
+                message:
+                  "Scheduling will be triggered once all requirements are met",
+                missingRequirements: [
+                  !reloadedPlan.phases?.length && "phases",
+                  !reloadedPlan.schedulingPreferences?.startDate && "startDate",
+                  !reloadedPlan.assignedTherapistId && "therapist",
+                ].filter(Boolean),
+                debug: {
+                  therapistIdInRequest: req.body.assignedTherapistId,
+                  therapistIdInDatabase: rawPlan.assignedTherapistId,
+                  therapistCollectionUsed: "therapists",
+                },
+              },
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("❌ Create treatment plan error:", error);
+      logger.error("Create treatment plan error:", {
+        error: error.message,
+        stack: error.stack,
+        doctorId: req.user?._id,
+      });
+
+      if (error.message.includes("not found")) {
         return res.status(404).json({
           success: false,
           error: {
-            code: 'THERAPIST_NOT_FOUND',
-            message: `Therapist with ID ${req.body.assignedTherapistId} not found`
+            code: "NOT_FOUND",
+            message: error.message,
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-      
-      console.log('✅ Therapist found:', therapist.name, therapist.email || therapist.userId?.email);
-    } else {
-      console.log('⚠️ No therapist assigned in request');
-    }
 
-    // Add doctorId from authenticated user
-    const treatmentData = {
-      ...req.body,
-      doctorId: req.user._id
-    };
-
-    console.log('📋 Sending to service with:', {
-      doctorId: treatmentData.doctorId,
-      assignedTherapistId: treatmentData.assignedTherapistId,
-      patientId: treatmentData.patientId
-    });
-    
-    // ═══════════════════════════════════════════════════════════
-    // STEP 2: CREATE TREATMENT PLAN
-    // ═══════════════════════════════════════════════════════════
-    const result = await doctorService.createTreatmentPlan(treatmentData);
-
-    console.log('✅ Treatment plan created successfully:', result.treatmentPlan._id);
-    console.log('📋 Checking what was saved - assignedTherapistId:', result.treatmentPlan.assignedTherapistId);
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 3: 🔥 RELOAD PLAN WITH FULL DATA
-    // ═══════════════════════════════════════════════════════════
-    
-    const TreatmentPlan = require('../models/TreatmentPlan');
-    
-    const reloadedPlan = await TreatmentPlan.findById(result.treatmentPlan._id)
-      .populate('patientId', 'name email phone profile')
-      .populate('assignedTherapistId', 'name email phone specialization expertise') // 🔥 Populates from Therapist collection
-      .populate('doctorId', 'name email')
-      .populate('phases.therapySessions.therapyId');
-    
-    if (!reloadedPlan) {
-      throw new Error('Failed to reload treatment plan after creation');
-    }
-    
-    console.log('📋 Reloaded plan with full data');
-    console.log('👨‍⚕️ Assigned Therapist (populated):', reloadedPlan.assignedTherapistId);
-    
-    // 🔥 CRITICAL DEBUG: Check raw document
-    const rawPlan = await TreatmentPlan.findById(result.treatmentPlan._id).lean();
-    console.log('🔍 RAW DATABASE CHECK:');
-    console.log('  - assignedTherapistId in DB:', rawPlan.assignedTherapistId);
-    console.log('  - Type:', typeof rawPlan.assignedTherapistId);
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 4: 🔥 AUTO-TRIGGER SCHEDULING
-    // ═══════════════════════════════════════════════════════════
-    
-    const AutoSchedulingService = require('../services/autoScheduling.service');
-    let schedulingResult = null;
-    
-    // Manual readiness check
-    const isReady = reloadedPlan.phases?.length > 0 &&
-                    reloadedPlan.schedulingPreferences?.startDate &&
-                    reloadedPlan.assignedTherapistId;
-    
-    console.log('🔍 Scheduling readiness check:', {
-      hasPhases: reloadedPlan.phases?.length > 0,
-      phasesCount: reloadedPlan.phases?.length || 0,
-      hasStartDate: !!reloadedPlan.schedulingPreferences?.startDate,
-      startDate: reloadedPlan.schedulingPreferences?.startDate,
-      hasTherapist: !!reloadedPlan.assignedTherapistId,
-      therapistId: reloadedPlan.assignedTherapistId?._id || reloadedPlan.assignedTherapistId,
-      therapistName: reloadedPlan.assignedTherapistId?.name,
-      isReady: isReady
-    });
-    
-    if (isReady) {
-      console.log('🚀 Auto-scheduling triggered for plan:', reloadedPlan._id);
-      
-      try {
-        schedulingResult = await AutoSchedulingService.generateDraftSchedule(
-          reloadedPlan._id
-        );
-        
-        // 🔥 FIX: Access correct properties (root level, not .summary)
-        if (schedulingResult.success) {
-          console.log('✅ Auto-scheduling completed successfully');
-          console.log(`📊 Sessions: ${schedulingResult.scheduledCount}/${schedulingResult.totalSessions}`);
-          console.log(`⚠️ Conflicts: ${schedulingResult.conflictCount}`);
-          console.log(`⏱️ Duration: ${schedulingResult.duration}`);
-          console.log(`📧 Therapist notified: ${reloadedPlan.assignedTherapistId.email}`);
-        } else {
-          console.warn('⚠️ Scheduling completed with warnings');
-        }
-        
-      } catch (schedulingError) {
-        console.error('❌ Auto-scheduling failed (non-critical):', schedulingError.message);
-        logger.error('Auto-scheduling error:', {
-          treatmentPlanId: reloadedPlan._id,
-          error: schedulingError.message,
-          stack: schedulingError.stack
-        });
-        
-        schedulingResult = {
+      if (
+        error.message.includes("Template") ||
+        error.message.includes("Therapy")
+      ) {
+        return res.status(400).json({
           success: false,
-          error: schedulingError.message
-        };
+          error: {
+            code: "INVALID_REFERENCE",
+            message: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
       }
-    } else {
-      console.log('⏸️ Plan not ready for auto-scheduling');
-      console.log('Missing requirements:', {
-        phases: !reloadedPlan.phases?.length ? '❌ Missing' : `✅ ${reloadedPlan.phases.length} phases`,
-        startDate: !reloadedPlan.schedulingPreferences?.startDate ? '❌ Missing' : `✅ ${reloadedPlan.schedulingPreferences.startDate}`,
-        therapist: !reloadedPlan.assignedTherapistId ? '❌ Missing therapist in DB' : `✅ ${reloadedPlan.assignedTherapistId.name || reloadedPlan.assignedTherapistId}`
-      });
-    }
 
-    // ═══════════════════════════════════════════════════════════
-    // STEP 5: RETURN RESPONSE
-    // ═══════════════════════════════════════════════════════════
-    
-    return res.status(201).json({
-      success: true,
-      message: 'Treatment plan created successfully',
-      data: {
-        treatmentPlan: reloadedPlan,
-        
-        // 🔥 FIX: Use correct property names from schedulingResult
-        scheduling: schedulingResult ? {
-          autoScheduled: true,
-          status: reloadedPlan.schedulingStatus || 'pending',
-          summary: schedulingResult.success ? {
-            totalSessions: schedulingResult.totalSessions,              // ✅ Root level
-            scheduledSessions: schedulingResult.scheduledCount,         // ✅ scheduledCount not scheduledSessions
-            conflictedSessions: schedulingResult.conflictCount,         // ✅ conflictCount not conflictsCount
-            successRate: schedulingResult.successRate,                  // ✅ Root level
-            duration: schedulingResult.duration                         // ✅ Root level
-          } : null,
-          error: schedulingResult.error || null,
-          consultationsCreated: schedulingResult.consultationsCreated || 0  // ✅ Number, not array
-        } : {
-          autoScheduled: false,
-          status: 'not_ready',
-          message: 'Scheduling will be triggered once all requirements are met',
-          missingRequirements: [
-            !reloadedPlan.phases?.length && 'phases',
-            !reloadedPlan.schedulingPreferences?.startDate && 'startDate',
-            !reloadedPlan.assignedTherapistId && 'therapist'
-          ].filter(Boolean),
-          debug: {
-            therapistIdInRequest: req.body.assignedTherapistId,
-            therapistIdInDatabase: rawPlan.assignedTherapistId,
-            therapistCollectionUsed: 'therapists'
-          }
-        }
-      },
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ Create treatment plan error:', error);
-    logger.error('Create treatment plan error:', {
-      error: error.message,
-      stack: error.stack,
-      doctorId: req.user?._id
-    });
-    
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
+      return res.status(500).json({
         success: false,
         error: {
-          code: 'NOT_FOUND',
-          message: error.message
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Failed to create treatment plan",
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
-    
-    if (error.message.includes('Template') || error.message.includes('Therapy')) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REFERENCE',
-          message: error.message
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error.message || 'Failed to create treatment plan'
-      },
-      timestamp: new Date().toISOString()
-    });
   }
-}
-
-
 
   /**
    * Get doctor's treatment plans
@@ -653,60 +733,70 @@ async createTreatmentPlan(req, res, next) {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 20,
         status: req.query.status,
-        patientId: req.query.patientId
+        patientId: req.query.patientId,
       };
-    
-      const result = await doctorService.getDoctorTreatmentPlans(doctorId, options);
-    
+
+      const result = await doctorService.getDoctorTreatmentPlans(
+        doctorId,
+        options
+      );
+
       return res.json({
         success: true,
-        data: result
+        data: result,
       });
     } catch (error) {
-      logger.error('Get doctor treatment plans error:', error);
+      logger.error("Get doctor treatment plans error:", error);
       next(error);
     }
-  }  
+  }
   /**
    * Get treatment plan details
    * GET /api/doctors/treatment-plans/:id
    */
-async getTreatmentPlanDetails(req, res, next) {
-  try {
-    const doctorId = req.user._id;
-    const { id } = req.params;
-    
-    console.log(`🔄 Getting treatment plan details: ${id} for doctor: ${doctorId}`);
+  async getTreatmentPlanDetails(req, res, next) {
+    try {
+      const doctorId = req.user._id;
+      const { id } = req.params;
 
-    const treatmentPlan = await doctorService.getTreatmentPlanDetails(id, doctorId);
+      console.log(
+        `🔄 Getting treatment plan details: ${id} for doctor: ${doctorId}`
+      );
 
-    console.log('✅ Treatment plan details retrieved');
+      const treatmentPlan = await doctorService.getTreatmentPlanDetails(
+        id,
+        doctorId
+      );
 
-    return res.json({
-      success: true,
-      data: treatmentPlan,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('❌ Get treatment plan details error:', error);
-    logger.error('Get treatment plan details error:', error);
-    
-    if (error.message.includes('not found') || error.message.includes('unauthorized')) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: error.message
-        },
-        timestamp: new Date().toISOString()
+      console.log("✅ Treatment plan details retrieved");
+
+      return res.json({
+        success: true,
+        data: treatmentPlan,
+        timestamp: new Date().toISOString(),
       });
+    } catch (error) {
+      console.error("❌ Get treatment plan details error:", error);
+      logger.error("Get treatment plan details error:", error);
+
+      if (
+        error.message.includes("not found") ||
+        error.message.includes("unauthorized")
+      ) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      next(error);
     }
-    
-    next(error);
   }
-}
-  
+
   /**
    * Update treatment plan
    * PUT /api/doctors/treatment-plans/:id
@@ -715,54 +805,60 @@ async getTreatmentPlanDetails(req, res, next) {
     try {
       const doctorId = req.user._id;
       const { id } = req.params;
-      
+
       console.log(`🔄 Updating treatment plan: ${id}`);
-      console.log('📋 Update data:', JSON.stringify(req.body, null, 2));
-  
+      console.log("📋 Update data:", JSON.stringify(req.body, null, 2));
+
       // Validation
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Validation failed',
-            details: errors.array()
+            code: "VALIDATION_ERROR",
+            message: "Validation failed",
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-  
-      const treatmentPlan = await doctorService.updateTreatmentPlan(id, doctorId, req.body);
-  
-      console.log('✅ Treatment plan updated successfully');
-  
+
+      const treatmentPlan = await doctorService.updateTreatmentPlan(
+        id,
+        doctorId,
+        req.body
+      );
+
+      console.log("✅ Treatment plan updated successfully");
+
       return res.json({
         success: true,
-        message: 'Treatment plan updated successfully',
+        message: "Treatment plan updated successfully",
         data: treatmentPlan,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
     } catch (error) {
-      console.error('❌ Update treatment plan error:', error);
-      logger.error('Update treatment plan error:', error);
-      
-      if (error.message.includes('not found') || error.message.includes('unauthorized')) {
+      console.error("❌ Update treatment plan error:", error);
+      logger.error("Update treatment plan error:", error);
+
+      if (
+        error.message.includes("not found") ||
+        error.message.includes("unauthorized")
+      ) {
         return res.status(404).json({
           success: false,
           error: {
-            code: 'NOT_FOUND',
-            message: error.message
+            code: "NOT_FOUND",
+            message: error.message,
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-      
+
       next(error);
     }
   }
-    
+
   /**
    * Delete treatment plan
    * DELETE /api/doctors/treatment-plans/:id
@@ -771,34 +867,36 @@ async getTreatmentPlanDetails(req, res, next) {
     try {
       const doctorId = req.user._id;
       const { id } = req.params;
-      
+
       console.log(`🔄 Deleting treatment plan: ${id}`);
-  
+
       const result = await doctorService.deleteTreatmentPlan(id, doctorId);
-  
-      console.log('✅ Treatment plan deleted successfully');
-  
+
+      console.log("✅ Treatment plan deleted successfully");
+
       return res.json({
         success: true,
         message: result.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
     } catch (error) {
-      console.error('❌ Delete treatment plan error:', error);
-      logger.error('Delete treatment plan error:', error);
-      
-      if (error.message.includes('not found') || error.message.includes('unauthorized')) {
+      console.error("❌ Delete treatment plan error:", error);
+      logger.error("Delete treatment plan error:", error);
+
+      if (
+        error.message.includes("not found") ||
+        error.message.includes("unauthorized")
+      ) {
         return res.status(404).json({
           success: false,
           error: {
-            code: 'NOT_FOUND',
-            message: error.message
+            code: "NOT_FOUND",
+            message: error.message,
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
-      
+
       next(error);
     }
   }
@@ -806,36 +904,34 @@ async getTreatmentPlanDetails(req, res, next) {
     try {
       const doctorId = req.user._id;
       const { id } = req.params;
-      
+
       console.log(`🔄 Triggering auto-scheduling for plan: ${id}`);
-  
+
       const result = await doctorService.triggerAutoScheduling(id, doctorId);
-  
-      console.log('✅ Auto-scheduling completed');
-  
+
+      console.log("✅ Auto-scheduling completed");
+
       return res.json({
         success: true,
-        message: 'Treatment plan scheduled successfully',
+        message: "Treatment plan scheduled successfully",
         data: result,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
     } catch (error) {
-      console.error('❌ Auto-scheduling error:', error);
-      logger.error('Auto-scheduling error:', error);
-      
+      console.error("❌ Auto-scheduling error:", error);
+      logger.error("Auto-scheduling error:", error);
+
       return res.status(500).json({
         success: false,
         error: {
-          code: 'SCHEDULING_FAILED',
-          message: error.message
+          code: "SCHEDULING_FAILED",
+          message: error.message,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }
-  
-  
+
   /**
    * Book consultation
    * POST /api/consultations/book
@@ -847,30 +943,33 @@ async getTreatmentPlanDetails(req, res, next) {
         return res.status(400).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid consultation data',
-            details: errors.array()
+            code: "VALIDATION_ERROR",
+            message: "Invalid consultation data",
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
       const consultationData = {
         ...req.body,
-        patientId: req.user.role === 'patient' ? req.user.id : req.body.patientId
+        patientId:
+          req.user.role === "patient" ? req.user.id : req.body.patientId,
       };
 
-      const consultation = await doctorService.bookConsultation(consultationData);
+      const consultation = await doctorService.bookConsultation(
+        consultationData
+      );
 
-      logger.info('Consultation booked', { 
+      logger.info("Consultation booked", {
         consultationId: consultation._id,
         doctorId: consultation.doctorId,
-        patientId: consultation.patientId
+        patientId: consultation.patientId,
       });
 
       res.status(201).json({
         success: true,
-        message: 'Consultation booked successfully',
+        message: "Consultation booked successfully",
         data: {
           consultation: {
             id: consultation._id,
@@ -879,14 +978,13 @@ async getTreatmentPlanDetails(req, res, next) {
             type: consultation.type,
             scheduledFor: consultation.scheduledFor,
             fees: consultation.fees,
-            status: consultation.status
-          }
+            status: consultation.status,
+          },
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Book consultation error:', error);
+      logger.error("Book consultation error:", error);
       next(error);
     }
   }
@@ -908,11 +1006,11 @@ async getTreatmentPlanDetails(req, res, next) {
         return res.status(400).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid availability data',
-            details: errors.array()
+            code: "VALIDATION_ERROR",
+            message: "Invalid availability data",
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -925,10 +1023,10 @@ async getTreatmentPlanDetails(req, res, next) {
         return res.status(404).json({
           success: false,
           error: {
-            code: 'DOCTOR_NOT_FOUND',
-            message: 'Doctor profile not found'
+            code: "DOCTOR_NOT_FOUND",
+            message: "Doctor profile not found",
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -937,21 +1035,20 @@ async getTreatmentPlanDetails(req, res, next) {
         availabilityData
       );
 
-      logger.info('Doctor availability updated', { 
-        doctorId: doctor._id 
+      logger.info("Doctor availability updated", {
+        doctorId: doctor._id,
       });
 
       res.json({
         success: true,
-        message: 'Availability updated successfully',
+        message: "Availability updated successfully",
         data: {
-          availability: updatedAvailability
+          availability: updatedAvailability,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Update availability error:', error);
+      logger.error("Update availability error:", error);
       next(error);
     }
   }
@@ -964,21 +1061,23 @@ async getTreatmentPlanDetails(req, res, next) {
     try {
       const { doctorId, date } = req.params;
 
-      const availableSlots = await doctorService.getAvailableSlots(doctorId, date);
+      const availableSlots = await doctorService.getAvailableSlots(
+        doctorId,
+        date
+      );
 
       res.json({
         success: true,
-        message: 'Available slots retrieved successfully',
+        message: "Available slots retrieved successfully",
         data: {
           date,
           availableSlots,
-          totalSlots: availableSlots.length
+          totalSlots: availableSlots.length,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Get available slots error:', error);
+      logger.error("Get available slots error:", error);
       next(error);
     }
   }
@@ -995,21 +1094,21 @@ async getTreatmentPlanDetails(req, res, next) {
    */
   async searchBySpecialization(req, res, next) {
     try {
-      const { 
+      const {
         specialization,
         page = 1,
         limit = 10,
-        sortBy = 'createdAt'
+        sortBy = "createdAt",
       } = req.query;
 
       if (!specialization) {
         return res.status(400).json({
           success: false,
           error: {
-            code: 'MISSING_PARAMETER',
-            message: 'Specialization parameter is required'
+            code: "MISSING_PARAMETER",
+            message: "Specialization parameter is required",
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -1018,25 +1117,24 @@ async getTreatmentPlanDetails(req, res, next) {
         {
           page: parseInt(page),
           limit: parseInt(limit),
-          sortBy
+          sortBy,
         }
       );
 
       res.json({
         success: true,
-        message: 'Doctors found successfully',
+        message: "Doctors found successfully",
         data: {
           ...result,
           searchCriteria: {
             specialization,
-            sortBy
-          }
+            sortBy,
+          },
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Search doctors by specialization error:', error);
+      logger.error("Search doctors by specialization error:", error);
       next(error);
     }
   }
@@ -1053,16 +1151,15 @@ async getTreatmentPlanDetails(req, res, next) {
 
       res.json({
         success: true,
-        message: 'Doctor search completed successfully',
+        message: "Doctor search completed successfully",
         data: {
           ...result,
-          searchCriteria
+          searchCriteria,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Search doctors error:', error);
+      logger.error("Search doctors error:", error);
       next(error);
     }
   }
@@ -1080,7 +1177,7 @@ async getTreatmentPlanDetails(req, res, next) {
   async getDoctorStats(req, res, next) {
     try {
       const userId = req.user.id;
-      const { period = '30d' } = req.query;
+      const { period = "30d" } = req.query;
 
       // Get doctor by userId
       const doctor = await doctorService.getDoctorByUserId(userId);
@@ -1088,10 +1185,10 @@ async getTreatmentPlanDetails(req, res, next) {
         return res.status(404).json({
           success: false,
           error: {
-            code: 'DOCTOR_NOT_FOUND',
-            message: 'Doctor profile not found'
+            code: "DOCTOR_NOT_FOUND",
+            message: "Doctor profile not found",
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -1099,13 +1196,12 @@ async getTreatmentPlanDetails(req, res, next) {
 
       res.json({
         success: true,
-        message: 'Statistics retrieved successfully',
+        message: "Statistics retrieved successfully",
         data: stats,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Get doctor stats error:', error);
+      logger.error("Get doctor stats error:", error);
       next(error);
     }
   }
@@ -1120,263 +1216,274 @@ async getTreatmentPlanDetails(req, res, next) {
    * Update doctor verification status (Admin only)
    * PUT /api/doctors/:doctorId/verification
    */
-// In controllers/doctor.controller.js
+  // In controllers/doctor.controller.js
 
-async updateVerificationStatus(req, res, next) {
-  try {
-    const { doctorId } = req.params;
-    const { status, notes } = req.body;
-
-    if (!['pending', 'under_review', 'approved', 'rejected'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_STATUS',
-          message: 'Invalid verification status'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // ✅ Use direct MongoDB update - completely bypasses Mongoose validation
-    const updateData = {
-      verificationStatus: status,
-      'verification.status': status,
-      'verification.verifiedBy': req.user._id || req.user.id,
-      'verification.notes': notes,
-      isActive: status === 'approved'
-    };
-
-    if (status === 'approved') {
-      updateData['verification.verifiedAt'] = new Date();
-    }
-
-    if (status === 'rejected') {
-      updateData['verification.rejectionReason'] = notes;
-    }
-
-    // ✅ Direct MongoDB update - no Mongoose validation
-    const result = await mongoose.connection.db.collection('doctors').findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(doctorId) },
-      { $set: updateData },
-      { returnDocument: 'after' }
-    );
-
-    if (!result) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'DOCTOR_NOT_FOUND',
-          message: 'Doctor not found'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const updatedDoctor = result;
-
-    // ✅ Send notifications
+  async updateVerificationStatus(req, res, next) {
     try {
-      if (status === 'approved') {
-        await NotificationService.sendEmail(
-          updatedDoctor.email,
-          'Account Verified - Welcome to AyurSutra',
-          'doctorVerificationApproved',
-          {
-            doctorName: updatedDoctor.name,
-            loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/doctor-login`
-          }
-        );
+      const { doctorId } = req.params;
+      const { status, notes } = req.body;
 
-        if (updatedDoctor.phone) {
-          await NotificationService.sendSMS(
-            updatedDoctor.phone,
-            `Congratulations Dr. ${updatedDoctor.name}! Your AyurSutra account has been verified.`
-          );
-        }
-
-      } else if (status === 'rejected') {
-        await NotificationService.sendEmail(
-          updatedDoctor.email,
-          'Account Verification Update',
-          'doctorVerificationRejected',
-          {
-            doctorName: updatedDoctor.name,
-            reason: notes || 'Please contact support',
-            supportEmail: process.env.SUPPORT_EMAIL || 'support@ayursutra.com'
-          }
-        );
-
-        if (updatedDoctor.phone) {
-          await NotificationService.sendSMS(
-            updatedDoctor.phone,
-            `Your AyurSutra application requires additional information. Check your email.`
-          );
-        }
+      if (
+        !["pending", "under_review", "approved", "rejected"].includes(status)
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: "INVALID_STATUS",
+            message: "Invalid verification status",
+          },
+          timestamp: new Date().toISOString(),
+        });
       }
-    } catch (notifError) {
-      console.error('Notification error:', notifError);
-    }
 
-    logger.info(`Doctor verification updated`, { 
-      doctorId,
-      status,
-      adminId: req.user.id
-    });
+      // ✅ Use direct MongoDB update - completely bypasses Mongoose validation
+      const updateData = {
+        verificationStatus: status,
+        "verification.status": status,
+        "verification.verifiedBy": req.user._id || req.user.id,
+        "verification.notes": notes,
+        isActive: status === "approved",
+      };
 
-    res.json({
-      success: true,
-      message: `Doctor verification status updated to ${status}`,
-      data: {
-        doctor: {
-          id: updatedDoctor._id,
-          name: updatedDoctor.name,
-          email: updatedDoctor.email,
-          verificationStatus: updatedDoctor.verificationStatus,
-          isActive: updatedDoctor.isActive
+      if (status === "approved") {
+        updateData["verification.verifiedAt"] = new Date();
+      }
+
+      if (status === "rejected") {
+        updateData["verification.rejectionReason"] = notes;
+      }
+
+      // ✅ Direct MongoDB update - no Mongoose validation
+      const result = await mongoose.connection.db
+        .collection("doctors")
+        .findOneAndUpdate(
+          { _id: new mongoose.Types.ObjectId(doctorId) },
+          { $set: updateData },
+          { returnDocument: "after" }
+        );
+
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: "DOCTOR_NOT_FOUND",
+            message: "Doctor not found",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const updatedDoctor = result;
+
+      // ✅ Send notifications
+      try {
+        if (status === "approved") {
+          await NotificationService.sendEmail(
+            updatedDoctor.email,
+            "Account Verified - Welcome to AyurSutra",
+            "doctorVerificationApproved",
+            {
+              doctorName: updatedDoctor.name,
+              loginUrl: `${
+                process.env.FRONTEND_URL || "http://localhost:5173"
+              }/doctor-login`,
+            }
+          );
+
+          if (updatedDoctor.phone) {
+            await NotificationService.sendSMS(
+              updatedDoctor.phone,
+              `Congratulations Dr. ${updatedDoctor.name}! Your AyurSutra account has been verified.`
+            );
+          }
+        } else if (status === "rejected") {
+          await NotificationService.sendEmail(
+            updatedDoctor.email,
+            "Account Verification Update",
+            "doctorVerificationRejected",
+            {
+              doctorName: updatedDoctor.name,
+              reason: notes || "Please contact support",
+              supportEmail:
+                process.env.SUPPORT_EMAIL || "support@ayursutra.com",
+            }
+          );
+
+          if (updatedDoctor.phone) {
+            await NotificationService.sendSMS(
+              updatedDoctor.phone,
+              `Your AyurSutra application requires additional information. Check your email.`
+            );
+          }
         }
-      },
-      timestamp: new Date().toISOString()
-    });
+      } catch (notifError) {
+        console.error("Notification error:", notifError);
+      }
 
-  } catch (error) {
-    logger.error('Update verification error:', error);
-    next(error);
+      logger.info(`Doctor verification updated`, {
+        doctorId,
+        status,
+        adminId: req.user.id,
+      });
+
+      res.json({
+        success: true,
+        message: `Doctor verification status updated to ${status}`,
+        data: {
+          doctor: {
+            id: updatedDoctor._id,
+            name: updatedDoctor.name,
+            email: updatedDoctor.email,
+            verificationStatus: updatedDoctor.verificationStatus,
+            isActive: updatedDoctor.isActive,
+          },
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error("Update verification error:", error);
+      next(error);
+    }
   }
-}
 
-/**
- * Add new patient (Doctor only)
- * POST /api/doctors/patients/add
- */
-async addPatient(req, res, next) {
-  try {
-    console.log('🟢 Add patient started by doctor:', req.user.email);
-    
-    // Validate request data
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid patient data provided',
-          details: errors.array()
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
+  /**
+   * Add new patient (Doctor only)
+   * POST /api/doctors/patients/add
+   */
+  async addPatient(req, res, next) {
+    try {
+      console.log("🟢 Add patient started by doctor:", req.user.email);
 
-    // Check if user is a doctor
-    if (req.user.role !== 'doctor') {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'INSUFFICIENT_PERMISSIONS',
-          message: 'Only doctors can add patients'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
+      // Validate request data
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid patient data provided",
+            details: errors.array(),
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
 
-    const { name, email, phone, dateOfBirth, gender, medicalHistory, allergies, symptoms } = req.body;
+      // Check if user is a doctor
+      if (req.user.role !== "doctor") {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: "INSUFFICIENT_PERMISSIONS",
+            message: "Only doctors can add patients",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
 
-    // Get doctor profile
-    const doctor = await doctorService.getDoctorByUserId(req.user.id);
-    if (!doctor) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'DOCTOR_NOT_FOUND', message: 'Doctor profile not found' },
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Check if patient already exists
-    const existingUser = await User.findOne({ 
-      $or: [
-        { email: email },
-        { phone: phone }
-      ]
-    });
-
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        error: {
-          code: 'PATIENT_EXISTS',
-          message: 'Patient with this email or phone already exists'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Generate temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(tempPassword, salt);
-
-    // Create new patient
-    const newPatient = new User({
-      name,
-      email,
-      phone,
-      passwordHash,
-      role: 'patient',
-      createdBy: req.user.id,
-      location: {
-        type: 'Point',
-        coordinates: [0, 0] // ← ADD THIS: Default coordinates [longitude, latitude]
-      },
-      profile: {
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      const {
+        name,
+        email,
+        phone,
+        dateOfBirth,
         gender,
-        medicalHistory: medicalHistory || [],
-        allergies: allergies || [],
-        symptoms: symptoms || []
-      },
-      emailVerified: false,
-      phoneVerified: false,
-      isActive: true
-    });
+        medicalHistory,
+        allergies,
+        symptoms,
+      } = req.body;
 
-    await newPatient.save();
+      // Get doctor profile
+      const doctor = await doctorService.getDoctorByUserId(req.user.id);
+      if (!doctor) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: "DOCTOR_NOT_FOUND",
+            message: "Doctor profile not found",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
 
-    console.log('✅ Patient added successfully:', newPatient._id);
-    logger.info('Patient added by doctor', { 
-      doctorId: doctor._id,
-      patientId: newPatient._id,
-      doctorEmail: req.user.email 
-    });
+      // Check if patient already exists
+      const existingUser = await User.findOne({
+        $or: [{ email: email }, { phone: phone }],
+      });
 
-    res.status(201).json({
-      success: true,
-      message: 'Patient added successfully',
-      data: {
-        patient: {
-          id: newPatient._id,
-          name: newPatient.name,
-          email: newPatient.email,
-          phone: newPatient.phone,
-          role: newPatient.role,
-          tempPassword, // Send temp password (in real app, send via email/SMS)
-          createdBy: doctor._id,
-          createdAt: newPatient.createdAt
-        }
-      },
-      timestamp: new Date().toISOString()
-    });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          error: {
+            code: "PATIENT_EXISTS",
+            message: "Patient with this email or phone already exists",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
 
-  } catch (error) {
-    console.error('❌ Add patient error:', error.message);
-    logger.error('Add patient error:', {
-      error: error.message,
-      doctorId: req.user?.id
-    });
-    next(error);
+      // Generate temporary password
+      const tempPassword = Math.random().toString(36).slice(-8);
+      const salt = await bcrypt.genSalt(12);
+      const passwordHash = await bcrypt.hash(tempPassword, salt);
+
+      // Create new patient
+      const newPatient = new User({
+        name,
+        email,
+        phone,
+        passwordHash,
+        role: "patient",
+        createdBy: req.user.id,
+        location: {
+          type: "Point",
+          coordinates: [0, 0], // ← ADD THIS: Default coordinates [longitude, latitude]
+        },
+        profile: {
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+          gender,
+          medicalHistory: medicalHistory || [],
+          allergies: allergies || [],
+          symptoms: symptoms || [],
+        },
+        emailVerified: false,
+        phoneVerified: false,
+        isActive: true,
+      });
+
+      await newPatient.save();
+
+      console.log("✅ Patient added successfully:", newPatient._id);
+      logger.info("Patient added by doctor", {
+        doctorId: doctor._id,
+        patientId: newPatient._id,
+        doctorEmail: req.user.email,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Patient added successfully",
+        data: {
+          patient: {
+            id: newPatient._id,
+            name: newPatient.name,
+            email: newPatient.email,
+            phone: newPatient.phone,
+            role: newPatient.role,
+            tempPassword, // Send temp password (in real app, send via email/SMS)
+            createdBy: doctor._id,
+            createdAt: newPatient.createdAt,
+          },
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("❌ Add patient error:", error.message);
+      logger.error("Add patient error:", {
+        error: error.message,
+        doctorId: req.user?.id,
+      });
+      next(error);
+    }
   }
-}
-
-
 
   /**
    * Get doctors pending verification (Admin only)
@@ -1388,16 +1495,15 @@ async addPatient(req, res, next) {
 
       res.json({
         success: true,
-        message: 'Pending verifications retrieved successfully',
+        message: "Pending verifications retrieved successfully",
         data: {
           doctors,
-          count: doctors.length
+          count: doctors.length,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      logger.error('Get pending verifications error:', error);
+      logger.error("Get pending verifications error:", error);
       next(error);
     }
   }

@@ -619,7 +619,7 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             >
                               <option value="daily">Daily</option>
-                              <option value="alternate">Alternate Days</option>
+                              <option value="alternate_days">Alternate Days</option>
                               <option value="weekly">Weekly</option>
                               <option value="twice_daily">Twice Daily</option>
                             </select>
