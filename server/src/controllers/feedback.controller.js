@@ -2,7 +2,7 @@ const { asyncHandler, AppError } = require('../middleware/error.middleware');
 const Feedback = require('../models/Feedback');
 const FeedbackService = require('../services/feedback.service');
 const FeedbackAnalyticsService = require('../services/feedbackAnalytics.service');
-
+const therapistApiService = require('../services/therapist.service')
 class FeedbackController {
   
   // ============ PATIENT FEEDBACK OPERATIONS ============
@@ -128,7 +128,9 @@ class FeedbackController {
   getProviderFeedback = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, timeRange = '3months' } = req.query;
     
-    const result = await FeedbackService.getProviderFeedback(req.user._id, {
+    const therapist = therapistApiService.getTherapistByUserId(req.user._id);
+
+    const result = await FeedbackService.getProviderFeedback(therapist._id, {
       page: parseInt(page),
       limit: parseInt(limit),
       timeRange

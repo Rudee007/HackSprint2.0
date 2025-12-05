@@ -1,227 +1,332 @@
-// src/controllers/realtime/session.controller.js (PRODUCTION-READY)
+// src/controllers/realtime/session.controller.js
+// 🔥 PRODUCTION-READY - CONSULTATION SCHEMA v2.0 COMPLIANT
 const { asyncHandler, AppError } = require('../../middleware/error.middleware');
 const Consultation = require('../../models/Consultation');
 
 class RealtimeSessionController {
   
-
-
-
-  // ✅ ADD THIS TO RealtimeSessionController class
-
-// Send emergency alert
-sendEmergencyAlert = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params;
-  const { message, severity } = req.body;
+  // ═══════════════════════════════════════════════════════════
+  // SESSION LIFECYCLE MANAGEMENT
+  // ═══════════════════════════════════════════════════════════
   
-  if (!message || !severity) {
-    throw new AppError('Message and severity are required', 400, 'VALIDATION_ERROR');
-  }
-  
-  const consultation = await Consultation.findById(sessionId)
-    .populate('patientId', 'name email')
-    .populate('providerId', 'name');
-  
-  if (!consultation) {
-    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
-  }
-  
-  // Update emergency flag in database
-  if (consultation.sessionType === 'therapy' && consultation.therapyData) {
-    consultation.therapyData.emergencyReported = true;
-    consultation.therapyData.emergencyDetails = {
-      type: 'manual_alert',
-      message,
-      severity,
-      timestamp: new Date(),
-      reportedBy: req.user._id
-    };
-    await consultation.save();
-  }
-  
-  // Broadcast emergency to all admins and doctors
-  const wsService = req.app.get('wsService');
-  if (wsService) {
-    wsService.emitEmergencyAlert({
-      sessionId,
-      sessionType: consultation.sessionType,
-      message,
-      severity,
-      patientName: consultation.patientId?.name,
-      therapistName: consultation.providerId?.name,
-      reportedBy: req.user.name,
-      timestamp: new Date()
-    });
-  }
-  
-  res.json({
-    success: true,
-    message: 'Emergency alert sent successfully',
-    data: { sessionId, severity }
-  });
-});
-
-// Pause session
-pauseSession = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params;
-  const { reason } = req.body;
-  
-  const consultation = await Consultation.findById(sessionId);
-  
-  if (!consultation) {
-    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
-  }
-  
-  if (consultation.sessionStatus !== 'in_progress') {
-    throw new AppError('Only in-progress sessions can be paused', 400, 'INVALID_STATE');
-  }
-  
-  // Update status
-  consultation.sessionStatus = 'paused';
-  consultation.sessionMetadata = consultation.sessionMetadata || {};
-  consultation.sessionMetadata.totalPauses = (consultation.sessionMetadata.totalPauses || 0) + 1;
-  consultation.sessionMetadata.lastActivity = new Date();
-  
-  await consultation.save();
-  
-  // Broadcast pause event
-  const wsService = req.app.get('wsService');
-  if (wsService) {
-    wsService.emitSessionStatusUpdate(sessionId, {
-      status: 'paused',
-      reason,
-      pausedBy: req.user.name,
-      timestamp: new Date()
-    });
-  }
-  
-  res.json({
-    success: true,
-    message: 'Session paused',
-    data: { consultation }
-  });
-});
-
-// Resume session
-resumeSession = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params;
-  
-  const consultation = await Consultation.findById(sessionId);
-  
-  if (!consultation) {
-    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
-  }
-  
-  if (consultation.sessionStatus !== 'paused') {
-    throw new AppError('Only paused sessions can be resumed', 400, 'INVALID_STATE');
-  }
-  
-  // Resume session
-  consultation.sessionStatus = 'in_progress';
-  consultation.sessionMetadata = consultation.sessionMetadata || {};
-  consultation.sessionMetadata.lastActivity = new Date();
-  
-  await consultation.save();
-  
-  // Broadcast resume event
-  const wsService = req.app.get('wsService');
-  if (wsService) {
-    wsService.emitSessionStatusUpdate(sessionId, {
-      status: 'in_progress',
-      resumedBy: req.user.name,
-      timestamp: new Date()
-    });
-  }
-  
-  res.json({
-    success: true,
-    message: 'Session resumed',
-    data: { consultation }
-  });
-});
-
-// Complete session
-completeSession = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params;
-  const { summary, notes } = req.body;
-  
-  const consultation = await Consultation.findById(sessionId)
-    .populate('patientId', 'name email')
-    .populate('providerId', 'name');
-  
-  if (!consultation) {
-    throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
-  }
-  
-  if (consultation.sessionStatus !== 'in_progress' && consultation.sessionStatus !== 'paused') {
-    throw new AppError('Only in-progress or paused sessions can be completed', 400, 'INVALID_STATE');
-  }
-  
-  // Complete session
-  consultation.sessionStatus = 'completed';
-  consultation.sessionEndTime = new Date();
-  consultation.notes = notes || consultation.notes;
-  
-  // Calculate actual duration
-  if (consultation.sessionStartTime) {
-    const duration = (consultation.sessionEndTime - consultation.sessionStartTime) / (1000 * 60); // minutes
-    consultation.actualDuration = Math.round(duration);
-  }
-  
-  await consultation.save();
-  
-  // Stop countdown
-  const wsService = req.app.get('wsService');
-  if (wsService) {
-    wsService.stopSessionCountdown(sessionId);
-    
-    wsService.emitSessionStatusUpdate(sessionId, {
-      status: 'completed',
-      completedBy: req.user.name,
-      actualDuration: consultation.actualDuration,
-      timestamp: new Date()
-    });
-    
-    // Notify patient
-    wsService.emitToUser(consultation.patientId._id, 'session_completed', {
-      sessionId,
-      therapyType: consultation.sessionType,
-      therapistName: consultation.providerId?.name,
-      summary,
-      timestamp: new Date()
-    });
-  }
-  
-  res.json({
-    success: true,
-    message: 'Session completed successfully',
-    data: { consultation }
-  });
-});
-
-  // Update session status with real-time broadcast
-  updateSessionStatus = asyncHandler(async (req, res) => {
+  /**
+   * Start a session with countdown timer
+   */
+  startSession = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
-    const { status, reason } = req.body;
-    
+
+    console.log('🟢 [SESSION] Starting session:', sessionId);
+
     const consultation = await Consultation.findById(sessionId)
-      .populate('patientId', 'name email')
-      .populate('providerId', 'name role');
-      
+      .populate('patientId', 'name email phone profile')
+      .populate({
+        path: 'providerId',
+        select: 'name email role specialization'
+      });
+
     if (!consultation) {
       throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
     }
-    
-    // Validate status transition
+
+    const allowedStatuses = ['scheduled', 'confirmed', 'patient_arrived', 'therapist_ready'];
+    if (!allowedStatuses.includes(consultation.sessionStatus)) {
+      throw new AppError(
+        `Cannot start session from ${consultation.sessionStatus} status`,
+        400,
+        'INVALID_SESSION_STATE'
+      );
+    }
+
+    if (consultation.sessionStatus === 'in_progress') {
+      console.log('⚠️ Session already in progress');
+      return res.json({
+        success: true,
+        message: 'Session already in progress',
+        data: {
+          consultation,
+          countdownStarted: true,
+          estimatedEndTime: new Date(
+            Date.now() + consultation.estimatedDuration * 60 * 1000
+          )
+        }
+      });
+    }
+
+    // Update live session status
+    consultation.sessionStatus = 'in_progress';
+    consultation.status = 'in_progress'; // valid in both enums
+    consultation.sessionStartTime = new Date();
+
+    consultation.statusHistory = consultation.statusHistory || [];
+    consultation.statusHistory.push({
+      status: 'in_progress',
+      previousStatus: 'scheduled',
+      timestamp: new Date(),
+      updatedBy: req.user._id,
+      reason: 'Session started'
+    });
+
+    await consultation.save();
+
+    console.log('✅ Session started successfully');
+
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      wsService.startSessionCountdown(sessionId, consultation.estimatedDuration || 60);
+
+      wsService.emitSessionStatusUpdate(sessionId, {
+        status: 'in_progress',
+        startTime: consultation.sessionStartTime,
+        estimatedDuration: consultation.estimatedDuration,
+        patientName: consultation.patientId?.name,
+        providerName: consultation.providerId?.name,
+        providerId: consultation.providerId?._id,
+        sessionType: consultation.sessionType,
+        therapyType: consultation.therapyData?.therapyType,
+        countdown: (consultation.estimatedDuration || 60) * 60
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Session started successfully',
+      data: {
+        consultation,
+        countdownStarted: true,
+        estimatedEndTime: new Date(
+          Date.now() + consultation.estimatedDuration * 60 * 1000
+        ),
+        isTherapySession: consultation.sessionType === 'therapy'
+      }
+    });
+  });
+  
+  /**
+   * Pause an active session
+   */
+  pauseSession = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { reason } = req.body;
+
+    console.log('⏸️ [SESSION] Pausing session:', sessionId);
+
+    const consultation = await Consultation.findById(sessionId)
+      .populate('patientId', 'name')
+      .populate('providerId', 'name');
+
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+
+    if (consultation.sessionStatus !== 'in_progress') {
+      throw new AppError('Only in-progress sessions can be paused', 400, 'INVALID_STATE');
+    }
+
+    const pausedAt = new Date();
+    const elapsed = pausedAt - consultation.sessionStartTime;
+
+    // 🔧 Only sessionStatus supports 'paused'
+    consultation.sessionStatus = 'paused';
+    // DO NOT do: consultation.status = 'paused';  // ❌ invalid enum
+
+    consultation.sessionMetadata = consultation.sessionMetadata || {};
+    consultation.sessionMetadata.totalPauses =
+      (consultation.sessionMetadata.totalPauses || 0) + 1;
+    consultation.sessionMetadata.lastActivity = pausedAt;
+
+    consultation.statusHistory = consultation.statusHistory || [];
+    consultation.statusHistory.push({
+      status: 'paused',
+      previousStatus: 'in_progress',
+      timestamp: pausedAt,
+      updatedBy: req.user._id,
+      reason: reason || 'Session paused by user'
+    });
+
+    await consultation.save();
+
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      wsService.emitSessionStatusUpdate(sessionId, {
+        status: 'paused',
+        reason,
+        pausedBy: req.user.name,
+        pausedAt,
+        elapsedTime: elapsed
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Session paused successfully',
+      data: { consultation }
+    });
+  });
+ 
+  /**
+   * Resume a paused session
+   */
+  resumeSession = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+
+    console.log('▶️ [SESSION] Resuming session:', sessionId);
+
+    const consultation = await Consultation.findById(sessionId)
+      .populate('patientId', 'name')
+      .populate('providerId', 'name');
+
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+
+    if (consultation.sessionStatus !== 'paused') {
+      throw new AppError('Only paused sessions can be resumed', 400, 'INVALID_STATE');
+    }
+
+    const resumedAt = new Date();
+    consultation.sessionStatus = 'in_progress';
+    consultation.status = 'in_progress'; // ✅ allowed
+    consultation.sessionMetadata = consultation.sessionMetadata || {};
+    consultation.sessionMetadata.lastActivity = resumedAt;
+
+    consultation.statusHistory = consultation.statusHistory || [];
+    consultation.statusHistory.push({
+      status: 'in_progress',
+      previousStatus: 'paused',
+      timestamp: resumedAt,
+      updatedBy: req.user._id,
+      reason: 'Session resumed'
+    });
+
+    await consultation.save();
+
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      wsService.emitSessionStatusUpdate(sessionId, {
+        status: 'in_progress',
+        resumedBy: req.user.name,
+        resumedAt
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Session resumed successfully',
+      data: { consultation }
+    });
+  });  
+  /**
+   * Complete a session
+   */
+  completeSession = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { summary, notes, rating, feedback } = req.body;
+
+    console.log('✅ [SESSION] Completing session:', sessionId);
+
+    const consultation = await Consultation.findById(sessionId)
+      .populate('patientId', 'name email')
+      .populate('providerId', 'name');
+
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+
+    const allowedStatuses = ['in_progress', 'paused'];
+    if (!allowedStatuses.includes(consultation.sessionStatus)) {
+      throw new AppError(
+        `Cannot complete session from ${consultation.sessionStatus} status`,
+        400,
+        'INVALID_STATE'
+      );
+    }
+
+    const completedAt = new Date();
+    consultation.sessionStatus = 'completed';
+    consultation.status = 'completed'; // ✅ allowed
+    consultation.sessionEndTime = completedAt;
+    consultation.notes = notes || consultation.notes;
+    consultation.patientFeedback = feedback || consultation.patientFeedback;
+    consultation.rating = rating || consultation.rating;
+
+    if (consultation.sessionStartTime) {
+      const duration =
+        (completedAt - consultation.sessionStartTime) / (1000 * 60);
+      consultation.actualDuration = Math.round(duration);
+    }
+
+    consultation.statusHistory = consultation.statusHistory || [];
+    consultation.statusHistory.push({
+      status: 'completed',
+      previousStatus: consultation.sessionStatus,
+      timestamp: completedAt,
+      updatedBy: req.user._id,
+      reason: 'Session completed successfully'
+    });
+
+    await consultation.save();
+
+    console.log(
+      `✅ Session completed - Duration: ${consultation.actualDuration} minutes`
+    );
+
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      wsService.stopSessionCountdown(sessionId);
+
+      wsService.emitSessionStatusUpdate(sessionId, {
+        status: 'completed',
+        completedBy: req.user.name,
+        completedAt,
+        actualDuration: consultation.actualDuration,
+        rating: consultation.rating
+      });
+
+      if (consultation.patientId?._id) {
+        wsService.emitToUser(consultation.patientId._id, 'session_completed', {
+          sessionId,
+          sessionType: consultation.sessionType,
+          providerName: consultation.providerId?.name,
+          summary,
+          actualDuration: consultation.actualDuration,
+          timestamp: completedAt
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Session completed successfully',
+      data: { consultation }
+    });
+  });  
+  /**
+   * Update session status (generic)
+   */
+  updateSessionStatus = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { status, reason } = req.body;
+
+    console.log(`🔄 [SESSION] Updating status to: ${status}`);
+
+    const consultation = await Consultation.findById(sessionId)
+      .populate('patientId', 'name email')
+      .populate('providerId', 'name role');
+
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+
     const validTransitions = {
-      'scheduled': ['confirmed', 'cancelled'],
-      'confirmed': ['in_progress', 'cancelled'],
-      'in_progress': ['completed', 'paused', 'cancelled'],
-      'paused': ['in_progress', 'cancelled'],
-      'completed': [],
-      'cancelled': []
+      scheduled: ['patient_arrived', 'therapist_ready', 'in_progress', 'cancelled'],
+      patient_arrived: ['in_progress', 'cancelled'],
+      therapist_ready: ['in_progress', 'cancelled'],
+      in_progress: ['completed', 'paused', 'cancelled'],
+      paused: ['in_progress', 'cancelled'],
+      completed: [],
+      cancelled: []
     };
-    
+
     const currentStatus = consultation.sessionStatus;
     if (!validTransitions[currentStatus]?.includes(status)) {
       throw new AppError(
@@ -230,34 +335,51 @@ completeSession = asyncHandler(async (req, res) => {
         'INVALID_STATUS_TRANSITION'
       );
     }
-    
-    // Update status in database
-    await consultation.updateSessionStatus(status, req.user._id, reason);
-    
-    // ✅ Get WebSocket service safely
+
+    // Always update sessionStatus
+    consultation.sessionStatus = status;
+
+    // Only update root status when new value is allowed by its enum
+    const statusEnumAllowed = [
+      'scheduled',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'no_show',
+      'patient_arrived',
+      'therapist_ready'
+    ];
+    if (statusEnumAllowed.includes(status)) {
+      consultation.status = status;
+    }
+
+    consultation.statusHistory = consultation.statusHistory || [];
+    consultation.statusHistory.push({
+      status,
+      previousStatus: currentStatus,
+      timestamp: new Date(),
+      updatedBy: req.user._id,
+      reason: reason || `Status updated to ${status}`
+    });
+
+    await consultation.save();
+
     const wsService = req.app.get('wsService');
-    if (!wsService) {
-      console.warn('⚠️ WebSocket service not available');
-    } else {
-      // Broadcast real-time update
+    if (wsService) {
       wsService.emitSessionStatusUpdate(sessionId, {
         status,
         reason,
         updatedBy: req.user.name,
         patientName: consultation.patientId?.name,
         providerName: consultation.providerId?.name,
-        sessionStartTime: consultation.sessionStartTime,
-        sessionEndTime: consultation.sessionEndTime,
-        estimatedDuration: consultation.estimatedDuration,
         timestamp: new Date()
       });
-      
-      // ✅ Stop countdown if session ends
+
       if (['completed', 'cancelled'].includes(status)) {
         wsService.stopSessionCountdown(sessionId);
       }
     }
-    
+
     res.json({
       success: true,
       message: 'Session status updated',
@@ -265,90 +387,363 @@ completeSession = asyncHandler(async (req, res) => {
     });
   });
   
-  // Start session with countdown
-  startSession = asyncHandler(async (req, res) => {
+  // ═══════════════════════════════════════════════════════════
+  // 🔥 THERAPY-SPECIFIC ENDPOINTS (NEW)
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Update therapy vitals (real-time)
+   */
+  updateTherapyVitals = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
+    const { bloodPressure, pulse, temperature, weight, respiratoryRate, oxygenSaturation } = req.body;
     
-    const consultation = await Consultation.findById(sessionId)
-      .populate('patientId', 'name')
-      .populate('providerId', 'name');
-      
+    console.log('🩺 [THERAPY] Updating vitals for session:', sessionId);
+    
+    const consultation = await Consultation.findById(sessionId);
+    
     if (!consultation) {
       throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
     }
     
-    // ✅ ALLOW BOTH 'scheduled' AND 'confirmed'
-    if (!['scheduled', 'confirmed'].includes(consultation.sessionStatus)) {
-      throw new AppError(
-        `Cannot start session from ${consultation.sessionStatus} status`,
-        400,
-        'INVALID_SESSION_STATE'
-      );
+    if (consultation.sessionType !== 'therapy') {
+      throw new AppError('Vitals can only be updated for therapy sessions', 400, 'INVALID_SESSION_TYPE');
     }
     
-    // ✅ ALREADY IN PROGRESS? Just return success
-    if (consultation.sessionStatus === 'in_progress') {
-      return res.json({
-        success: true,
-        message: 'Session already in progress',
-        data: { 
-          consultation,
-          countdownStarted: true,
-          estimatedEndTime: new Date(Date.now() + (consultation.estimatedDuration * 60 * 1000))
-        }
-      });
-    }
+    // Use schema method
+    const vitalsData = {
+      bloodPressure: bloodPressure ? {
+        systolic: bloodPressure.systolic,
+        diastolic: bloodPressure.diastolic,
+        measuredAt: new Date()
+      } : undefined,
+      pulse,
+      temperature,
+      weight,
+      respiratoryRate,
+      oxygenSaturation
+    };
     
-    // Update to in-progress
-    consultation.sessionStatus = 'in_progress';
-    consultation.sessionStartTime = new Date();
-    consultation.actualStartedBy = req.user._id;
-    await consultation.save();
+    await consultation.updateVitals(vitalsData);
     
-    // ✅ Get WebSocket service
+    console.log('✅ Vitals updated successfully');
+    
+    // Real-time broadcast
     const wsService = req.app.get('wsService');
-    if (!wsService) {
-      console.warn('⚠️ WebSocket service unavailable');
-    } else {
-      // ✅ Start countdown in WebSocket service
-      wsService.startSessionCountdown(sessionId, consultation.estimatedDuration || 60);
-      
-      // Broadcast session started
-      wsService.emitSessionStatusUpdate(sessionId, {
-        status: 'in_progress',
-        startTime: consultation.sessionStartTime,
-        estimatedDuration: consultation.estimatedDuration,
-        patientName: consultation.patientId?.name,
-        providerName: consultation.providerId?.name,
-        countdown: (consultation.estimatedDuration || 60) * 60
+    if (wsService) {
+      wsService.emitToSession(sessionId, 'vitals_updated', {
+        sessionId,
+        vitals: consultation.therapyData.vitals,
+        updatedBy: req.user.name,
+        timestamp: new Date()
       });
     }
     
     res.json({
       success: true,
-      message: 'Session started successfully',
-      data: { 
-        consultation,
-        countdownStarted: true,
-        estimatedEndTime: new Date(Date.now() + (consultation.estimatedDuration * 60 * 1000))
-      }
+      message: 'Vitals updated successfully',
+      data: { vitals: consultation.therapyData.vitals }
     });
   });
-    
-  // Get real-time session details
-  getSessionDetails = asyncHandler(async (req, res) => {
+  
+  /**
+   * Update therapy observations
+   */
+  updateTherapyObservations = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
+    const { sweatingQuality, skinTexture, skinColor, patientComfort, responseToTreatment } = req.body;
     
-    const consultation = await Consultation.findById(sessionId)
-      .populate('patientId', 'name email phone')
-      .populate('providerId', 'name email role')
-      .populate('activeParticipants.userId', 'name email role');
+    console.log('👁️ [THERAPY] Updating observations for session:', sessionId);
+    
+    const consultation = await Consultation.findById(sessionId);
     
     if (!consultation) {
       throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
     }
     
-    // Calculate remaining time if in progress
+    if (consultation.sessionType !== 'therapy') {
+      throw new AppError('Observations can only be updated for therapy sessions', 400, 'INVALID_SESSION_TYPE');
+    }
+    
+    // Update observations
+    consultation.therapyData = consultation.therapyData || {};
+    consultation.therapyData.observations = consultation.therapyData.observations || {};
+    
+    if (sweatingQuality) consultation.therapyData.observations.sweatingQuality = sweatingQuality;
+    if (skinTexture) consultation.therapyData.observations.skinTexture = skinTexture;
+    if (skinColor) consultation.therapyData.observations.skinColor = skinColor;
+    if (patientComfort) consultation.therapyData.observations.patientComfort = patientComfort;
+    if (responseToTreatment) consultation.therapyData.observations.responseToTreatment = responseToTreatment;
+    
+    consultation.therapyData.observations.timeOfObservation = consultation.therapyData.observations.timeOfObservation || [];
+    consultation.therapyData.observations.timeOfObservation.push(new Date());
+    
+    await consultation.save();
+    
+    // Real-time broadcast
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      wsService.emitToSession(sessionId, 'observations_updated', {
+        sessionId,
+        observations: consultation.therapyData.observations,
+        updatedBy: req.user.name,
+        timestamp: new Date()
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Observations updated successfully',
+      data: { observations: consultation.therapyData.observations }
+    });
+  });
+  
+  /**
+   * Add therapy progress update
+   */
+  addTherapyProgress = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { stage, notes, percentage } = req.body;
+    
+    console.log(`📊 [THERAPY] Adding progress - Stage: ${stage}, ${percentage}%`);
+    
+    if (!stage || percentage === undefined) {
+      throw new AppError('Stage and percentage are required', 400, 'VALIDATION_ERROR');
+    }
+    
+    const consultation = await Consultation.findById(sessionId);
+    
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+    
+    if (consultation.sessionType !== 'therapy') {
+      throw new AppError('Progress updates are only for therapy sessions', 400, 'INVALID_SESSION_TYPE');
+    }
+    
+    // Use schema method
+    await consultation.addTherapyProgress(stage, notes, percentage);
+    
+    console.log(`✅ Progress updated: ${stage} - ${percentage}%`);
+    
+    // Real-time broadcast
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      wsService.emitToSession(sessionId, 'therapy_progress_updated', {
+        sessionId,
+        stage,
+        percentage,
+        notes,
+        updatedBy: req.user.name,
+        timestamp: new Date()
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Progress updated successfully',
+      data: { 
+        currentStage: stage,
+        percentage,
+        progressUpdates: consultation.therapyData.progressUpdates
+      }
+    });
+  });
+  
+  /**
+   * Report adverse effect (CRITICAL)
+   */
+  reportAdverseEffect = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { effect, severity, description, actionTaken } = req.body;
+    
+    console.log(`🚨 [ADVERSE EFFECT] ${severity.toUpperCase()} - ${effect}`);
+    
+    if (!effect || !severity) {
+      throw new AppError('Effect and severity are required', 400, 'VALIDATION_ERROR');
+    }
+    
+    const consultation = await Consultation.findById(sessionId)
+      .populate('patientId', 'name email')
+      .populate('providerId', 'name');
+    
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+    
+    if (consultation.sessionType !== 'therapy') {
+      throw new AppError('Adverse effects are only for therapy sessions', 400, 'INVALID_SESSION_TYPE');
+    }
+    
+    // Use schema method (auto-handles emergency escalation)
+    await consultation.addAdverseEffect(effect, severity, description, actionTaken);
+    
+    console.log('✅ Adverse effect recorded');
+    
+    // Real-time broadcast
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      // Broadcast to all relevant parties
+      wsService.emitToSession(sessionId, 'adverse_effect_reported', {
+        sessionId,
+        effect,
+        severity,
+        description,
+        patientName: consultation.patientId?.name,
+        reportedBy: req.user.name,
+        timestamp: new Date()
+      });
+      
+      // Critical alert for severe/critical effects
+      if (['severe', 'critical'].includes(severity)) {
+        wsService.emitEmergencyAlert({
+          sessionId,
+          type: 'adverse_effect',
+          severity,
+          effect,
+          description,
+          patientName: consultation.patientId?.name,
+          providerName: consultation.providerId?.name,
+          reportedBy: req.user.name,
+          timestamp: new Date()
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Adverse effect reported successfully',
+      data: { 
+        effect,
+        severity,
+        emergencyReported: consultation.therapyData.emergencyReported,
+        adverseEffects: consultation.therapyData.adverseEffects
+      }
+    });
+  });
+  
+  /**
+   * Add materials used in therapy
+   */
+  addTherapyMaterials = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { materials } = req.body; // Array of {name, quantity, unit, batchNumber}
+    
+    console.log('📦 [THERAPY] Adding materials used');
+    
+    if (!materials || !Array.isArray(materials)) {
+      throw new AppError('Materials array is required', 400, 'VALIDATION_ERROR');
+    }
+    
+    const consultation = await Consultation.findById(sessionId);
+    
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+    
+    if (consultation.sessionType !== 'therapy') {
+      throw new AppError('Materials tracking is only for therapy sessions', 400, 'INVALID_SESSION_TYPE');
+    }
+    
+    // Add materials
+    consultation.therapyData = consultation.therapyData || {};
+    consultation.therapyData.materialsUsed = consultation.therapyData.materialsUsed || [];
+    consultation.therapyData.materialsUsed.push(...materials);
+    
+    await consultation.save();
+    
+    console.log(`✅ ${materials.length} material(s) added`);
+    
+    res.json({
+      success: true,
+      message: 'Materials recorded successfully',
+      data: { materialsUsed: consultation.therapyData.materialsUsed }
+    });
+  });
+  
+  /**
+   * Send emergency alert
+   */
+  sendEmergencyAlert = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const { message, severity } = req.body;
+    
+    console.log(`🚨 [EMERGENCY] ${severity.toUpperCase()} alert for session ${sessionId}`);
+    
+    if (!message || !severity) {
+      throw new AppError('Message and severity are required', 400, 'VALIDATION_ERROR');
+    }
+    
+    const consultation = await Consultation.findById(sessionId)
+      .populate('patientId', 'name email')
+      .populate('providerId', 'name');
+    
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+    
+    // Update emergency flag
+    if (consultation.sessionType === 'therapy' && consultation.therapyData) {
+      consultation.therapyData.emergencyReported = true;
+      consultation.therapyData.emergencyDetails = {
+        type: 'manual_alert',
+        message,
+        severity,
+        timestamp: new Date(),
+        reportedBy: req.user._id
+      };
+      await consultation.save();
+    }
+    
+    // Broadcast emergency to all admins and doctors
+    const wsService = req.app.get('wsService');
+    if (wsService) {
+      wsService.emitEmergencyAlert({
+        sessionId,
+        sessionType: consultation.sessionType,
+        message,
+        severity,
+        patientName: consultation.patientId?.name,
+        providerName: consultation.providerId?.name,
+        reportedBy: req.user.name,
+        timestamp: new Date()
+      });
+    }
+    
+    console.log('✅ Emergency alert sent');
+    
+    res.json({
+      success: true,
+      message: 'Emergency alert sent successfully',
+      data: { sessionId, severity, emergencyReported: true }
+    });
+  });
+  
+  // ═══════════════════════════════════════════════════════════
+  // SESSION INFORMATION & PARTICIPANTS
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Get real-time session details
+   */
+  getSessionDetails = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    
+    const consultation = await Consultation.findById(sessionId)
+      .populate('patientId', 'name email phone profile')
+      .populate({
+        path: 'providerId',
+        select: 'name email role specialization'
+      })
+      .populate('activeParticipants.userId', 'name email role')
+      .populate('therapyData.treatmentPlanId', 'treatmentName totalDays')
+      .populate('therapyData.doctorId', 'name');
+    
+    if (!consultation) {
+      throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+    }
+    
+    // Calculate timing
     let remainingTime = null;
     let elapsedTime = null;
     let progressPercentage = 0;
@@ -360,6 +755,17 @@ completeSession = asyncHandler(async (req, res) => {
       progressPercentage = Math.min(100, (elapsedTime / estimated) * 100);
     }
     
+    // Therapy-specific data
+    const therapyInfo = consultation.sessionType === 'therapy' ? {
+      hasVitals: !!consultation.therapyData?.vitals,
+      hasAdverseEffects: (consultation.therapyData?.adverseEffects || []).length > 0,
+      emergencyReported: consultation.therapyData?.emergencyReported || false,
+      currentStage: consultation.therapyData?.progressUpdates?.slice(-1)[0]?.stage || 'preparation',
+      progressPercentage: consultation.therapyData?.progressUpdates?.slice(-1)[0]?.percentage || 0,
+      materialsCount: (consultation.therapyData?.materialsUsed || []).length,
+      observationCount: (consultation.therapyData?.observations?.timeOfObservation || []).length
+    } : null;
+    
     res.json({
       success: true,
       data: {
@@ -370,15 +776,20 @@ completeSession = asyncHandler(async (req, res) => {
           estimatedDuration: consultation.estimatedDuration || 60,
           progressPercentage: Math.round(progressPercentage * 10) / 10
         },
+        therapyInfo,
         isActive: ['in_progress', 'paused'].includes(consultation.sessionStatus),
         participantCount: consultation.activeParticipants?.length || 0
       }
     });
   });
   
-  // Join session
+  /**
+   * Join session as participant
+   */
   joinSession = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
+    
+    console.log(`👤 [SESSION] User ${req.user.name} joining session ${sessionId}`);
     
     const consultation = await Consultation.findById(sessionId);
     if (!consultation) {
@@ -398,21 +809,20 @@ completeSession = asyncHandler(async (req, res) => {
       });
     }
     
-    // Add user as active participant
-    if (typeof consultation.addParticipant === 'function') {
-      await consultation.addParticipant(req.user._id, req.user.role);
-    } else {
-      // Fallback if method doesn't exist
-      consultation.activeParticipants = consultation.activeParticipants || [];
-      consultation.activeParticipants.push({
-        userId: req.user._id,
-        role: req.user.role,
-        joinedAt: new Date()
-      });
-      await consultation.save();
-    }
+    // Add participant
+    consultation.activeParticipants = consultation.activeParticipants || [];
+    consultation.activeParticipants.push({
+      userId: req.user._id,
+      role: req.user.role,
+      joinedAt: new Date(),
+      isActive: true
+    });
     
-    // Broadcaste join event
+    await consultation.save();
+    
+    console.log(`✅ User joined - Total participants: ${consultation.activeParticipants.length}`);
+    
+    // Broadcast join event
     const wsService = req.app.get('wsService');
     if (wsService) {
       wsService.emitSessionStatusUpdate(sessionId, {
@@ -429,13 +839,17 @@ completeSession = asyncHandler(async (req, res) => {
     res.json({
       success: true,
       message: 'Joined session successfully',
-      data: { sessionId, role: req.user.role }
+      data: { sessionId, role: req.user.role, participantCount: consultation.activeParticipants.length }
     });
   });
   
-  // Leave session
+  /**
+   * Leave session
+   */
   leaveSession = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
+    
+    console.log(`👋 [SESSION] User ${req.user.name} leaving session ${sessionId}`);
     
     const consultation = await Consultation.findById(sessionId);
     if (!consultation) {
@@ -443,15 +857,11 @@ completeSession = asyncHandler(async (req, res) => {
     }
     
     // Remove participant
-    if (typeof consultation.removeParticipant === 'function') {
-      await consultation.removeParticipant(req.user._id);
-    } else {
-      // Fallback
-      consultation.activeParticipants = consultation.activeParticipants?.filter(
-        p => p.userId.toString() !== req.user._id.toString()
-      ) || [];
-      await consultation.save();
-    }
+    consultation.activeParticipants = consultation.activeParticipants?.filter(
+      p => p.userId.toString() !== req.user._id.toString()
+    ) || [];
+    
+    await consultation.save();
     
     // Broadcast leave event
     const wsService = req.app.get('wsService');

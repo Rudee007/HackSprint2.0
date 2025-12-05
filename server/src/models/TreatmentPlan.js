@@ -98,13 +98,11 @@ const therapySessionSchema = new Schema(
       },
     ],
 
-    // Instructions specific to this therapy
     instructions: {
       type: String,
       maxlength: 1000,
     },
 
-    // Safety and monitoring
     preConditions: {
       type: String,
       maxlength: 500,
@@ -114,7 +112,6 @@ const therapySessionSchema = new Schema(
       maxlength: 500,
     },
 
-    // Tracking
     isCustom: {
       type: Boolean,
       default: false,
@@ -123,9 +120,7 @@ const therapySessionSchema = new Schema(
   { _id: true }
 );
 
-/**
- * Phase Configuration (Purvakarma / Pradhanakarma / Paschatkarma)
- */
+
 const phaseConfigSchema = new Schema(
   {
     phaseName: {
@@ -140,7 +135,6 @@ const phaseConfigSchema = new Schema(
       max: 3,
     },
 
-    // Phase duration
     totalDays: {
       type: Number,
       required: true,

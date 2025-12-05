@@ -63,7 +63,7 @@ class TherapistApiService {
       }
 
       console.log('📡 [API] GET request to:', `/consultations/provider/${therapistId}`);
-      
+      console.log(therapistId);
       const response = await apiService.get(`/consultations/provider/${therapistId}`, {
         params: options
       });
@@ -1003,12 +1003,13 @@ class TherapistApiService {
       console.log('📡 [API] GET request to: /therapists/profile');
       
       const response = await apiService.get('/therapists/profile');
-      
-      console.log('✅ [API] Profile response:', response);
+      const payload = response.data || response;
+
+      console.log('✅ [API] Profile response:', payload);
       
       return {
         success: true,
-        data: response.data || response
+        data: payload.data || payload      // backend sends { success, data }
       };
     } catch (error) {
       console.error('❌ [API] Error fetching therapist profile:', error);
@@ -1016,7 +1017,7 @@ class TherapistApiService {
       
       return {
         success: false,
-        error: error.message,
+        error: error.response?.data?.message || error.message,
         data: null
       };
     }
@@ -1025,43 +1026,63 @@ class TherapistApiService {
   async updateTherapistProfile(therapistId, profileData) {
     console.log('🔥 [API] updateTherapistProfile called');
     console.log('🆔 [API] Therapist ID:', therapistId);
-    console.log('📦 [API] Profile Data:', JSON.stringify(profileData, null, 2));
+    console.log('📦 [API] Raw Profile Data:', JSON.stringify(profileData, null, 2));
     
     try {
-      // ✅ SANITIZE PAYLOAD
-      const sanitizedData = {
-        name: profileData.name,
-        email: profileData.email,
-        phone: profileData.phone,
-        bio: profileData.bio || '',
-        specialization: Array.isArray(profileData.specialization) 
-          ? profileData.specialization 
-          : [],
-        experienceYears: parseInt(profileData.experienceYears) || 0,
-        availability: {
-          workingHours: {
-            start: profileData.availability?.workingHours?.start || '09:00',
-            end: profileData.availability?.workingHours?.end || '17:00'
-          },
-          workingDays: Array.isArray(profileData.availability?.workingDays) 
-            ? profileData.availability.workingDays 
-            : [],
-          sessionDuration: parseInt(profileData.availability?.sessionDuration) || 60,
-          maxPatientsPerDay: parseInt(profileData.availability?.maxPatientsPerDay) || 8
+      // ✅ SANITIZE PAYLOAD TO MATCH BACKEND CONTROLLER
+      const sanitizedData = {};
+
+      // User fields (updated in User model by controller)
+      if (profileData.name) sanitizedData.name = profileData.name;
+      if (profileData.email) sanitizedData.email = profileData.email;
+      if (profileData.phone) sanitizedData.phone = profileData.phone;
+
+      // Therapist fields
+      if (typeof profileData.bio === 'string') {
+        sanitizedData.bio = profileData.bio;
+      }
+
+      if (Array.isArray(profileData.specialization)) {
+        sanitizedData.specialization = profileData.specialization;
+      }
+
+      if (profileData.experienceYears !== undefined) {
+        const exp = parseInt(profileData.experienceYears, 10);
+        if (!Number.isNaN(exp)) {
+          sanitizedData.experienceYears = exp;
         }
-      };
-      
+      }
+
+      // Certifications (optional)
+      if (Array.isArray(profileData.certifications)) {
+        sanitizedData.certifications = profileData.certifications.map(cert => ({
+          therapy: cert.therapy,
+          level: cert.level,
+          experienceYears: Number(cert.experienceYears) || 0,
+          certificateUrl: cert.certificateUrl
+        }));
+      }
+
+      // Optional status flags
+      if (typeof profileData.isActive === 'boolean') {
+        sanitizedData.isActive = profileData.isActive;
+      }
+      if (typeof profileData.verificationStatus === 'string') {
+        sanitizedData.verificationStatus = profileData.verificationStatus;
+      }
+
       console.log('📡 [API] PUT request to:', `/therapists/${therapistId}`);
       console.log('✅ [API] Sanitized payload:', JSON.stringify(sanitizedData, null, 2));
       
       const response = await apiService.put(`/therapists/${therapistId}`, sanitizedData);
-      
-      console.log('✅ [API] Profile update response:', response);
+      const payload = response.data || response;
+
+      console.log('✅ [API] Profile update response:', payload);
       
       return {
-        success: true,
-        data: response.data || response,
-        message: 'Profile updated successfully'
+        success: payload.success !== false,
+        data: payload.data || payload,
+        message: payload.message || 'Profile updated successfully'
       };
       
     } catch (error) {
@@ -1078,19 +1099,31 @@ class TherapistApiService {
   async updateAvailability(therapistId, availabilityData) {
     console.log('🔥 [API] updateAvailability called');
     console.log('🆔 [API] Therapist ID:', therapistId);
-    console.log('📦 [API] Availability Data:', JSON.stringify(availabilityData, null, 2));
+    console.log('📦 [API] Availability Data (raw):', JSON.stringify(availabilityData, null, 2));
     
     try {
+      // Optional: minimal normalization of numeric fields / legacy fields
+      const normalized = { ...availabilityData };
+
+      if (normalized.maxPatientsPerDay !== undefined) {
+        normalized.maxPatientsPerDay = parseInt(normalized.maxPatientsPerDay, 10) || 8;
+      }
+      if (normalized.sessionDuration !== undefined) {
+        normalized.sessionDuration = parseInt(normalized.sessionDuration, 10) || 60;
+      }
+
       console.log('📡 [API] PUT request to:', `/therapists/${therapistId}/availability`);
+      console.log('✅ [API] Normalized availability payload:', JSON.stringify(normalized, null, 2));
       
-      const response = await apiService.put(`/therapists/${therapistId}/availability`, availabilityData);
-      
-      console.log('✅ [API] Availability update response:', response);
+      const response = await apiService.put(`/therapists/${therapistId}/availability`, normalized);
+      const payload = response.data || response;
+
+      console.log('✅ [API] Availability update response:', payload);
       
       return {
-        success: true,
-        data: response.data || response,
-        message: 'Availability updated successfully'
+        success: payload.success !== false,
+        data: payload.data || payload,
+        message: payload.message || 'Availability updated successfully'
       };
     } catch (error) {
       console.error('❌ [API] Error updating availability:', error);
@@ -1098,11 +1131,10 @@ class TherapistApiService {
       
       return {
         success: false,
-        error: error.message
+        error: error.response?.data?.message || error.message
       };
     }
   }
-
   // ═══════════════════════════════════════════════════════════
   // 🔥 TREATMENT PLAN METHODS
   // ═══════════════════════════════════════════════════════════
@@ -1527,40 +1559,134 @@ async getPatientTreatmentPlans(patientId) {
   }
 }
 
-/**
+
+/**startRealtimeSession
  * Get treatment plan details
  */
+// services/therapistApiService.js
 async getTreatmentPlanDetails(treatmentPlanId, patientId = null) {
   console.log('🔥 [API] getTreatmentPlanDetails called');
   console.log('🆔 [API] Treatment Plan ID:', treatmentPlanId);
+  console.log('👤 [API] Patient ID (optional):', patientId);
   
   try {
+    // 🔥 Construct query params for ownership verification
     const params = patientId ? { patientId } : {};
     
     console.log('📡 [API] GET request to:', `/therapists/treatment-plans/${treatmentPlanId}`);
+    console.log('🔍 [API] Query params:', params);
     
     const response = await apiService.get(`/therapists/treatment-plans/${treatmentPlanId}`, {
       params
     });
     
-    console.log('✅ [API] Treatment plan details response:', response);
+    console.log('✅ [API] Raw response structure:', {
+      success: response.data?.success,
+      hasPhases: response.data?.data?.phases?.length > 0,
+      totalSessions: response.data?.data?.totalSessionsPlanned,
+      progress: response.data?.data?.progress,
+      nextSession: !!response.data?.data?.nextSession,
+      generatedSessionsCount: response.data?.data?.generatedSessions?.length || 0
+    });
+
+    // 🔥 ENHANCE RESPONSE with frontend-friendly structure
+    const rawData = response.data?.data || response.data;
     
+    const enhancedData = {
+      ...rawData,
+      
+      // 🔥 Frontend-friendly session stats
+      sessionStats: {
+        total: rawData.totalSessionsPlanned || 0,
+        completed: rawData.completedSessions || 0,
+        scheduled: rawData.generatedSessions?.filter(s => s.status === 'scheduled').length || 0,
+        today: rawData.generatedSessions?.filter(s => {
+          const sessionDate = new Date(s.scheduledDate);
+          const today = new Date();
+          return sessionDate.toDateString() === today.toDateString() && s.status === 'scheduled';
+        }).length || 0,
+        upcoming: rawData.nextSession ? 1 : 0
+      },
+      
+      // 🔥 Current phase info
+      currentPhase: rawData.phases?.[rawData.currentPhaseIndex || 0] || null,
+      
+      // 🔥 Formatted dates
+      formattedStartDate: rawData.schedulingPreferences?.startDate 
+        ? new Date(rawData.schedulingPreferences.startDate).toLocaleDateString('en-IN', {
+            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+          })
+        : 'Not scheduled',
+      
+      estimatedCompletion: rawData.estimatedCompletionDate 
+        ? new Date(rawData.estimatedCompletionDate).toLocaleDateString('en-IN', {
+            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+          })
+        : 'TBD',
+      
+      // 🔥 Progress breakdown by phase
+      phaseProgress: rawData.phases?.map((phase, index) => ({
+        phaseName: phase.phaseName.toUpperCase(),
+        totalDays: phase.totalDays,
+        completedDays: Math.floor((rawData.progress || 0) / 100 * rawData.totalDays),
+        progressPercentage: Math.min(100, ((index + 1) / rawData.phases.length) * (rawData.progress || 0)),
+        therapySessionsCount: phase.therapySessions?.length || 0
+      })) || [],
+      
+      // 🔥 Today's sessions (prioritized for therapist dashboard)
+      todaySessions: rawData.generatedSessions?.filter(s => {
+        const sessionDate = new Date(s.scheduledDate);
+        return sessionDate.toDateString() === new Date().toDateString() && 
+               ['scheduled', 'confirmed'].includes(s.status);
+      }).sort((a, b) => new Date(a.scheduledStartTime) - new Date(b.scheduledStartTime)) || [],
+      
+      // 🔥 Next 5 upcoming sessions
+      upcomingSessions: rawData.nextSession ? [rawData.nextSession] : [],
+      
+      // 🔥 Safety & instruction flags
+      hasPreInstructions: !!rawData.prePanchakarmaInstructions,
+      hasPostInstructions: !!rawData.postPanchakarmaInstructions,
+      hasSafetyNotes: !!rawData.safetyNotes,
+      
+      // 🔥 Scheduling status
+      isReadyForScheduling: rawData.isReadyForScheduling || false,
+      schedulingStatus: rawData.schedulingStatus || 'pending'
+    };
+
+    console.log('✨ [API] Enhanced data prepared:', {
+      phaseCount: enhancedData.phases?.length || 0,
+      todaySessions: enhancedData.todaySessions.length,
+      progress: rawData.progress || 0
+    });
+
     return {
       success: true,
-      data: response.data?.data || response.data,
-      message: 'Treatment plan retrieved successfully'
+      data: enhancedData,
+      message: 'Treatment plan retrieved successfully',
+      metadata: {
+        fetchedAt: new Date().toISOString(),
+        schemaVersion: '2.0',
+        totalPhases: enhancedData.phases?.length || 0,
+        totalSessions: enhancedData.sessionStats.total
+      }
     };
     
   } catch (error) {
-    console.error('❌ [API] Error fetching treatment plan details:', error);
+    console.error('❌ [API] Error fetching treatment plan details:', {
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+      url: error.config?.url
+    });
     
     return {
       success: false,
-      error: error.response?.data?.message || error.message || 'Failed to fetch treatment plan',
-      data: null
+      error: error.response?.data?.message || error.message || 'Failed to fetch treatment plan details',
+      data: null,
+      statusCode: error.response?.status || 500
     };
   }
 }
+
 
 /**
  * Update treatment plan progress
@@ -1601,54 +1727,108 @@ async updateTreatmentPlanProgress(treatmentPlanId, progressData) {
    * Get real-time tracking dashboard
    * Fetches all active, upcoming, completed, and paused sessions
    */
-  async getRealtimeTrackingDashboard() {
-    console.log('🔥 [REALTIME] getRealtimeTrackingDashboard called');
+ // services/therapistApiService.js
+async getRealtimeTrackingDashboard() {
+  console.log('🔥 [REALTIME] getRealtimeTrackingDashboard called');
+  
+  try {
+    console.log('📡 [REALTIME] GET request to: /realtime/tracking/dashboard');
     
-    try {
-      console.log('📡 [REALTIME] GET request to: /realtime/tracking/dashboard');
+    const response = await apiService.get('/realtime/tracking/dashboard');
+    
+    console.log('✅ [REALTIME] Raw dashboard response:', {
+      activeCount: response.data?.data?.activeSessions?.length || 0,
+      upcomingCount: response.data?.data?.upcomingSessions?.length || 0,
+      hasTimingData: !!(response.data?.data?.activeSessions?.[0]?.timing),
+      hasTherapyData: !!(response.data?.data?.activeSessions?.[0]?.therapyType),
+      wsConnections: response.data?.data?.stats?.connectedUsers || 0
+    });
+    
+    const rawData = response.data?.data || response.data || {};
+    
+    // 🔥 ENHANCE: Schema-aware data processing
+    const enhancedData = {
+      activeSessions: (rawData.activeSessions || []).map(enhanceSessionData),
+      upcomingSessions: (rawData.upcomingSessions || []).map(enhanceSessionData),
+      completedSessions: (rawData.completedSessions || []).map(enhanceSessionData),
+      pausedSessions: (rawData.pausedSessions || []).map(enhanceSessionData),
+      connectedUsers: rawData.connectedUsers || [],
       
-      const response = await apiService.get('/realtime/tracking/dashboard');
+      // 🔥 ENHANCED STATS with therapy-specific metrics
+      stats: {
+        ...rawData.stats,
+        therapySessions: {
+          activeTherapy: rawData.activeSessions?.filter(s => s.sessionType === 'therapy').length || 0,
+          upcomingTherapy: rawData.upcomingSessions?.filter(s => s.sessionType === 'therapy').length || 0,
+          completedTherapy: rawData.completedSessions?.filter(s => s.sessionType === 'therapy').length || 0
+        },
+        vitalsCount: rawData.activeSessions?.filter(s => s.therapyData?.vitals).length || 0,
+        adverseEffects: rawData.activeSessions?.reduce((sum, s) => sum + (s.therapyData?.adverseEffects?.length || 0), 0) || 0,
+        avgProgress: Math.round(
+          rawData.activeSessions?.reduce((sum, s) => sum + (s.timing?.progressPercentage || 0), 0) / 
+          Math.max(1, rawData.activeSessions?.length || 1)
+        ) || 0
+      },
       
-      console.log('✅ [REALTIME] Dashboard response:', response);
-      
-      const data = response.data?.data || response.data || {};
-      
-      return {
-        success: true,
-        data: {
-          activeSessions: data.activeSessions || [],
-          upcomingSessions: data.upcomingSessions || [],
-          completedSessions: data.completedSessions || [],
-          pausedSessions: data.pausedSessions || [],
-          connectedUsers: data.connectedUsers || [],
-          stats: data.stats || {
-            active: 0,
-            upcoming: 0,
-            completed: 0,
-            paused: 0,
-            total: 0,
-            connectedUsers: 0
-          }
-        }
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error fetching dashboard:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to fetch dashboard',
-        data: {
-          activeSessions: [],
-          upcomingSessions: [],
-          completedSessions: [],
-          pausedSessions: [],
-          connectedUsers: [],
-          stats: { active: 0, upcoming: 0, completed: 0, paused: 0, total: 0 }
-        }
-      };
-    }
+      // 🔥 FRONTEND-READY METADATA
+      metadata: {
+        fetchedAt: new Date().toISOString(),
+        dateRange: rawData.dateRange || {
+          from: new Date().setHours(0, 0, 0, 0),
+          to: new Date().setHours(23, 59, 59, 999)
+        },
+        serverTimestamp: response.data?.timestamp || new Date().toISOString(),
+        schemaVersion: '2.0'
+      }
+    };
+    
+    console.log('✨ [REALTIME] Enhanced dashboard ready:', {
+      totalSessions: enhancedData.activeSessions.length + enhancedData.upcomingSessions.length,
+      therapyActive: enhancedData.stats.therapySessions.activeTherapy,
+      avgProgress: enhancedData.stats.avgProgress
+    });
+    
+    return {
+      success: true,
+      data: enhancedData,
+      message: 'Realtime dashboard data loaded successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error fetching dashboard:', {
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+      url: error.config?.url
+    });
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to fetch realtime dashboard',
+      data: {
+        activeSessions: [],
+        upcomingSessions: [],
+        completedSessions: [],
+        pausedSessions: [],
+        connectedUsers: [],
+        stats: { 
+          active: 0, 
+          upcoming: 0, 
+          completed: 0, 
+          paused: 0, 
+          total: 0, 
+          connectedUsers: 0,
+          therapySessions: { activeTherapy: 0, upcomingTherapy: 0, completedTherapy: 0 },
+          vitalsCount: 0,
+          adverseEffects: 0,
+          avgProgress: 0
+        },
+        metadata: { fetchedAt: new Date().toISOString() }
+      }
+    };
   }
+}
+
+
 
   /**
    * Get upcoming sessions with countdown
@@ -1686,7 +1866,11 @@ async updateTreatmentPlanProgress(treatmentPlanId, progressData) {
    * Start a therapy session with real-time broadcast
    */
 // Add this method to therapistApiService.js
+// services/therapistApiService.js - REALTIME SESSION METHODS (UPDATED)
 
+/**
+ * Start real-time session with countdown
+ */
 async startRealtimeSession(sessionId) {
   console.log('🔥 [REALTIME] startRealtimeSession called');
   console.log('🆔 [REALTIME] Session ID:', sessionId);
@@ -1696,16 +1880,28 @@ async startRealtimeSession(sessionId) {
     
     const response = await apiService.post(`/realtime/sessions/${sessionId}/start`);
     
-    console.log('✅ [REALTIME] Session started:', response);
+    console.log('✅ [REALTIME] Session started:', {
+      status: response.data?.data?.consultation?.sessionStatus,
+      countdownStarted: response.data?.data?.countdownStarted,
+      estimatedEndTime: response.data?.data?.estimatedEndTime
+    });
     
     return {
       success: true,
-      data: response.data?.data || response.data,
-      message: 'Session started successfully'
+      data: {
+        consultation: response.data?.data?.consultation,
+        countdownStarted: response.data?.data?.countdownStarted || true,
+        estimatedEndTime: response.data?.data?.estimatedEndTime,
+        isTherapySession: response.data?.data?.isTherapySession || false
+      },
+      message: response.data?.message || 'Session started successfully'
     };
     
   } catch (error) {
-    console.error('❌ [REALTIME] Error starting session:', error);
+    console.error('❌ [REALTIME] Error starting session:', {
+      status: error.response?.status,
+      message: error.response?.data?.message
+    });
     
     return {
       success: false,
@@ -1714,402 +1910,568 @@ async startRealtimeSession(sessionId) {
   }
 }
 
-  /**
-   * Update session status in real-time
-   */
-  async updateSessionStatusRealtime(sessionId, status, reason = '') {
-    console.log('🔥 [REALTIME] updateSessionStatusRealtime called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
-    console.log('📊 [REALTIME] New Status:', status);
+/**
+ * Pause session with reason
+ */
+async pauseRealtimeSession(sessionId, reason = '') {
+  console.log('🔥 [REALTIME] pauseRealtimeSession called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('📝 [REALTIME] Reason:', reason);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/pause`);
     
-    try {
-      console.log('📡 [REALTIME] PUT request to:', `/realtime/sessions/${sessionId}/status`);
-      
-      const response = await apiService.put(`/realtime/sessions/${sessionId}/status`, {
-        status,
-        reason
-      });
-      
-      console.log('✅ [REALTIME] Status updated:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Status updated successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error updating status:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to update status'
-      };
-    }
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/pause`, {
+      reason: reason || 'Session paused by user'
+    });
+    
+    console.log('✅ [REALTIME] Session paused:', {
+      status: response.data?.data?.consultation?.sessionStatus,
+      totalPauses: response.data?.data?.consultation?.sessionMetadata?.totalPauses
+    });
+    
+    return {
+      success: true,
+      data: {
+        consultation: response.data?.data?.consultation,
+        totalPauses: response.data?.data?.consultation?.sessionMetadata?.totalPauses || 0
+      },
+      message: response.data?.message || 'Session paused successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error pausing session:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to pause session'
+    };
   }
+}
 
-  /**
-   * Pause session
-   */
-  async pauseRealtimeSession(sessionId, reason = '') {
-    console.log('🔥 [REALTIME] pauseRealtimeSession called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
+/**
+ * Resume paused session
+ */
+async resumeRealtimeSession(sessionId) {
+  console.log('🔥 [REALTIME] resumeRealtimeSession called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/resume`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/pause`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/pause`, {
-        reason
-      });
-      
-      console.log('✅ [REALTIME] Session paused:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Session paused successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error pausing session:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to pause session'
-      };
-    }
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/resume`);
+    
+    console.log('✅ [REALTIME] Session resumed:', {
+      status: response.data?.data?.consultation?.sessionStatus
+    });
+    
+    return {
+      success: true,
+      data: {
+        consultation: response.data?.data?.consultation
+      },
+      message: response.data?.message || 'Session resumed successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error resuming session:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to resume session'
+    };
   }
+}
 
-  /**
-   * Resume session
-   */
-  async resumeRealtimeSession(sessionId) {
-    console.log('🔥 [REALTIME] resumeRealtimeSession called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
+/**
+ * Complete session with summary, notes, rating, and feedback
+ */
+async completeRealtimeSession(sessionId, summary = '', notes = '', rating = null, feedback = '') {
+  console.log('🔥 [REALTIME] completeRealtimeSession called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('⭐ [REALTIME] Rating:', rating);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/complete`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/resume`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/resume`);
-      
-      console.log('✅ [REALTIME] Session resumed:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Session resumed successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error resuming session:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to resume session'
-      };
-    }
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/complete`, {
+      summary,
+      notes,
+      rating: rating ? Number(rating) : undefined,
+      feedback
+    });
+    
+    console.log('✅ [REALTIME] Session completed:', {
+      status: response.data?.data?.consultation?.sessionStatus,
+      actualDuration: response.data?.data?.consultation?.actualDuration,
+      rating: response.data?.data?.consultation?.rating
+    });
+    
+    return {
+      success: true,
+      data: {
+        consultation: response.data?.data?.consultation,
+        actualDuration: response.data?.data?.consultation?.actualDuration,
+        rating: response.data?.data?.consultation?.rating
+      },
+      message: response.data?.message || 'Session completed successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error completing session:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to complete session'
+    };
   }
+}
 
-  /**
-   * Complete session
-   */
-  async completeRealtimeSession(sessionId, summary = '', notes = '') {
-    console.log('🔥 [REALTIME] completeRealtimeSession called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
+/**
+ * Update session status (generic)
+ */
+async updateSessionStatusRealtime(sessionId, status, reason = '') {
+  console.log('🔥 [REALTIME] updateSessionStatusRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('📊 [REALTIME] New Status:', status);
+  
+  try {
+    console.log('📡 [REALTIME] PUT request to:', `/realtime/sessions/${sessionId}/status`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/complete`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/complete`, {
-        summary,
-        notes
-      });
-      
-      console.log('✅ [REALTIME] Session completed:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Session completed successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error completing session:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to complete session'
-      };
-    }
+    const response = await apiService.put(`/realtime/sessions/${sessionId}/status`, {
+      status,
+      reason
+    });
+    
+    console.log('✅ [REALTIME] Status updated:', {
+      newStatus: response.data?.data?.consultation?.sessionStatus
+    });
+    
+    return {
+      success: true,
+      data: {
+        consultation: response.data?.data?.consultation
+      },
+      message: response.data?.message || 'Status updated successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error updating status:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to update status'
+    };
   }
+}
 
-  /**
-   * Join session room (for real-time updates)
-   */
-  async joinRealtimeSession(sessionId) {
-    console.log('🔥 [REALTIME] joinRealtimeSession called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
+/**
+ * Join session room for real-time updates
+ */
+async joinRealtimeSession(sessionId) {
+  console.log('🔥 [REALTIME] joinRealtimeSession called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/join`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/join`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/join`);
-      
-      console.log('✅ [REALTIME] Joined session:', response);
-      
-      // Join WebSocket room
-      if (webSocketService.isSocketConnected()) {
-        webSocketService.socket.emit('join:session', { sessionId });
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/join`);
+    
+    console.log('✅ [REALTIME] Joined session:', {
+      participantCount: response.data?.data?.participantCount
+    });
+    
+    // Join WebSocket room
+    if (webSocketService.isSocketConnected()) {
+      webSocketService.socket.emit('join:session', { sessionId });
+      console.log('📡 [WEBSOCKET] Joined room:', sessionId);
+    }
+    
+    return {
+      success: true,
+      data: {
+        sessionId: response.data?.data?.sessionId,
+        role: response.data?.data?.role,
+        participantCount: response.data?.data?.participantCount
+      },
+      message: 'Joined session successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error joining session:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to join session'
+    };
+  }
+}
+
+/**
+ * Leave session room
+ */
+async leaveRealtimeSession(sessionId) {
+  console.log('🔥 [REALTIME] leaveRealtimeSession called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/leave`);
+    
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/leave`);
+    
+    console.log('✅ [REALTIME] Left session');
+    
+    // Leave WebSocket room
+    if (webSocketService.isSocketConnected()) {
+      webSocketService.socket.emit('leave:session', { sessionId });
+      console.log('📡 [WEBSOCKET] Left room:', sessionId);
+    }
+    
+    return {
+      success: true,
+      message: 'Left session successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error leaving session:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to leave session'
+    };
+  }
+}
+
+/**
+ * Get real-time session details with timing and therapy info
+ */
+async getRealtimeSessionDetails(sessionId) {
+  console.log('🔥 [REALTIME] getRealtimeSessionDetails called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  
+  try {
+    console.log('📡 [REALTIME] GET request to:', `/realtime/sessions/${sessionId}/details`);
+    
+    const response = await apiService.get(`/realtime/sessions/${sessionId}/details`);
+    
+    const data = response.data?.data || {};
+    
+    console.log('✅ [REALTIME] Session details loaded:', {
+      status: data.consultation?.sessionStatus,
+      isTherapy: data.consultation?.sessionType === 'therapy',
+      hasVitals: data.therapyInfo?.hasVitals,
+      emergencyReported: data.therapyInfo?.emergencyReported
+    });
+    
+    return {
+      success: true,
+      data: {
+        consultation: data.consultation,
+        timing: data.timing || {
+          elapsedTime: null,
+          remainingTime: null,
+          estimatedDuration: 60,
+          progressPercentage: 0
+        },
+        therapyInfo: data.therapyInfo || null,
+        isActive: data.isActive || false,
+        participantCount: data.participantCount || 0
       }
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error joining session:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message
-      };
-    }
-  }
-
-  /**
-   * Leave session room
-   */
-  async leaveRealtimeSession(sessionId) {
-    console.log('🔥 [REALTIME] leaveRealtimeSession called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
+    };
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/leave`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/leave`);
-      
-      console.log('✅ [REALTIME] Left session:', response);
-      
-      // Leave WebSocket room
-      if (webSocketService.isSocketConnected()) {
-        webSocketService.socket.emit('leave:session', { sessionId });
-      }
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error leaving session:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message
-      };
-    }
-  }
-
-  /**
-   * Get session details with real-time timing
-   */
-  async getRealtimeSessionDetails(sessionId) {
-    console.log('🔥 [REALTIME] getRealtimeSessionDetails called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
+  } catch (error) {
+    console.error('❌ [REALTIME] Error fetching session details:', error);
     
-    try {
-      console.log('📡 [REALTIME] GET request to:', `/realtime/sessions/${sessionId}/details`);
-      
-      const response = await apiService.get(`/realtime/sessions/${sessionId}/details`);
-      
-      console.log('✅ [REALTIME] Session details:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error fetching session details:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message
-      };
-    }
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to fetch session details'
+    };
   }
+}
 
-  /**
-   * Update vitals in real-time
-   */
-  async updateVitalsRealtime(sessionId, vitals) {
-    console.log('🔥 [REALTIME] updateVitalsRealtime called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
-    console.log('💓 [REALTIME] Vitals:', vitals);
-    
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/vitals`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/vitals`, {
-        vitals
-      });
-      
-      console.log('✅ [REALTIME] Vitals updated:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Vitals updated successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error updating vitals:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to update vitals'
-      };
-    }
-  }
+// ═══════════════════════════════════════════════════════════
+// 🔥 THERAPY-SPECIFIC METHODS
+// ═══════════════════════════════════════════════════════════
 
-  /**
-   * Update therapy progress in real-time
-   */
-  async updateProgressRealtime(sessionId, stage, notes = '', percentage = 0) {
-    console.log('🔥 [REALTIME] updateProgressRealtime called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
-    console.log('📊 [REALTIME] Stage:', stage, 'Percentage:', percentage);
+/**
+ * Update therapy vitals in real-time
+ * @param {string} sessionId - Session ID
+ * @param {Object} vitals - Vitals object with bloodPressure, pulse, temperature, etc.
+ */
+async updateVitalsRealtime(sessionId, vitals) {
+  console.log('🔥 [REALTIME] updateVitalsRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('💓 [REALTIME] Vitals:', vitals);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/vitals`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/progress`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/progress`, {
-        stage,
-        notes,
-        percentage
-      });
-      
-      console.log('✅ [REALTIME] Progress updated:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Progress updated successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error updating progress:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to update progress'
-      };
-    }
+    // ✅ SCHEMA-ALIGNED: Send vitals as separate fields
+    const payload = {
+      bloodPressure: vitals.bloodPressure ? {
+        systolic: Number(vitals.bloodPressure.systolic),
+        diastolic: Number(vitals.bloodPressure.diastolic)
+      } : undefined,
+      pulse: vitals.pulse ? Number(vitals.pulse) : undefined,
+      temperature: vitals.temperature ? Number(vitals.temperature) : undefined,
+      weight: vitals.weight ? Number(vitals.weight) : undefined,
+      respiratoryRate: vitals.respiratoryRate ? Number(vitals.respiratoryRate) : undefined,
+      oxygenSaturation: vitals.oxygenSaturation ? Number(vitals.oxygenSaturation) : undefined
+    };
+    
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/vitals`, payload);
+    
+    console.log('✅ [REALTIME] Vitals updated:', response.data?.data?.vitals);
+    
+    return {
+      success: true,
+      data: {
+        vitals: response.data?.data?.vitals
+      },
+      message: response.data?.message || 'Vitals updated successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error updating vitals:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to update vitals'
+    };
   }
+}
 
-  /**
-   * Report adverse effect
-   */
-  async reportAdverseEffectRealtime(sessionId, effect, severity, description = '', actionTaken = '') {
-    console.log('🔥 [REALTIME] reportAdverseEffectRealtime called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
-    console.log('⚠️ [REALTIME] Effect:', effect, 'Severity:', severity);
+/**
+ * Update therapy observations in real-time
+ */
+async updateObservationsRealtime(sessionId, observations) {
+  console.log('🔥 [REALTIME] updateObservationsRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('👁️ [REALTIME] Observations:', observations);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/observations`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/adverse-effect`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/adverse-effect`, {
-        effect,
-        severity,
-        description,
-        actionTaken
-      });
-      
-      console.log('✅ [REALTIME] Adverse effect reported:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Adverse effect reported successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error reporting adverse effect:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to report adverse effect'
-      };
-    }
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/observations`, {
+      sweatingQuality: observations.sweatingQuality,
+      skinTexture: observations.skinTexture,
+      skinColor: observations.skinColor,
+      patientComfort: observations.patientComfort,
+      responseToTreatment: observations.responseToTreatment
+    });
+    
+    console.log('✅ [REALTIME] Observations updated');
+    
+    return {
+      success: true,
+      data: {
+        observations: response.data?.data?.observations
+      },
+      message: response.data?.message || 'Observations updated successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error updating observations:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to update observations'
+    };
   }
+}
 
-  /**
-   * Send emergency alert
-   */
-  async sendEmergencyAlertRealtime(sessionId, message, severity = 'high') {
-    console.log('🔥 [REALTIME] sendEmergencyAlertRealtime called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
-    console.log('🚨 [REALTIME] Message:', message, 'Severity:', severity);
+/**
+ * Update therapy progress stage
+ */
+async updateProgressRealtime(sessionId, stage, notes = '', percentage = 0) {
+  console.log('🔥 [REALTIME] updateProgressRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('📊 [REALTIME] Stage:', stage, 'Percentage:', percentage);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/progress`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/emergency`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/emergency`, {
-        message,
-        severity
-      });
-      
-      console.log('✅ [REALTIME] Emergency alert sent:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Emergency alert sent successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error sending emergency alert:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to send emergency alert'
-      };
-    }
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/progress`, {
+      stage,
+      notes,
+      percentage: Number(percentage)
+    });
+    
+    console.log('✅ [REALTIME] Progress updated:', {
+      currentStage: response.data?.data?.currentStage,
+      percentage: response.data?.data?.percentage
+    });
+    
+    return {
+      success: true,
+      data: {
+        currentStage: response.data?.data?.currentStage,
+        percentage: response.data?.data?.percentage,
+        progressUpdates: response.data?.data?.progressUpdates
+      },
+      message: response.data?.message || 'Progress updated successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error updating progress:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to update progress'
+    };
   }
+}
 
-  /**
-   * Add session note in real-time
-   */
-  async addSessionNoteRealtime(sessionId, note, type = 'general') {
-    console.log('🔥 [REALTIME] addSessionNoteRealtime called');
-    console.log('🆔 [REALTIME] Session ID:', sessionId);
+/**
+ * Report adverse effect (with auto-escalation for severe/critical)
+ */
+async reportAdverseEffectRealtime(sessionId, effect, severity, description = '', actionTaken = '') {
+  console.log('🔥 [REALTIME] reportAdverseEffectRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('⚠️ [REALTIME] Effect:', effect, 'Severity:', severity);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/adverse-effect`);
     
-    try {
-      console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/notes`);
-      
-      const response = await apiService.post(`/realtime/sessions/${sessionId}/notes`, {
-        note,
-        type
-      });
-      
-      console.log('✅ [REALTIME] Note added:', response);
-      
-      return {
-        success: true,
-        data: response.data?.data || response.data,
-        message: 'Note added successfully'
-      };
-      
-    } catch (error) {
-      console.error('❌ [REALTIME] Error adding note:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'Failed to add note'
-      };
-    }
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/adverse-effect`, {
+      effect,
+      severity,
+      description,
+      actionTaken
+    });
+    
+    console.log('✅ [REALTIME] Adverse effect reported:', {
+      emergencyReported: response.data?.data?.emergencyReported,
+      adverseEffectsCount: response.data?.data?.adverseEffects?.length
+    });
+    
+    return {
+      success: true,
+      data: {
+        effect: response.data?.data?.effect,
+        severity: response.data?.data?.severity,
+        emergencyReported: response.data?.data?.emergencyReported,
+        adverseEffects: response.data?.data?.adverseEffects
+      },
+      message: response.data?.message || 'Adverse effect reported successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error reporting adverse effect:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to report adverse effect'
+    };
   }
+}
+
+/**
+ * Add therapy materials used
+ */
+async addTherapyMaterialsRealtime(sessionId, materials) {
+  console.log('🔥 [REALTIME] addTherapyMaterialsRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('📦 [REALTIME] Materials:', materials);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/materials`);
+    
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/materials`, {
+      materials: Array.isArray(materials) ? materials : [materials]
+    });
+    
+    console.log('✅ [REALTIME] Materials added');
+    
+    return {
+      success: true,
+      data: {
+        materialsUsed: response.data?.data?.materialsUsed
+      },
+      message: response.data?.message || 'Materials recorded successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error adding materials:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to add materials'
+    };
+  }
+}
+
+/**
+ * Send emergency alert
+ */
+async sendEmergencyAlertRealtime(sessionId, message, severity = 'high') {
+  console.log('🔥 [REALTIME] sendEmergencyAlertRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('🚨 [REALTIME] Message:', message, 'Severity:', severity);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/emergency`);
+    
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/emergency`, {
+      message,
+      severity
+    });
+    
+    console.log('✅ [REALTIME] Emergency alert sent');
+    
+    return {
+      success: true,
+      data: {
+        sessionId: response.data?.data?.sessionId,
+        severity: response.data?.data?.severity,
+        emergencyReported: response.data?.data?.emergencyReported
+      },
+      message: response.data?.message || 'Emergency alert sent successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error sending emergency alert:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to send emergency alert'
+    };
+  }
+}
+
+/**
+ * Add session note in real-time
+ */
+async addSessionNoteRealtime(sessionId, note, type = 'general') {
+  console.log('🔥 [REALTIME] addSessionNoteRealtime called');
+  console.log('🆔 [REALTIME] Session ID:', sessionId);
+  console.log('📝 [REALTIME] Note type:', type);
+  
+  try {
+    console.log('📡 [REALTIME] POST request to:', `/realtime/sessions/${sessionId}/notes`);
+    
+    const response = await apiService.post(`/realtime/sessions/${sessionId}/notes`, {
+      note,
+      type
+    });
+    
+    console.log('✅ [REALTIME] Note added');
+    
+    return {
+      success: true,
+      data: response.data?.data,
+      message: response.data?.message || 'Note added successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ [REALTIME] Error adding note:', error);
+    
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to add note'
+    };
+  }
+}
 
   /**
    * Get patient milestones
@@ -2204,6 +2566,87 @@ async startRealtimeSession(sessionId) {
       };
     }
   }
+}
+// 🔥 HELPER: Schema-aware session enhancement
+function enhanceSessionData(session) {
+  if (!session) return session;
+  
+  const now = Date.now();
+  const isTherapy = session.sessionType === 'therapy';
+  
+  return {
+    ...session,
+    
+    // 🔥 FORMATTED TIMING (real-time)
+    formattedScheduledTime: session.scheduledTime || 
+      (session.scheduledAt ? new Date(session.scheduledAt).toLocaleTimeString('en-IN', { 
+        hour: '2-digit', minute: '2-digit' 
+      }) : 'N/A'),
+    
+    formattedScheduledDate: session.scheduledDate || 
+      (session.scheduledAt ? formatDateIndian(session.scheduledAt) : 'Today'),
+    
+    // 🔥 ENHANCED TIMING for active sessions
+    timing: session.timing ? {
+      ...session.timing,
+      elapsedTimeFormatted: formatDurationMs(session.timing.elapsedTimeMs || 0),
+      remainingTimeFormatted: formatDurationMs(session.timing.remainingTimeMs || 0),
+      isOverdue: session.timing.remainingTimeMs < 0
+    } : null,
+    
+    // 🔥 THERAPY-SPECIFIC ENHANCEMENTS
+    therapyData: isTherapy ? {
+      ...(session.therapyData || {}),
+      hasVitals: !!session.therapyData?.vitals,
+      hasAdverseEffects: (session.therapyData?.adverseEffects || []).length > 0,
+      hasProgressUpdates: (session.therapyData?.progressUpdates || []).length > 0,
+      currentStage: session.therapyData?.progressUpdates?.slice(-1)[0]?.stage || 'preparation',
+      latestVitals: session.therapyData?.vitals || null,
+      criticalAlerts: (session.therapyData?.adverseEffects || [])
+        .filter(effect => ['severe', 'critical'].includes(effect.severity))
+        .length
+    } : null,
+    
+    // 🔥 PROVIDER INFO
+    providerName: session.providerName || session.providerId?.name || 'Unassigned',
+    
+    // 🔥 PATIENT AVATAR READY
+    patientInitials: getPatientInitials(session.patientName),
+    
+    // 🔥 STATUS INDICATORS
+    isActive: ['in_progress', 'patient_arrived', 'therapist_ready'].includes(session.sessionStatus),
+    isCritical: isTherapy && session.therapyData?.emergencyReported,
+    hasSafetyIssues: isTherapy && (session.therapyData?.adverseEffects?.length || 0) > 0
+  };
+}
+
+// 🔥 UTILITY FUNCTIONS
+function formatDateIndian(dateString) {
+  try {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return 'N/A';
+  }
+}
+
+function formatDurationMs(ms) {
+  const totalSeconds = Math.floor(Math.abs(ms) / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (minutes === 0) return `${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+}
+
+function getPatientInitials(name) {
+  if (!name) return 'UP';
+  const names = name.trim().split(' ');
+  return names.length >= 2 ? `${names[0][0]}${names[1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
 }
 
 console.log('✅ [MODULE] TherapistApiService class defined');

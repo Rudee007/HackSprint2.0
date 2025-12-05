@@ -64,9 +64,7 @@ async function getTherapist(req, res) {
   }
 }
 
-// @desc    Get logged-in therapist's profile
-// @route   GET /api/therapists/profile
-// @access  Private (therapist only)
+
 async function getMyProfile(req, res) {
   console.log('🔥 [CONTROLLER] getMyProfile - START');
   console.log('👤 User ID from token:', req.user?.id);
@@ -99,10 +97,6 @@ async function getMyProfile(req, res) {
   }
 }
 
-// @desc    Update therapist profile
-// @route   PUT /api/therapists/:id
-// @access  Private (therapist only)
-// Controller: therapist.controller.js or similar
 
 async function updateProfile(req, res) {
   console.log('🔥 [CONTROLLER] updateProfile - START');
@@ -117,40 +111,53 @@ async function updateProfile(req, res) {
       bio,
       specialization,
       experienceYears,
-      availability
+      certifications,
+      isActive,
+      verificationStatus
     } = req.body;
 
     // ═══════════════════════════════════════════════════════
-    // ✅ BUILD THERAPIST UPDATE OBJECT
+    // ✅ BUILD THERAPIST UPDATE OBJECT (schema-aligned)
     // ═══════════════════════════════════════════════════════
-    const therapistUpdateData = {
-      bio: bio || '',
-      specialization: Array.isArray(specialization) ? specialization : [],
-      experienceYears: parseInt(experienceYears) || 0
-    };
+    const therapistUpdateData = {};
 
-    // ✅ HANDLE AVAILABILITY (with enum capitalization)
-    if (availability) {
-      therapistUpdateData.availability = {
-        workingDays: Array.isArray(availability.workingDays) 
-          ? availability.workingDays.map(day => 
-              // Capitalize first letter to match enum: Monday, Tuesday, etc.
-              day.charAt(0).toUpperCase() + day.slice(1).toLowerCase()
-            )
-          : [],
-        workingHours: {
-          start: availability.workingHours?.start || '09:00',
-          end: availability.workingHours?.end || '17:00'
-        },
-        sessionDuration: parseInt(availability.sessionDuration) || 60,
-        maxPatientsPerDay: parseInt(availability.maxPatientsPerDay) || 8
-      };
+    if (typeof bio === 'string') {
+      therapistUpdateData.bio = bio;
+    }
+
+    if (Array.isArray(specialization)) {
+      therapistUpdateData.specialization = specialization;
+    }
+
+    if (experienceYears !== undefined) {
+      const exp = parseInt(experienceYears, 10);
+      if (!Number.isNaN(exp)) {
+        therapistUpdateData.experienceYears = exp;
+      }
+    }
+
+    // Certifications: expect array with (therapy, level, experienceYears, certificateUrl)
+    if (Array.isArray(certifications)) {
+      therapistUpdateData.certifications = certifications.map(cert => ({
+        therapy: cert.therapy,
+        level: cert.level,
+        experienceYears: Number(cert.experienceYears) || 0,
+        certificateUrl: cert.certificateUrl
+      }));
+    }
+
+    if (typeof isActive === 'boolean') {
+      therapistUpdateData.isActive = isActive;
+    }
+
+    if (typeof verificationStatus === 'string') {
+      therapistUpdateData.verificationStatus = verificationStatus;
     }
 
     console.log('📝 [CONTROLLER] Sanitized therapist data:', JSON.stringify(therapistUpdateData, null, 2));
 
     // ═══════════════════════════════════════════════════════
-    // ✅ UPDATE THERAPIST PROFILE
+    // ✅ UPDATE THERAPIST PROFILE (no availability here)
     // ═══════════════════════════════════════════════════════
     const therapist = await therapistService.updateTherapist(req.params.id, therapistUpdateData);
     
@@ -172,7 +179,10 @@ async function updateProfile(req, res) {
 
       if (Object.keys(userUpdateData).length > 0) {
         console.log('👤 [CONTROLLER] Updating user details:', userUpdateData);
-        await therapistService.updateUserDetails(therapist.userId._id || therapist.userId, userUpdateData);
+        await therapistService.updateUserDetails(
+          therapist.userId._id || therapist.userId,
+          userUpdateData
+        );
       }
     }
 
@@ -183,7 +193,7 @@ async function updateProfile(req, res) {
     // ═══════════════════════════════════════════════════════
     const updatedTherapist = await therapistService.getTherapistProfile(req.params.id);
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       message: 'Profile updated successfully',
       data: updatedTherapist 
@@ -210,15 +220,41 @@ async function updateProfile(req, res) {
       });
     }
     
-    res.status(500).json({ 
+    return res.status(500).json({ 
       success: false, 
       message: error.message || 'Failed to update profile'
     });
   }
 }
-// @desc    Search therapists with filters
-// @route   GET /api/therapists/search
-// @access  Public
+
+async function updateAvailability(req, res) {
+  console.log('🔥 [CONTROLLER] updateAvailability - START');
+  console.log('🆔 Therapist ID:', req.params.id);
+  console.log('📦 Availability Data:', JSON.stringify(req.body, null, 2));
+  
+  try {
+    const { id } = req.params;
+    const availabilityData = req.body; // should be full availability object
+
+    const therapist = await therapistService.updateAvailability(id, availabilityData);
+    
+    console.log('✅ [CONTROLLER] Availability updated successfully');
+    
+    return res.json({ 
+      success: true, 
+      message: 'Availability updated successfully',
+      data: therapist 
+    });
+  } catch (error) {
+    console.error('❌ [CONTROLLER] Update availability error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Failed to update availability' 
+    });
+  }
+}
+
+
 async function searchTherapists(req, res) {
   console.log('🔥 [CONTROLLER] searchTherapists - START');
   console.log('🔍 Query Params:', req.query);
@@ -279,32 +315,6 @@ async function searchTherapists(req, res) {
 // @desc    Update therapist availability
 // @route   PUT /api/therapists/:id/availability
 // @access  Private (therapist only)
-async function updateAvailability(req, res) {
-  console.log('🔥 [CONTROLLER] updateAvailability - START');
-  console.log('🆔 Therapist ID:', req.params.id);
-  console.log('📦 Availability Data:', JSON.stringify(req.body, null, 2));
-  
-  try {
-    const { id } = req.params;
-    const availabilityData = req.body;
-    
-    const therapist = await therapistService.updateAvailability(id, availabilityData);
-    
-    console.log('✅ [CONTROLLER] Availability updated successfully');
-    
-    res.json({ 
-      success: true, 
-      message: 'Availability updated successfully',
-      data: therapist 
-    });
-  } catch (error) {
-    console.error('❌ [CONTROLLER] Update availability error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
-  }
-}
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -1131,23 +1141,35 @@ async function getPatientTreatmentPlans(req, res) {
   }
 }
 
+
 /**
  * Get treatment plan details
  * GET /api/therapists/treatment-plans/:treatmentPlanId
  */
+// controllers/therapistController.js
 async function getTreatmentPlanDetails(req, res) {
-  console.log('🔥 [CONTROLLER] getTreatmentPlanDetails called');
+  console.log('🔥 [CONTROLLER] getTreatmentPlanDetails:', {
+    treatmentPlanId: req.params.treatmentPlanId,
+    therapistId: req.user._id
+  });
   
   try {
     const { treatmentPlanId } = req.params;
-    const { patientId } = req.query; // Optional: verify patient ownership
-    
-    console.log('Treatment Plan ID:', treatmentPlanId);
-    console.log('Therapist ID:', req.user._id);
-    
+    const therapist = await therapistService.getTherapistByUserId(req.user.id);
+
+    // 🔥 VALIDATE therapist ownership & populate FULL schema
     const treatmentPlan = await therapistService.getTreatmentPlanDetailsForTherapist(
-      treatmentPlanId);
-    
+      treatmentPlanId, 
+      therapist._id  // Pass therapistId for ownership check
+    );
+
+    console.log('✅ [CONTROLLER] Treatment plan loaded:', {
+      patient: treatmentPlan.patientId?.name,
+      status: treatmentPlan.status,
+      phases: treatmentPlan.phases?.length || 0,
+      totalSessions: treatmentPlan.totalSessionsPlanned
+    });
+
     return res.json({
       success: true,
       message: 'Treatment plan retrieved successfully',
@@ -1157,9 +1179,13 @@ async function getTreatmentPlanDetails(req, res) {
   } catch (error) {
     console.error('❌ [CONTROLLER] Get treatment plan details error:', error);
     
-    return res.status(error.message.includes('not found') ? 404 : 500).json({
+    const statusCode = error.message.includes('not found') || error.message.includes('not assigned') 
+      ? 404 
+      : 500;
+      
+    return res.status(statusCode).json({
       success: false,
-      message: error.message || 'Failed to fetch treatment plan',
+      message: error.message || 'Failed to fetch treatment plan details',
       data: null
     });
   }

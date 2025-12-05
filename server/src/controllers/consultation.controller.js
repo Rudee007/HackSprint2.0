@@ -2,7 +2,7 @@
 const consultationService = require('../services/consultation.service');
 const notificationService = require('../services/notification.service');
 const websocketService = require('../services/websocket.service');
-
+const therapistService = require('../services/therapist.service')
 // ✅ EXTERNAL ERROR HANDLER (Prevents binding issues)
 const handleError = (res, error) => {
   console.error('Consultation Controller Error:', error);
@@ -862,6 +862,8 @@ class ConsultationController {
       const { providerId } = req.params;
       const { providerType, status, page = 1, limit = 20 } = req.query;
       
+      const therapistProfile = await therapistService.getTherapistByUserId(providerId);
+
       if (!providerId) {
         return res.status(400).json({
           success: false,
@@ -885,8 +887,8 @@ class ConsultationController {
       };
 
       const [consultations, total] = await Promise.all([
-        consultationService.getConsultationsByProvider(providerId, options),
-        consultationService.countConsultationsByProvider(providerId, { 
+        consultationService.getConsultationsByProvider(therapistProfile._id, options),
+        consultationService.countConsultationsByProvider(therapistProfile._id, { 
           ...(providerType && { providerType }), 
           ...(status && { status }) 
         })
@@ -912,7 +914,8 @@ class ConsultationController {
   getUpcomingConsultations = async (req, res) => {
     try {
       const { providerId } = req.params;
-      
+      const therapistProfile = await therapistService.getTherapistByUserId(providerId);
+
       if ((req.user.role === 'doctor' || req.user.role === 'therapist') && req.user.id !== providerId) {
         return res.status(403).json({
           success: false,
@@ -920,7 +923,7 @@ class ConsultationController {
         });
       }
 
-      const consultations = await consultationService.getUpcomingConsultations(providerId);
+      const consultations = await consultationService.getUpcomingConsultations(therapistProfile._id);
       
       return res.json({
         success: true,

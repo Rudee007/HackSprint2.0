@@ -11,6 +11,7 @@ const http = require('http');
 const WebSocketService = require('./src/services/websocket.service');
 require('dotenv').config();
 const app = express();
+const NotificationScheduler = require('./src/jobs/notificationScheduler');
 
 const therapistRoutes = require('./src/routes/therapist.routes');
 const prescriptionRoutes = require('./src/routes/prescription.routes');
@@ -18,7 +19,7 @@ const prescriptionRoutes = require('./src/routes/prescription.routes');
 
 // ✅ Connect Database
 connectDB();
-
+NotificationScheduler.init();
 // ✅ Middleware
 app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));

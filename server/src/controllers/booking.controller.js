@@ -254,10 +254,8 @@ createBooking = asyncHandler(async (req, res) => {
   
       } catch (alternativeError) {
         console.error('❌ Error finding alternatives:', alternativeError.message);
-        // Continue with empty alternatives array - still return conflict info
       }
   
-      // ===== ENHANCED CONFLICT RESPONSE =====
       const conflictErrorData = {
         conflictInfo: {
           existingAppointment: {
@@ -292,7 +290,6 @@ createBooking = asyncHandler(async (req, res) => {
       );
     }
   
-    // ===== BOOKING CREATION PHASE =====
     console.log(`✅ No conflicts detected. Creating booking...`);
   
     const consultationData = {
@@ -307,7 +304,6 @@ createBooking = asyncHandler(async (req, res) => {
       notes
     };
   
-    // Add optional fields
     if (sessionType) {
       consultationData.sessionType = sessionType;
     }
@@ -319,7 +315,6 @@ createBooking = asyncHandler(async (req, res) => {
     try {
       const consultation = await Consultation.create(consultationData);
   
-      // ===== POPULATE RELATED DATA =====
       await consultation.populate([
         { path: 'providerId', select: 'name email role' },
         { path: 'patientId', select: 'name email phone' }
@@ -327,7 +322,6 @@ createBooking = asyncHandler(async (req, res) => {
   
       console.log(`🎉 Booking created successfully: ${consultation._id}`);
   
-      // ===== SUCCESS RESPONSE =====
       return res.status(201).json({
         success: true,
         message: 'Booking created successfully',

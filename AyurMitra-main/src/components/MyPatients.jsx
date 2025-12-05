@@ -1,75 +1,52 @@
-// src/pages/MyPatients.jsx - 🔥 WITH NESTED MODALS (NO NAVIGATION) 🔥
+// src/pages/MyPatients.jsx - SCHEMA-ALIGNED VERSION
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User, Phone, Calendar, Activity, Search, Filter, 
-  ChevronRight, MapPin, Mail, Clock, TrendingUp,
-  Heart, Star, AlertCircle, Loader2, RefreshCw,
-  CheckCircle, XCircle, Users, FileText, MessageCircle,
-  X, Stethoscope, ClipboardList, Pill, Shield, AlertTriangle, Info
+  User, Phone, Calendar, Activity, Search, Users, FileText, 
+  Mail, Clock, Heart, Loader2, RefreshCw, AlertCircle, X,
+  CheckCircle, AlertTriangle, TrendingUp, Info, Stethoscope,
+  ClipboardList, Shield
 } from 'lucide-react';
 import therapistApiService from '../services/therapistApiService';
 import { toast, Toaster } from 'react-hot-toast';
 import './MyPatients.css';
+import TreatmentPlanDetailsModal from './TreatmentPlanDetailsModal';
 
 // ═══════════════════════════════════════════════════════════
-// 🎨 HELPER FUNCTIONS
+// UTILITY FUNCTIONS
 // ═══════════════════════════════════════════════════════════
 
 const getPatientInitials = (name) => {
-  if (!name || name === 'Unknown' || name === 'Unknown Patient') {
-    return 'P';
-  }
-  
+  if (!name || name === 'Unknown Patient') return 'UP';
   const names = name.trim().split(' ');
-  
-  if (names.length >= 2) {
-    return (names[0][0] + names[1][0]).toUpperCase();
-  }
-  
-  return name.substring(0, 2).toUpperCase();
+  return names.length >= 2 ? `${names[0][0]}${names[1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
 };
 
 const getPatientInitialsColor = (name) => {
-  const colors = [
-    'from-rose-500 to-pink-600',
-    'from-emerald-500 to-teal-600',
-    'from-blue-500 to-cyan-600',
-    'from-purple-500 to-violet-600',
-    'from-amber-500 to-orange-600',
-    'from-indigo-500 to-purple-600',
-    'from-red-500 to-rose-600',
-    'from-teal-500 to-emerald-600'
-  ];
-  
-  const index = (name || '').length % colors.length;
-  return colors[index];
+  const colors = ['from-blue-500 to-cyan-600', 'from-emerald-500 to-teal-600', 'from-purple-500 to-violet-600', 'from-rose-500 to-pink-600'];
+  return colors[(name || '').length % colors.length];
 };
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
-  
   try {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    return new Date(dateString).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
   } catch {
     return 'N/A';
   }
 };
 
-const formatDateTime = (dateString) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+const formatPhoneNumber = (phone) => {
+  if (!phone || phone === 'N/A') return 'N/A';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) {
+    return `+91 ${cleaned.substring(0, 5)} ${cleaned.substring(5)}`;
+  }
+  if (cleaned.length === 12 && cleaned.startsWith('91')) {
+    return `+91 ${cleaned.substring(2, 7)} ${cleaned.substring(7)}`;
+  }
+  return phone;
 };
 
 const calculateAge = (dateOfBirth) => {
@@ -84,88 +61,82 @@ const calculateAge = (dateOfBirth) => {
   return age;
 };
 
-const formatPhoneNumber = (phone) => {
-  if (!phone || phone === 'N/A') return 'N/A';
-  
-  const cleaned = phone.replace(/\D/g, '');
-  
-  if (cleaned.length === 10) {
-    return `+91 ${cleaned.substring(0, 5)} ${cleaned.substring(5)}`;
-  }
-  
-  if (cleaned.length === 12 && cleaned.startsWith('91')) {
-    return `+91 ${cleaned.substring(2, 7)} ${cleaned.substring(7)}`;
-  }
-  
-  return phone;
+// 🔥 NEW: Get phase color based on name
+const getPhaseColor = (phaseName) => {
+  const colors = {
+    'purvakarma': 'from-yellow-400 to-orange-500',
+    'pradhanakarma': 'from-red-400 to-pink-500',
+    'paschatkarma': 'from-green-400 to-emerald-500'
+  };
+  return colors[phaseName?.toLowerCase()] || 'from-gray-400 to-gray-500';
+};
+
+// 🔥 NEW: Get status badge color
+const getStatusBadgeColor = (status) => {
+  const colors = {
+    'active': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    'completed': 'bg-blue-100 text-blue-700 border-blue-200',
+    'paused': 'bg-amber-100 text-amber-700 border-amber-200',
+    'cancelled': 'bg-red-100 text-red-700 border-red-200'
+  };
+  return colors[status] || 'bg-slate-100 text-slate-700 border-slate-200';
 };
 
 // ═══════════════════════════════════════════════════════════
-// 🔥 MAIN COMPONENT
+// MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════
 
 const MyPatients = () => {
-  console.log('🔥 [COMPONENT] MyPatients mounted (WITH MODALS)');
+  console.log('🔥 MyPatients mounted - Schema v2.0');
   
   const navigate = useNavigate();
   const dataLoadedOnce = useRef(false);
 
   // State
   const [patients, setPatients] = useState([]);
-  const [consultations, setConsultations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [error, setError] = useState(null);
 
-  // 🔥 MODAL STATE
+  // Patient modal state
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [treatmentPlans, setTreatmentPlans] = useState([]);
   const [loadingTreatmentPlans, setLoadingTreatmentPlans] = useState(false);
-  
-  // 🔥 TREATMENT PLAN DETAIL MODAL STATE
+
+  // Treatment plan detail modal state
   const [selectedTreatmentPlan, setSelectedTreatmentPlan] = useState(null);
   const [isTreatmentDetailModalOpen, setIsTreatmentDetailModalOpen] = useState(false);
   const [loadingTreatmentDetail, setLoadingTreatmentDetail] = useState(false);
 
   // ═══════════════════════════════════════════════════════════
-  // 🔥 LOAD PATIENTS FROM CONSULTATIONS
+  // DATA FETCHING
   // ═══════════════════════════════════════════════════════════
 
   const fetchPatients = useCallback(async (isRefresh = false) => {
-    console.log('🔥 [FETCH] fetchPatients called');
-    
+    console.log('🔥 fetchPatients called');
     if (!isRefresh && dataLoadedOnce.current) {
-      console.log('⚠️ [FETCH] Data already loaded');
+      console.log('⚠️ Data already loaded');
       return;
     }
 
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
 
       const result = await therapistApiService.getTherapistConsultations();
-      
+
       if (result.success) {
         const consultationsData = result.data || [];
-        setConsultations(consultationsData);
-        
-        // Extract unique patients
         const patientMap = new Map();
-        
+
         consultationsData.forEach((consultation) => {
           const patient = consultation.patientId;
-          
           if (patient && patient._id) {
             const patientId = patient._id;
-            
             if (!patientMap.has(patientId)) {
               patientMap.set(patientId, {
                 _id: patientId,
@@ -183,39 +154,31 @@ const MyPatients = () => {
                 }
               });
             }
-            
             const patientData = patientMap.get(patientId);
             patientData.consultationSummary.totalConsultations++;
             
-            if (consultation.status === 'completed') {
-              patientData.consultationSummary.completedConsultations++;
-            } else if (consultation.status === 'scheduled') {
-              patientData.consultationSummary.scheduledConsultations++;
-            } else if (consultation.status === 'cancelled') {
-              patientData.consultationSummary.cancelledConsultations++;
+            if (consultation.status === 'completed') patientData.consultationSummary.completedConsultations++;
+            else if (consultation.status === 'scheduled') patientData.consultationSummary.scheduledConsultations++;
+            else if (consultation.status === 'cancelled') patientData.consultationSummary.cancelledConsultations++;
+
+            const cDate = new Date(consultation.scheduledAt);
+            if (consultation.status === 'completed' &&
+                (!patientData.consultationSummary.lastConsultationDate || cDate > new Date(patientData.consultationSummary.lastConsultationDate))) {
+              patientData.consultationSummary.lastConsultationDate = consultation.scheduledAt;
             }
             
-            const consultationDate = new Date(consultation.scheduledAt);
-            if (!patientData.consultationSummary.lastConsultationDate || 
-                consultationDate > new Date(patientData.consultationSummary.lastConsultationDate)) {
-              if (consultation.status === 'completed') {
-                patientData.consultationSummary.lastConsultationDate = consultation.scheduledAt;
-              }
-            }
-            
-            if (consultation.status === 'scheduled' && consultationDate > new Date()) {
-              if (!patientData.consultationSummary.nextConsultationDate ||
-                  consultationDate < new Date(patientData.consultationSummary.nextConsultationDate)) {
+            if (consultation.status === 'scheduled' && cDate > new Date()) {
+              const nextDate = patientData.consultationSummary.nextConsultationDate;
+              if (!nextDate || cDate < new Date(nextDate)) {
                 patientData.consultationSummary.nextConsultationDate = consultation.scheduledAt;
               }
             }
           }
         });
-        
+
         const patientsData = Array.from(patientMap.values());
         setPatients(patientsData);
         dataLoadedOnce.current = true;
-        
         toast.success(`✅ Loaded ${patientsData.length} patients`);
       } else {
         setError(result.error || 'Failed to load consultations');
@@ -224,7 +187,7 @@ const MyPatients = () => {
       }
     } catch (err) {
       setError(err.message || 'Failed to load patients');
-      toast.error('Failed to load patients');
+      toast.error('❌ Failed to load patients');
       setPatients([]);
     } finally {
       setLoading(false);
@@ -237,12 +200,12 @@ const MyPatients = () => {
   }, [fetchPatients]);
 
   // ═══════════════════════════════════════════════════════════
-  // 🔥 PATIENT MODAL HANDLERS
+  // MODAL HANDLERS
   // ═══════════════════════════════════════════════════════════
 
   const handleViewPatientDetails = useCallback(async (patient, e) => {
     e.stopPropagation();
-    console.log('🔥 [HANDLER] handleViewPatientDetails:', patient._id);
+    console.log('🔥 Opening patient details for:', patient.name);
     
     setSelectedPatient(patient);
     setIsPatientModalOpen(true);
@@ -250,15 +213,16 @@ const MyPatients = () => {
     
     try {
       const result = await therapistApiService.getPatientTreatmentPlans(patient._id);
-      
       if (result.success) {
+        console.log('✅ Treatment plans loaded:', result.data?.length || 0);
         setTreatmentPlans(result.data || []);
-        toast.success(`Loaded ${result.data?.length || 0} treatment plans`);
+        toast.success(`📋 Loaded ${result.data?.length || 0} treatment plan(s)`);
       } else {
         toast.error(result.error || 'Failed to load treatment plans');
         setTreatmentPlans([]);
       }
     } catch (error) {
+      console.error('❌ Error loading treatment plans:', error);
       toast.error('Failed to load treatment plans');
       setTreatmentPlans([]);
     } finally {
@@ -272,27 +236,32 @@ const MyPatients = () => {
     setTreatmentPlans([]);
   };
 
-  // ═══════════════════════════════════════════════════════════
-  // 🔥 TREATMENT PLAN DETAIL MODAL HANDLERS
-  // ═══════════════════════════════════════════════════════════
-
   const handleViewTreatmentPlanDetails = useCallback(async (treatmentPlanId) => {
-    console.log('🔥 [HANDLER] handleViewTreatmentPlanDetails:', treatmentPlanId);
+    console.log('🔥 Loading treatment plan details:', treatmentPlanId);
     
     setIsTreatmentDetailModalOpen(true);
     setLoadingTreatmentDetail(true);
     
     try {
+      // 🔥 ENHANCED: Now gets full schema data with phases, sessions, etc.
       const result = await therapistApiService.getTreatmentPlanDetails(treatmentPlanId, selectedPatient?._id);
       
       if (result.success) {
+        console.log('✅ Enhanced treatment plan loaded:', {
+          phases: result.data?.phases?.length || 0,
+          sessions: result.data?.sessionStats?.total || 0,
+          todaySessions: result.data?.todaySessions?.length || 0,
+          progress: result.data?.progress || 0
+        });
+        
         setSelectedTreatmentPlan(result.data);
-        toast.success('Treatment plan details loaded');
+        toast.success('✅ Treatment plan details loaded');
       } else {
         toast.error(result.error || 'Failed to load details');
         setIsTreatmentDetailModalOpen(false);
       }
     } catch (error) {
+      console.error('❌ Error loading treatment plan details:', error);
       toast.error('Failed to load treatment plan details');
       setIsTreatmentDetailModalOpen(false);
     } finally {
@@ -306,40 +275,35 @@ const MyPatients = () => {
   };
 
   // ═══════════════════════════════════════════════════════════
-  // 🔥 OTHER HANDLERS
+  // NAVIGATION HANDLERS
   // ═══════════════════════════════════════════════════════════
-
-  const handleRefresh = useCallback(() => {
-    dataLoadedOnce.current = false;
-    fetchPatients(true);
-  }, [fetchPatients]);
 
   const handleViewConsultations = useCallback((patientId, e) => {
     e.stopPropagation();
     navigate(`/therapist/consultations/patient/${patientId}`);
   }, [navigate]);
 
+  const handleRefresh = useCallback(() => {
+    dataLoadedOnce.current = false;
+    fetchPatients(true);
+  }, [fetchPatients]);
+
   // ═══════════════════════════════════════════════════════════
-  // 🔥 COMPUTED VALUES
+  // COMPUTED VALUES
   // ═══════════════════════════════════════════════════════════
 
   const filteredAndSortedPatients = useMemo(() => {
     let filtered = [...patients];
-    
     if (searchTerm) {
-      filtered = filtered.filter(patient => {
-        const name = patient.name || '';
-        const email = patient.email || '';
-        const phone = patient.phone || '';
-        
-        const searchLower = searchTerm.toLowerCase();
-        return name.toLowerCase().includes(searchLower) ||
-               email.toLowerCase().includes(searchLower) ||
-               phone.toLowerCase().includes(searchLower);
-      });
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(patient =>
+        (patient.name || '').toLowerCase().includes(searchLower) ||
+        (patient.email || '').toLowerCase().includes(searchLower) ||
+        (patient.phone || '').toLowerCase().includes(searchLower)
+      );
     }
-    
-    filtered.sort((a, b) => {
+
+    return filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return (a.name || '').localeCompare(b.name || '');
@@ -353,36 +317,25 @@ const MyPatients = () => {
           return 0;
       }
     });
-    
-    return filtered;
   }, [patients, searchTerm, sortBy]);
 
   const stats = useMemo(() => {
     const totalPatients = patients.length;
     const totalConsultations = patients.reduce((sum, p) => sum + (p.consultationSummary?.totalConsultations || 0), 0);
-    const completedConsultations = patients.reduce((sum, p) => sum + (p.consultationSummary?.completedConsultations || 0), 0);
-    const scheduledConsultations = patients.reduce((sum, p) => sum + (p.consultationSummary?.scheduledConsultations || 0), 0);
     const activePatients = patients.filter(p => (p.consultationSummary?.scheduledConsultations || 0) > 0).length;
-    
-    return {
-      totalPatients,
-      activePatients,
-      totalConsultations,
-      completedConsultations,
-      scheduledConsultations
-    };
+    return { totalPatients, activePatients, totalConsultations };
   }, [patients]);
 
   // ═══════════════════════════════════════════════════════════
-  // 🔥 LOADING & ERROR STATES
+  // LOADING & ERROR STATES
   // ═══════════════════════════════════════════════════════════
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-rose-50/30 to-pink-50/20 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center p-4">
         <Toaster position="top-right" />
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-r from-rose-500 to-pink-600 rounded-3xl flex items-center justify-center mb-6 mx-auto shadow-2xl">
+          <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center mb-6 mx-auto shadow-2xl">
             <Loader2 className="w-10 h-10 animate-spin text-white" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Loading Patients</h2>
@@ -402,7 +355,7 @@ const MyPatients = () => {
           </div>
           <h2 className="text-2xl font-bold text-slate-800 mb-4">Failed to Load Patients</h2>
           <p className="text-slate-600 mb-6">{error}</p>
-          <button onClick={handleRefresh} className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all shadow-lg inline-flex items-center space-x-2">
+          <button onClick={handleRefresh} className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg inline-flex items-center space-x-2">
             <RefreshCw className="w-5 h-5" />
             <span>Try Again</span>
           </button>
@@ -412,58 +365,40 @@ const MyPatients = () => {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🔥🔥🔥 MAIN RENDER 🔥🔥🔥
+  // MAIN RENDER
   // ═══════════════════════════════════════════════════════════
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-rose-50/30 to-pink-50/20 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 py-8 px-4 sm:px-6 lg:px-8">
       <Toaster position="top-right" />
-      
+
       <div className="max-w-7xl mx-auto">
         {/* Stats Cards */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-2">
-              <Users className="w-8 h-8 text-rose-500" />
+              <Users className="w-10 h-10 text-blue-500" />
               <span className="text-3xl font-bold text-slate-800">{stats.totalPatients}</span>
             </div>
             <p className="text-sm text-slate-600 font-medium">Total Patients</p>
           </div>
-
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-2">
-              <Activity className="w-8 h-8 text-emerald-500" />
+              <Activity className="w-10 h-10 text-emerald-500" />
               <span className="text-3xl font-bold text-slate-800">{stats.activePatients}</span>
             </div>
             <p className="text-sm text-slate-600 font-medium">Active Patients</p>
           </div>
-
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-2">
-              <Calendar className="w-8 h-8 text-blue-500" />
+              <Calendar className="w-10 h-10 text-purple-500" />
               <span className="text-3xl font-bold text-slate-800">{stats.totalConsultations}</span>
             </div>
             <p className="text-sm text-slate-600 font-medium">Total Consultations</p>
           </div>
-
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <CheckCircle className="w-8 h-8 text-purple-500" />
-              <span className="text-3xl font-bold text-slate-800">{stats.completedConsultations}</span>
-            </div>
-            <p className="text-sm text-slate-600 font-medium">Completed</p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <Clock className="w-8 h-8 text-amber-500" />
-              <span className="text-3xl font-bold text-slate-800">{stats.scheduledConsultations}</span>
-            </div>
-            <p className="text-sm text-slate-600 font-medium">Scheduled</p>
-          </div>
         </motion.div>
 
-        {/* Search and Filter */}
+        {/* Search & Filter */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
@@ -474,57 +409,49 @@ const MyPatients = () => {
                   placeholder="Search patients by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
             </div>
-
-            <div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-rose-500/20 focus:border-rose-500 transition-all bg-white"
-              >
-                <option value="name">Sort by Name</option>
-                <option value="consultations">Sort by Consultations</option>
-                <option value="recent">Sort by Recent Activity</option>
-              </select>
-            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
+            >
+              <option value="name">Sort by Name</option>
+              <option value="consultations">Most Consultations</option>
+              <option value="recent">Recent Activity</option>
+            </select>
           </div>
         </motion.div>
 
         {/* Patients List */}
         {filteredAndSortedPatients.length === 0 ? (
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 text-center">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-lg border border-slate-200 p-12 text-center">
             <Heart className="w-20 h-20 text-slate-300 mx-auto mb-6" />
-            <h3 className="text-2xl font-bold text-slate-800 mb-3">No Patients Found</h3>
-            <p className="text-slate-600 text-lg mb-2">
-              {searchTerm ? 'Try adjusting your search criteria' : 'No consultation patients yet'}
+            <h3 className="text-2xl font-bold text-slate-800 mb-3">
+              {searchTerm ? 'No Patients Found' : 'No consultation patients yet'}
+            </h3>
+            <p className="text-slate-600 text-lg">
+              {searchTerm ? 'Try adjusting your search criteria' : 'Get started by completing consultations'}
             </p>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredAndSortedPatients.map((patient, index) => {
               const patientName = patient.name || 'Unknown Patient';
-              const patientEmail = patient.email || 'N/A';
-              const patientPhone = patient.phone || 'N/A';
-              const patientGender = patient.profile?.gender || 'Not specified';
-              const patientAge = patient.profile?.dateOfBirth 
-                ? new Date().getFullYear() - new Date(patient.profile.dateOfBirth).getFullYear()
-                : 'N/A';
-              
+              const patientAge = calculateAge(patient.profile?.dateOfBirth);
               const consultationSummary = patient.consultationSummary || {};
-              
               const initials = getPatientInitials(patientName);
               const colorGradient = getPatientInitialsColor(patientName);
-              
+
               return (
                 <motion.div
                   key={patient._id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + (index * 0.05) }}
-                  className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-2xl transition-all"
+                  transition={{ delay: 0.1 + index * 0.05 }}
+                  className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all hover:-translate-y-1"
                 >
                   {/* Patient Header */}
                   <div className="flex items-start justify-between mb-6">
@@ -535,9 +462,9 @@ const MyPatients = () => {
                       <div>
                         <h3 className="text-xl font-bold text-slate-800 mb-1">{patientName}</h3>
                         <div className="flex items-center space-x-2 text-sm text-slate-600">
-                          <span>{patientGender}</span>
+                          <span>{patient.profile?.gender || 'Not specified'}</span>
                           <span>•</span>
-                          <span>{patientAge} years</span>
+                          <span>{patientAge !== 'N/A' ? `${patientAge} years` : 'N/A'}</span>
                         </div>
                       </div>
                     </div>
@@ -545,13 +472,13 @@ const MyPatients = () => {
 
                   {/* Contact Info */}
                   <div className="space-y-3 mb-6">
-                    <div className="flex items-center space-x-3 text-slate-600">
-                      <Mail className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm">{patientEmail}</span>
+                    <div className="flex items-center space-x-3 text-sm text-slate-600">
+                      <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span className="truncate">{patient.email}</span>
                     </div>
-                    <div className="flex items-center space-x-3 text-slate-600">
-                      <Phone className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm">{formatPhoneNumber(patientPhone)}</span>
+                    <div className="flex items-center space-x-3 text-sm text-slate-600">
+                      <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span>{formatPhoneNumber(patient.phone)}</span>
                     </div>
                   </div>
 
@@ -577,47 +504,43 @@ const MyPatients = () => {
                     </div>
                   </div>
 
-                  {/* Last/Next Consultation */}
+                  {/* Last/Next Visit */}
                   {(consultationSummary.lastConsultationDate || consultationSummary.nextConsultationDate) && (
-                    <div className="space-y-2 mb-4">
+                    <div className="space-y-2 mb-6">
                       {consultationSummary.lastConsultationDate && (
                         <div className="bg-slate-50 rounded-xl p-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-slate-600 font-medium">Last Visit</span>
-                            <span className="text-sm font-bold text-slate-800">
-                              {formatDate(consultationSummary.lastConsultationDate)}
-                            </span>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600 font-medium">Last Visit</span>
+                            <span className="font-bold text-slate-800">{formatDate(consultationSummary.lastConsultationDate)}</span>
                           </div>
                         </div>
                       )}
                       {consultationSummary.nextConsultationDate && (
                         <div className="bg-blue-50 rounded-xl p-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-blue-600 font-medium">Next Visit</span>
-                            <span className="text-sm font-bold text-blue-800">
-                              {formatDate(consultationSummary.nextConsultationDate)}
-                            </span>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-blue-600 font-medium">Next Visit</span>
+                            <span className="font-bold text-blue-800">{formatDate(consultationSummary.nextConsultationDate)}</span>
                           </div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Actions */}
+                  {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={(e) => handleViewConsultations(patient._id, e)}
-                      className="flex items-center justify-center space-x-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl hover:bg-rose-100 transition-all border border-rose-200 font-medium"
+                      className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-50 text-slate-700 rounded-xl hover:bg-slate-100 transition-all border border-slate-200 font-medium hover:shadow-sm"
                     >
                       <Calendar className="w-4 h-4" />
                       <span>Consultations</span>
                     </button>
                     <button
                       onClick={(e) => handleViewPatientDetails(patient, e)}
-                      className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-all border border-blue-200 font-medium"
+                      className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-all border border-blue-200 font-medium hover:shadow-sm"
                     >
                       <FileText className="w-4 h-4" />
-                      <span>Details</span>
+                      <span>Treatment Plans</span>
                     </button>
                   </div>
                 </motion.div>
@@ -625,461 +548,188 @@ const MyPatients = () => {
             })}
           </div>
         )}
-      </div>
 
-      {/* 🔥🔥🔥 PATIENT DETAILS MODAL (Treatment Plans List) 🔥🔥🔥 */}
-      <AnimatePresence>
-        {isPatientModalOpen && selectedPatient && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={closePatientModal}
-          >
+        {/* ═══════════════════════════════════════════════════════════
+            PATIENT DETAILS MODAL - 🔥 ENHANCED FOR SCHEMA v2.0
+            ═══════════════════════════════════════════════════════════ */}
+        <AnimatePresence>
+          {isPatientModalOpen && selectedPatient && (
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+              onClick={closePatientModal}
             >
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500 p-6 text-white flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-white font-bold text-2xl`}>
-                    {getPatientInitials(selectedPatient.name)}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold">{selectedPatient.name}</h2>
-                    <p className="text-rose-100 text-sm">{selectedPatient.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={closePatientModal}
-                  className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                {/* Patient Info */}
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-200 mb-6">
-                  <h3 className="text-xl font-bold text-slate-800 mb-4">Patient Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-slate-600">Phone</p>
-                      <p className="font-bold text-slate-800">{formatPhoneNumber(selectedPatient.phone)}</p>
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-6 text-white flex items-center justify-between rounded-t-3xl">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center font-bold text-2xl">
+                      {getPatientInitials(selectedPatient.name)}
                     </div>
                     <div>
-                      <p className="text-sm text-slate-600">Age / Gender</p>
-                      <p className="font-bold text-slate-800">
-                        {calculateAge(selectedPatient.profile?.dateOfBirth)} years / {selectedPatient.profile?.gender || 'N/A'}
-                      </p>
+                      <h2 className="text-2xl font-bold">{selectedPatient.name}</h2>
+                      <p className="text-slate-300 text-sm">{selectedPatient.email}</p>
                     </div>
                   </div>
+                  <button onClick={closePatientModal} className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-all">
+                    <X className="w-6 h-6" />
+                  </button>
                 </div>
 
-                {/* Treatment Plans Section */}
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-800 mb-4 flex items-center space-x-2">
-                    <ClipboardList className="w-7 h-7 text-rose-500" />
+                {/* Modal Content - Scrollable */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  {/* Patient Info */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200 mb-6">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <User className="w-6 h-6 text-blue-600" />
+                      Patient Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-600 mb-1 font-medium">Phone</p>
+                        <p className="font-bold text-slate-800">{formatPhoneNumber(selectedPatient.phone)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-600 mb-1 font-medium">Age / Gender</p>
+                        <p className="font-bold text-slate-800">
+                          {calculateAge(selectedPatient.profile?.dateOfBirth)} years / {selectedPatient.profile?.gender || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Treatment Plans Section */}
+                  <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center space-x-2">
+                    <ClipboardList className="w-8 h-8 text-blue-500" />
                     <span>Treatment Plans</span>
                   </h3>
-                  
+
                   {loadingTreatmentPlans ? (
                     <div className="flex items-center justify-center py-16">
-                      <Loader2 className="w-12 h-12 animate-spin text-rose-500" />
+                      <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
                     </div>
                   ) : treatmentPlans.length === 0 ? (
                     <div className="bg-slate-50 rounded-2xl p-12 text-center">
                       <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                      <p className="text-slate-600 font-medium">No treatment plans found</p>
+                      <p className="text-slate-600 font-medium text-lg">No treatment plans found</p>
+                      <p className="text-slate-500 text-sm mt-2">Treatment plans will appear here once assigned</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {treatmentPlans.map((plan) => (
-                        <div key={plan._id} className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border border-purple-200 hover:shadow-lg transition-all">
+                        <div key={plan._id} className="bg-white rounded-2xl p-6 border-2 border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all">
+                          {/* Header */}
                           <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <h4 className="text-lg font-bold text-slate-800 mb-1">{plan.treatmentType || 'Treatment Plan'}</h4>
-                              <p className="text-sm text-slate-600">By: {plan.doctorId?.name || 'Unknown'}</p>
+                            <div className="flex-1">
+                              <h4 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                <Stethoscope className="w-5 h-5 text-purple-500" />
+                                {plan.treatmentCategory || plan.panchakarmaType || 'Treatment Plan'}
+                              </h4>
+                              <p className="text-sm text-slate-600 flex items-center gap-1">
+                                <span className="font-medium">Dr. {plan.doctorId?.name || 'Unknown'}</span>
+                              </p>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              plan.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                              plan.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                              'bg-slate-100 text-slate-700'
-                            }`}>
-                              {plan.status}
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${getStatusBadgeColor(plan.status)}`}>
+                              {plan.status?.toUpperCase()}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3 mb-4">
-                            <div className="bg-white/50 rounded-xl p-3">
-                              <p className="text-xs text-slate-600">Duration</p>
-                              <p className="font-bold text-slate-800">{plan.duration || 'N/A'}</p>
+                          {/* 🔥 ENHANCED: Phase Pills */}
+                          {plan.phases && plan.phases.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {plan.phases.map((phase, idx) => (
+                                <span key={idx} className={`px-3 py-1 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${getPhaseColor(phase.phaseName)}`}>
+                                  {phase.phaseName?.toUpperCase()} ({phase.totalDays}d)
+                                </span>
+                              ))}
                             </div>
-                            <div className="bg-white/50 rounded-xl p-3">
-                              <p className="text-xs text-slate-600">Progress</p>
-                              <p className="font-bold text-slate-800">{plan.progress || 0}%</p>
+                          )}
+
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="bg-blue-50 rounded-xl p-3 text-center">
+                              <p className="text-xs text-blue-600 font-medium mb-1">Duration</p>
+                              <p className="text-lg font-bold text-blue-700">{plan.totalDays || 'N/A'}</p>
+                              <p className="text-xs text-blue-600">days</p>
+                            </div>
+                            <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                              <p className="text-xs text-emerald-600 font-medium mb-1">Progress</p>
+                              <p className="text-lg font-bold text-emerald-700">{plan.progressPercentage || plan.progress || 0}%</p>
+                            </div>
+                            <div className="bg-purple-50 rounded-xl p-3 text-center">
+                              <p className="text-xs text-purple-600 font-medium mb-1">Phases</p>
+                              <p className="text-lg font-bold text-purple-700">{plan.phases?.length || 0}</p>
                             </div>
                           </div>
 
+                          {/* 🔥 ENHANCED: Safety indicators */}
+                          {(plan.prePanchakarmaInstructions || plan.postPanchakarmaInstructions || plan.safetyNotes) && (
+                            <div className="flex gap-2 mb-4 text-xs">
+                              {plan.prePanchakarmaInstructions && (
+                                <span className="flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200">
+                                  <Info className="w-3 h-3" /> Pre-instructions
+                                </span>
+                              )}
+                              {plan.postPanchakarmaInstructions && (
+                                <span className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg border border-green-200">
+                                  <CheckCircle className="w-3 h-3" /> Post-care
+                                </span>
+                              )}
+                              {plan.safetyNotes && (
+                                <span className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded-lg border border-red-200">
+                                  <Shield className="w-3 h-3" /> Safety
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Progress Bar */}
+                          <div className="mb-4">
+                            <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                              <div 
+                                className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2.5 rounded-full transition-all duration-500"
+                                style={{ width: `${plan.progressPercentage || plan.progress || 0}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* View Details Button */}
                           <button
                             onClick={() => handleViewTreatmentPlanDetails(plan._id)}
-                            className="w-full bg-gradient-to-r from-rose-500 to-pink-600 text-white py-3 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all font-bold"
+                            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                           >
-                            View Full Details
+                            <FileText className="w-5 h-5" />
+                            View Complete Details
                           </button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
 
-      {/* 🔥🔥🔥 TREATMENT PLAN DETAIL MODAL (Nested) 🔥🔥🔥 */}
-      {/* I'll continue in next message due to length... */}
-
-            {/* 🔥🔥🔥 TREATMENT PLAN DETAIL MODAL (Full Details - Nested over Patient Modal) 🔥🔥🔥 */}
-            <AnimatePresence>
-        {isTreatmentDetailModalOpen && selectedTreatmentPlan && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-            onClick={closeTreatmentDetailModal}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-6 text-white flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <FileText className="w-8 h-8" />
-                  <div>
-                    <h2 className="text-2xl font-bold">Treatment Plan Details</h2>
-                    <p className="text-purple-100 text-sm">{selectedTreatmentPlan.treatmentType || 'Complete Information'}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={closeTreatmentDetailModal}
-                  className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-                {loadingTreatmentDetail ? (
-                  <div className="flex items-center justify-center py-16">
-                    <Loader2 className="w-12 h-12 animate-spin text-rose-500" />
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* Patient Info Section */}
-                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-200">
-                      <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center space-x-2">
-                        <User className="w-6 h-6 text-blue-600" />
-                        <span>Patient Information</span>
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-slate-600 mb-1">Name</p>
-                          <p className="font-bold text-slate-800">{selectedTreatmentPlan.patientId?.name || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600 mb-1">Email</p>
-                          <p className="font-bold text-slate-800">{selectedTreatmentPlan.patientId?.email || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600 mb-1">Phone</p>
-                          <p className="font-bold text-slate-800">{formatPhoneNumber(selectedTreatmentPlan.patientId?.phone)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600 mb-1">Gender / Age</p>
-                          <p className="font-bold text-slate-800">
-                            {selectedTreatmentPlan.patientId?.profile?.gender || 'N/A'} / {calculateAge(selectedTreatmentPlan.patientId?.profile?.dateOfBirth)} years
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Treatment Plan Details */}
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
-                      <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center space-x-2">
-                        <ClipboardList className="w-6 h-6 text-purple-600" />
-                        <span>Treatment Details</span>
-                      </h3>
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-sm text-slate-600 mb-1 font-semibold">Treatment Type</p>
-                          <p className="text-lg font-bold text-slate-800">{selectedTreatmentPlan.treatmentType || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600 mb-1 font-semibold">Treatment Plan</p>
-                          <div className="bg-white rounded-xl p-4">
-                            <p className="text-slate-800 whitespace-pre-wrap">{selectedTreatmentPlan.treatmentPlan || 'No treatment plan specified'}</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Duration</p>
-                            <p className="font-bold text-slate-800">{selectedTreatmentPlan.duration || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Status</p>
-                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
-                              selectedTreatmentPlan.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                              selectedTreatmentPlan.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                              'bg-slate-100 text-slate-700'
-                            }`}>
-                              {selectedTreatmentPlan.status}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Instructions Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Pre-Instructions */}
-                      {selectedTreatmentPlan.preInstructions && (
-                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
-                          <h3 className="text-lg font-bold text-amber-800 mb-3 flex items-center space-x-2">
-                            <AlertTriangle className="w-5 h-5" />
-                            <span>Pre-Instructions</span>
-                          </h3>
-                          <p className="text-amber-900">{selectedTreatmentPlan.preInstructions}</p>
-                        </div>
-                      )}
-
-                      {/* Post-Instructions */}
-                      {selectedTreatmentPlan.postInstructions && (
-                        <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-200">
-                          <h3 className="text-lg font-bold text-teal-800 mb-3 flex items-center space-x-2">
-                            <CheckCircle className="w-5 h-5" />
-                            <span>Post-Instructions</span>
-                          </h3>
-                          <p className="text-teal-900">{selectedTreatmentPlan.postInstructions}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Medicines & Protocols */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Medicines */}
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
-                        <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center space-x-2">
-                          <Pill className="w-5 h-5" />
-                          <span>Medicines</span>
-                        </h3>
-                        {selectedTreatmentPlan.medicines && selectedTreatmentPlan.medicines.length > 0 ? (
-                          <ul className="space-y-2">
-                            {selectedTreatmentPlan.medicines.map((medicine, idx) => (
-                              <li key={idx} className="flex items-start space-x-2">
-                                <span className="text-green-600 font-bold">•</span>
-                                <span className="text-green-900">{medicine}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-green-700 italic">No medicines prescribed</p>
-                        )}
-                      </div>
-
-                      {/* Protocols */}
-                      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-6 border border-indigo-200">
-                        <h3 className="text-lg font-bold text-indigo-800 mb-3 flex items-center space-x-2">
-                          <Shield className="w-5 h-5" />
-                          <span>Protocols</span>
-                        </h3>
-                        {selectedTreatmentPlan.protocols && selectedTreatmentPlan.protocols.length > 0 ? (
-                          <ul className="space-y-2">
-                            {selectedTreatmentPlan.protocols.map((protocol, idx) => (
-                              <li key={idx} className="flex items-start space-x-2">
-                                <span className="text-indigo-600 font-bold">•</span>
-                                <span className="text-indigo-900">{protocol}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-indigo-700 italic">No specific protocols</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Patient Medical History */}
-                    {selectedTreatmentPlan.patientId?.profile && (
-                      <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-2xl p-6 border border-slate-200">
-                        <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center space-x-2">
-                          <Heart className="w-6 h-6 text-red-500" />
-                          <span>Medical History</span>
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Medical History</p>
-                            <p className="text-slate-800">{selectedTreatmentPlan.patientId.profile.medicalHistory?.join(', ') || 'None'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Allergies</p>
-                            <p className="text-slate-800">{selectedTreatmentPlan.patientId.profile.allergies?.join(', ') || 'None'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Current Symptoms</p>
-                            <p className="text-slate-800">{selectedTreatmentPlan.patientId.profile.symptoms?.join(', ') || 'None'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Addictions</p>
-                            <p className="text-slate-800">{selectedTreatmentPlan.patientId.profile.addictions?.join(', ') || 'None'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Diet Habits</p>
-                            <p className="text-slate-800">{selectedTreatmentPlan.patientId.profile.dietHabits || 'None'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1 font-semibold">Sleep Pattern</p>
-                            <p className="text-slate-800">{selectedTreatmentPlan.patientId.profile.sleepPattern || 'None'}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Consultation Info */}
-                    {selectedTreatmentPlan.consultationId && (
-                      <div className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl p-6 border border-rose-200">
-                        <h3 className="text-lg font-bold text-rose-800 mb-3 flex items-center space-x-2">
-                          <Calendar className="w-5 h-5" />
-                          <span>Related Consultation</span>
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1">Type</p>
-                            <p className="font-bold text-slate-800 capitalize">{selectedTreatmentPlan.consultationId.type || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1">Scheduled For</p>
-                            <p className="font-bold text-slate-800">{formatDateTime(selectedTreatmentPlan.consultationId.scheduledAt)}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1">Status</p>
-                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${
-                              selectedTreatmentPlan.consultationId.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              selectedTreatmentPlan.consultationId.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                              'bg-slate-100 text-slate-700'
-                            }`}>
-                              {selectedTreatmentPlan.consultationId.status}
-                            </span>
-                          </div>
-                          {selectedTreatmentPlan.consultationId.notes && (
-                            <div className="col-span-2">
-                              <p className="text-sm text-slate-600 mb-1">Notes</p>
-                              <p className="text-slate-800">{selectedTreatmentPlan.consultationId.notes}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Progress Section */}
-                    <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl p-6 border border-yellow-200">
-                      <h3 className="text-lg font-bold text-yellow-800 mb-4 flex items-center space-x-2">
-                        <TrendingUp className="w-5 h-5" />
-                        <span>Treatment Progress</span>
-                      </h3>
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-semibold text-slate-700">Progress</span>
-                          <span className="text-2xl font-bold text-yellow-700">{selectedTreatmentPlan.progress || 0}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-5 overflow-hidden">
-                          <div 
-                            className="bg-gradient-to-r from-yellow-400 to-amber-500 h-5 rounded-full transition-all duration-500 flex items-center justify-center"
-                            style={{ width: `${selectedTreatmentPlan.progress || 0}%` }}
-                          >
-                            {selectedTreatmentPlan.progress > 10 && (
-                              <span className="text-xs font-bold text-white">{selectedTreatmentPlan.progress}%</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      {selectedTreatmentPlan.notes && (
-                        <div>
-                          <p className="text-sm text-slate-600 mb-2 font-semibold">Treatment Notes</p>
-                          <div className="bg-white rounded-xl p-4">
-                            <p className="text-slate-800">{selectedTreatmentPlan.notes}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Timestamps */}
-                    <div className="bg-slate-100 rounded-2xl p-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-slate-600 mb-1">Created At</p>
-                          <p className="font-bold text-slate-800">{formatDateTime(selectedTreatmentPlan.createdAt)}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-600 mb-1">Last Updated</p>
-                          <p className="font-bold text-slate-800">{formatDateTime(selectedTreatmentPlan.updatedAt)}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Doctor Info (if available) */}
-                    {selectedTreatmentPlan.doctorId && (
-                      <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border border-cyan-200">
-                        <h3 className="text-lg font-bold text-cyan-800 mb-3 flex items-center space-x-2">
-                          <Stethoscope className="w-5 h-5" />
-                          <span>Prescribed By</span>
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-slate-600 mb-1">Doctor Name</p>
-                            <p className="font-bold text-slate-800">{selectedTreatmentPlan.doctorId.name || 'N/A'}</p>
-                          </div>
-                          {selectedTreatmentPlan.doctorId.specialization && (
-                            <div>
-                              <p className="text-sm text-slate-600 mb-1">Specialization</p>
-                              <p className="font-bold text-slate-800">{selectedTreatmentPlan.doctorId.specialization}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bg-slate-50 p-6 border-t border-slate-200 flex justify-end space-x-3">
-                <button
-                  onClick={closeTreatmentDetailModal}
-                  className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all font-bold shadow-lg"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+        {/* ═══════════════════════════════════════════════════════════
+            TREATMENT PLAN DETAILS MODAL - EXTERNAL COMPONENT
+            ═══════════════════════════════════════════════════════════ */}
+        <TreatmentPlanDetailsModal
+          isOpen={isTreatmentDetailModalOpen}
+          onClose={closeTreatmentDetailModal}
+          treatmentPlan={selectedTreatmentPlan}
+          loading={loadingTreatmentDetail}
+        />
+      </div>
     </div>
   );
 };
