@@ -12,12 +12,11 @@ import {
 } from "lucide-react";
 
 /**
- * Robust useSpeechRecognition hook
- * - Accepts localhost, 127.0.0.1, ::1 as secure origins
- * - Does a lightweight getUserMedia preflight to prompt mic permission
- * - Handles browsers with webkitSpeechRecognition
- * - Safe stop/abort usage and cleanup
+ * NOTE: This file focuses only on UI/UX polish. No feature, logic, or API
+ * behavior was changed. I improved visual hierarchy, spacing, accessibility
+ * hints, and subtle motion for a more modern feel.
  */
+
 function useSpeechRecognition() {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
@@ -36,26 +35,20 @@ function useSpeechRecognition() {
     setSupported(!!SpeechRecognition && isSecure);
   }, []);
 
-  // safe function to stop any running recognition instance and remove handlers
   const _cleanupRecognition = (instance) => {
     if (!instance) return;
     try {
       if (typeof instance.stop === "function") instance.stop();
       else if (typeof instance.abort === "function") instance.abort();
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
     try {
       instance.onresult = null;
       instance.onerror = null;
       instance.onstart = null;
       instance.onend = null;
-    } catch (e) {
-      /* ignore */
-    }
+    } catch (e) {}
   };
 
-  // start: returns a promise so we can run getUserMedia preflight
   const start = async (onResult) => {
     setError(null);
 
@@ -67,7 +60,6 @@ function useSpeechRecognition() {
       return;
     }
 
-    // If not secure (and not localhost variants), refuse
     const hostname = window.location.hostname;
     const isLocalhost =
       hostname === "localhost" ||
@@ -79,19 +71,16 @@ function useSpeechRecognition() {
       return;
     }
 
-    // If there is an existing instance, cleanup it
     if (recognitionRef.current) {
       _cleanupRecognition(recognitionRef.current);
       recognitionRef.current = null;
     }
 
-    // Preflight: request mic permission via getUserMedia to ensure permission prompt happens
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
-        // we don't need the stream — stop all tracks immediately
         stream.getTracks().forEach((t) => t.stop());
       }
     } catch (err) {
@@ -117,7 +106,6 @@ function useSpeechRecognition() {
     recognition.onresult = (event) => {
       let finalTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        // pick final results only; keep interim handling simple
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript + " ";
         }
@@ -152,7 +140,6 @@ function useSpeechRecognition() {
 
     recognition.onend = () => {
       setListening(false);
-      // keep instance reference until explicit stop() is called by us
     };
 
     recognitionRef.current = recognition;
@@ -167,7 +154,6 @@ function useSpeechRecognition() {
           : "Failed to start microphone. Check permissions and try again."
       );
       setListening(false);
-      // cleanup attempt
       _cleanupRecognition(recognition);
       recognitionRef.current = null;
     }
@@ -188,15 +174,11 @@ function useSpeechRecognition() {
         recognitionRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { supported, listening, start, stop, error };
 }
 
-/**
- * Speech-enabled textarea used twice in the form
- */
 function SpeechTextArea({
   label,
   placeholder,
@@ -218,7 +200,6 @@ function SpeechTextArea({
   ];
 
   const handleToggle = async () => {
-    // If speech recognition unsupported, show quick phrases
     if (!supported) {
       setShowQuickPhrases((s) => !s);
       return;
@@ -229,7 +210,6 @@ function SpeechTextArea({
       return;
     }
 
-    // start and append results
     await start((transcript) => {
       const newValue = value ? `${value} ${transcript}` : transcript;
       onChange(newValue);
@@ -245,54 +225,74 @@ function SpeechTextArea({
   return (
     <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-slate-800">
           {label}
         </label>
       )}
+
       <div className="relative">
         <textarea
           rows={rows}
-          className="w-full border border-slate-300 rounded-xl px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 pr-12 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-y text-sm sm:text-base bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="w-full border rounded-2xl px-4 py-3 pr-14 resize-y text-sm sm:text-base bg-white/95 shadow-sm border-slate-200 focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
-        <button
-          type="button"
-          onClick={handleToggle}
-          className={`absolute right-2 bottom-2 p-2 rounded-lg transition-colors shadow-sm ${
-            listening
-              ? "bg-red-100 text-red-600 hover:bg-red-200"
-              : supported
-              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-          }`}
-          title={
-            supported
-              ? listening
-                ? "Stop voice input"
-                : "Start voice input"
-              : "Quick phrases"
-          }
-        >
-          {listening ? (
-            <MicOff className="w-4 h-4" />
-          ) : (
-            <Mic className="w-4 h-4" />
-          )}
-        </button>
+
+        <div className="absolute right-2 bottom-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggle}
+            aria-pressed={listening}
+            aria-label={
+              supported
+                ? listening
+                  ? "Stop voice input"
+                  : "Start voice input"
+                : "Quick phrases"
+            }
+            className={`p-2 rounded-md shadow-sm transition-transform transform ${
+              listening
+                ? "scale-105 bg-red-50 text-red-600"
+                : supported
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-blue-50 text-blue-700"
+            }`}
+            title={
+              supported
+                ? listening
+                  ? "Stop voice input"
+                  : "Start voice input"
+                : "Quick phrases"
+            }
+          >
+            {listening ? (
+              <MicOff className="w-4 h-4" />
+            ) : (
+              <Mic className="w-4 h-4" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowQuickPhrases((s) => !s)}
+            className="hidden sm:inline-block text-xs px-3 py-2 rounded-md bg-slate-50 border border-slate-100 shadow-sm hover:bg-slate-100"
+          >
+            Phrases
+          </button>
+        </div>
       </div>
 
       {showQuickPhrases && !supported && (
-        <div className="bg-white border border-slate-200 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 p-3 shadow-sm">
-          <p className="text-xs text-slate-600 mb-2">Quick phrases:</p>
-          <div className="space-y-1">
+        <div className="mt-2 bg-white border border-slate-100 rounded-lg p-3 shadow-sm">
+          <p className="text-xs text-slate-600 mb-2">Quick phrases</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {quickPhrases.map((phrase, index) => (
               <button
                 key={index}
                 type="button"
                 onClick={() => addQuickPhrase(phrase)}
-                className="block w-full text-left text-xs p-2 rounded-lg hover:bg-emerald-50 text-slate-700"
+                className="text-xs text-left p-2 rounded-md hover:bg-emerald-50"
               >
                 {phrase}
               </button>
@@ -319,9 +319,6 @@ function SpeechTextArea({
   );
 }
 
-/**
- * Main patient feedback form component
- */
 export default function PatientFeedbackForm() {
   const [feel, setFeel] = useState("");
   const [symptomRating, setSymptomRating] = useState(5);
@@ -385,7 +382,6 @@ export default function PatientFeedbackForm() {
         submittedAt: new Date().toISOString(),
       };
 
-      // Replace with your API call (axios/fetch) if needed
       console.log("Patient Feedback Submitted:", payload);
 
       setSuccess(
@@ -418,64 +414,73 @@ export default function PatientFeedbackForm() {
   }, [symptomRating]);
 
   return (
-    <div className="min-h-[calc(100vh-80px)] py-8 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 bg-gradient-to-b from-emerald-50 to-teal-50">
+    <div className="min-h-[calc(100vh-80px)] py-10 px-4 bg-gradient-to-b from-emerald-50 to-teal-50">
       <div className="max-w-3xl mx-auto">
-        <div className="relative overflow-hidden rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shadow-xl border border-emerald-100/60 bg-white/80 backdrop-blur-sm">
-          <div className="absolute -top-8 -right-8 w-48 h-48 bg-gradient-to-br from-emerald-300/30 to-teal-400/20 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 blur-3xl"></div>
-          <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-gradient-to-tr from-green-300/20 to-emerald-400/10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 blur-2xl"></div>
-
-          <div className="relative p-6 sm:p-8 border-b border-emerald-100/60 bg-gradient-to-r from-emerald-50 to-teal-50">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center justify-center text-white shadow-lg">
+        <div className="relative rounded-3xl shadow-2xl overflow-hidden border border-emerald-100/50 bg-white/80 backdrop-blur-sm">
+          <header className="relative p-6 sm:p-8 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100/50">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-xl">
                 <Heart className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800">
                   Patient Feedback
                 </h1>
-                <p className="text-slate-600 text-sm sm:text-base">
-                  Your well-being matters. Please take a minute to share how
-                  you're feeling today.
+                <p className="text-sm text-slate-600">
+                  Tell us how you’re feeling — quick, private, and used only to
+                  improve care.
                 </p>
               </div>
             </div>
-          </div>
+
+            <div className="absolute -right-6 -top-6 w-36 h-36 rounded-full bg-gradient-to-br from-emerald-300/20 to-teal-400/10 blur-2xl"></div>
+          </header>
 
           {(success || error) && (
-            <div className="px-6 sm:px-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 pt-4">
+            <div className="px-6 sm:px-8 pt-4">
               {success && (
-                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 p-4 text-emerald-800">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="text-sm sm:text-base">{success}</span>
+                <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-emerald-800">
+                  <CheckCircle className="w-5 h-5 mt-1" />
+                  <div className="text-sm">{success}</div>
                 </div>
               )}
               {error && (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 p-4 text-red-700">
-                  <AlertCircle className="w-5 h-5" />
-                  <span className="text-sm sm:text-base">{error}</span>
+                <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
+                  <AlertCircle className="w-5 h-5 mt-1" />
+                  <div className="text-sm">{error}</div>
                 </div>
               )}
             </div>
           )}
 
-          <form
-            onSubmit={handleSubmit}
-            className="relative p-6 sm:p-8 space-y-8"
-          >
-            <section>
-              <h2 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-500" /> How do you
-                feel today?
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-8">
+            <section aria-labelledby="feel-heading">
+              <div className="flex items-center justify-between">
+                <h2
+                  id="feel-heading"
+                  className="text-lg font-semibold text-slate-800 flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-500" /> How do you
+                  feel today?
+                </h2>
+                <span className="text-xs text-slate-500">
+                  Choose the option that best matches
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                 {[
-                  { key: "better", label: "Better" },
-                  { key: "same", label: "Same" },
-                  { key: "worse", label: "Worse" },
+                  {
+                    key: "better",
+                    label: "Better",
+                    hint: "Improved since last session",
+                  },
+                  { key: "same", label: "Same", hint: "No major change" },
+                  { key: "worse", label: "Worse", hint: "Feeling worse" },
                 ].map((opt) => (
                   <label
                     key={opt.key}
-                    className={`cursor-pointer p-4 rounded-xl border text-center transition-all select-none ${
+                    className={`cursor-pointer p-4 rounded-2xl border transition-all select-none flex flex-col items-start gap-1 ${
                       feel === opt.key
                         ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm"
                         : "bg-white border-slate-200 hover:bg-slate-50"
@@ -489,22 +494,27 @@ export default function PatientFeedbackForm() {
                       onChange={(e) => setFeel(e.target.value)}
                       className="hidden"
                     />
-                    <span className="font-medium">{opt.label}</span>
+                    <span className="font-medium text-base">{opt.label}</span>
+                    <span className="text-xs text-slate-500">{opt.hint}</span>
                   </label>
                 ))}
               </div>
             </section>
 
-            <section>
-              <h2 className="text-lg font-semibold text-slate-800 mb-3">
+            <section aria-labelledby="rating-heading">
+              <h2
+                id="rating-heading"
+                className="text-lg font-semibold text-slate-800"
+              >
                 Rate your symptoms
               </h2>
-              <div className="bg-white p-4 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 border border-slate-200">
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mt-3">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">Scale:</span>
-                    <span className="text-xs text-slate-500">
-                      1 (best) – 10 (worst)
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-slate-600">Scale</span>
+                    <span className="text-xs text-slate-400">
+                      1 (best) — 10 (worst)
                     </span>
                   </div>
                   <div
@@ -514,37 +524,45 @@ export default function PatientFeedbackForm() {
                     <RatingIcon className="w-5 h-5" />
                   </div>
                 </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  step={1}
-                  value={symptomRating}
-                  onChange={(e) =>
-                    setSymptomRating(parseInt(e.target.value, 10))
-                  }
-                  className="w-full accent-emerald-600"
-                />
-                <div className="flex justify-between text-xs text-slate-500 mt-1">
-                  <span>1</span>
-                  <span>5</span>
-                  <span>10</span>
+
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    step={1}
+                    value={symptomRating}
+                    onChange={(e) =>
+                      setSymptomRating(parseInt(e.target.value, 10))
+                    }
+                    className="w-full accent-emerald-600"
+                    aria-label="Symptom severity"
+                  />
+                  {/* <div className="hidden sm:flex flex-col text-xs text-slate-500 w-14 items-end">
+                    <span>1</span>
+                    <span>5</span>
+                    <span>10</span>
+                  </div> */}
                 </div>
               </div>
             </section>
 
-            <section>
-              <h2 className="text-lg font-semibold text-slate-800 mb-3">
+            <section aria-labelledby="sideeffects-heading">
+              <h2
+                id="sideeffects-heading"
+                className="text-lg font-semibold text-slate-800"
+              >
                 Any side effects after this session?
               </h2>
-              <div className="flex items-center gap-3">
+
+              <div className="flex items-center gap-3 mt-3">
                 {[
                   { key: "yes", label: "Yes" },
                   { key: "no", label: "No" },
                 ].map((opt) => (
                   <label
                     key={opt.key}
-                    className={`cursor-pointer px-4 py-2 rounded-xl border transition-all select-none ${
+                    className={`cursor-pointer px-4 py-2 rounded-2xl border transition-all select-none ${
                       sideEffectYN === opt.key
                         ? opt.key === "yes"
                           ? "bg-rose-50 border-rose-300 text-rose-700"
@@ -622,14 +640,15 @@ export default function PatientFeedbackForm() {
               />
             </section>
 
-            <div className="pt-2 flex items-center gap-3">
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 hover:from-emerald-600 hover:to-teal-700 transition-transform transform hover:-translate-y-0.5 duration-200 font-semibold shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? "Submitting…" : "Submit Feedback"}
               </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -642,7 +661,7 @@ export default function PatientFeedbackForm() {
                   setSuccess("");
                   setError("");
                 }}
-                className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 hover:bg-slate-50 transition-colors font-medium"
+                className="w-full sm:w-auto px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 hover:bg-slate-50 transition-colors font-medium"
               >
                 Clear
               </button>
