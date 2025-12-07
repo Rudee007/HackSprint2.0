@@ -1,349 +1,649 @@
-// src/jobs/notificationScheduler.js
-const cron = require('node-cron');
+// src/services/notificationService.js
+const nodemailer = require('nodemailer');
+const twilio = require('twilio');
+const handlebars = require('handlebars');
+const fs = require('fs');
+const path = require('path');
 
-const NotificationService = require('../services/notification.service');
+const config = require('../config');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const Consultation = require('../models/Consultation');
 const TreatmentPlan = require('../models/TreatmentPlan');
-const Prescription = require('../models/Prescription');
 const Feedback = require('../models/Feedback');
+const Consultation = require('../models/Consultation');
+const Prescription = require('../models/Prescription');
 
-class NotificationScheduler {
-  static init() {
-    console.log('🕐 Initializing notification scheduler...');
-
-    // 1) Generic dispatcher: run every minute
-    cron.schedule('* * * * *', async () => {
-      console.log('📤 Running scheduled notification dispatcher...');
-      await this.dispatchDueNotifications();
+class NotificationService {
+  constructor() {
+    this.emailTransporter = nodemailer.createTransport({
+      host: config.SMTP.HOST,
+      port: config.SMTP.PORT,
+      secure: config.SMTP.PORT === 465,
+      auth: {
+        user: config.SMTP.USER,
+        pass: config.SMTP.PASS
+      },
+      tls: config.NODE_ENV === 'production' ? undefined : { rejectUnauthorized: false }
     });
 
-    // 2) Daily appointment reminders (for tomorrow) at 9 AM
-    cron.schedule('0 9 * * *', async () => {
-      console.log('🔔 Running daily appointment reminders (for tomorrow)...');
-      await this.sendDailyConsultationReminders();
-    });
-
-    // 3) Daily feedback requests for completed sessions at 6 PM
-    cron.schedule('0 18 * * *', async () => {
-      console.log('💝 Running daily feedback requests for completed sessions...');
-      await this.sendDailyFeedbackRequests();
-    });
-
-    // 4) Daily prescription end reminder planner at 8 AM
-    cron.schedule('0 8 * * *', async () => {
-      console.log('💊 Scheduling prescription end reminders...');
-      await this.schedulePrescriptionEndReminders();
-    });
-
-    // 5) Daily therapy reminders: schedule from TreatmentPlan.generatedSessions at 7 AM
-    cron.schedule('0 7 * * *', async () => {
-      console.log('🧘 Scheduling daily therapy reminders...');
-      await this.scheduleTodayTherapyReminders();
-    });
-
-    // 6) Weekly admin summary on Mondays at 10 AM
-    cron.schedule('0 10 * * 1', async () => {
-      console.log('📊 Running weekly summary (admin)...');
-      await this.sendWeeklySummary();
-    });
-
-    console.log('✅ Notification scheduler initialized successfully');
-  }
-
-  // =========================================================
-  // 1. GENERIC DISPATCHER (FOR ANY SCHEDULED NOTIFICATION)
-  // =========================================================
-
-  static async dispatchDueNotifications() {
-    try {
-      const now = new Date();
-
-      const dueNotifications = await Notification.find({
-        overallStatus: { $in: ['pending', 'queued'] },
-        scheduledAt: { $lte: now }
-      })
-        .sort({ scheduledAt: 1 })
-        .limit(50); // batch size
-
-      if (!dueNotifications.length) return;
-
-      console.log(`📨 Found ${dueNotifications.length} due notifications to dispatch`);
-
-      for (const notif of dueNotifications) {
-        await NotificationService.dispatchNow(notif);
-      }
-
-      console.log('✅ Due notifications dispatched');
-    } catch (err) {
-      console.error('❌ Error in dispatchDueNotifications:', err);
-    }
-  }
-
-  // =========================================================
-  // 2. DAILY CONSULTATION REMINDERS (FOR TOMORROW)
-  // =========================================================
-
-  static async sendDailyConsultationReminders() {
-    try {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-
-      const endOfTomorrow = new Date(tomorrow);
-      endOfTomorrow.setHours(23, 59, 59, 999);
-
-      const upcomingAppointments = await Consultation.find({
-        scheduledAt: {
-          $gte: tomorrow,
-          $lte: endOfTomorrow
-        },
-        status: { $in: ['scheduled', 'confirmed'] }
-      }).populate('patientId', 'name email phone notificationPreferences');
-
-      console.log(
-        `📧 Found ${upcomingAppointments.length} consultations for reminder (tomorrow)`
+    if (config.TWILIO.ACCOUNT_SID && config.TWILIO.AUTH_TOKEN) {
+      this.twilioClient = twilio(
+        config.TWILIO.ACCOUNT_SID,
+        config.TWILIO.AUTH_TOKEN
       );
-
-      for (const consultation of upcomingAppointments) {
-        const patient = consultation.patientId;
-        if (!patient) continue;
-
-        // Respect user preferences if present
-        const prefs = patient.notificationPreferences || {};
-        if (prefs.appointmentReminder === false) continue;
-
-        // Build a session-like object for therapy reminder if you want to use scheduleDailyTherapyReminder.
-        // Here we send a generic email-only reminder via existing legacy helper for simplicity.
-
-        const appointmentData = {
-          patientEmail: patient.email,
-          patientName: patient.name,
-          therapyType:
-            consultation.therapyType || consultation.sessionType || 'Panchakarma',
-          scheduledAt: consultation.scheduledAt,
-          centerName: consultation.centerName || 'AyurSutra Wellness Center'
-        };
-
-        await NotificationService.sendAppointmentReminder(appointmentData);
-      }
-
-      console.log('✅ Daily consultation reminders completed');
-    } catch (err) {
-      console.error('❌ Error in sendDailyConsultationReminders:', err);
     }
+
+    this.registerHandlebarsHelpers();
   }
 
-  // =========================================================
-  // 3. DAILY FEEDBACK REQUESTS (FOR YESTERDAY COMPLETED)
-  // =========================================================
+  // ---------------------------------------------------------
+  // HANDLEBARS HELPERS
+  // ---------------------------------------------------------
+  registerHandlebarsHelpers() {
+    handlebars.registerHelper('currency', function (amount) {
+      return `₹${Number(amount).toLocaleString('en-IN')}`;
+    });
 
-  static async sendDailyFeedbackRequests() {
+    handlebars.registerHelper('formatDate', function (date) {
+      return new Date(date).toLocaleDateString('en-IN', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    });
+
+    handlebars.registerHelper('formatTime', function (date) {
+      return new Date(date).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    });
+
+    handlebars.registerHelper('stars', function (rating) {
+      const filled = '⭐'.repeat(Math.floor(rating));
+      const empty = '☆'.repeat(5 - Math.floor(rating));
+      return filled + empty;
+    });
+
+    handlebars.registerHelper('ifEquals', function (arg1, arg2, options) {
+      return arg1 == arg2 ? options.fn(this) : options.inverse(this);
+    });
+  }
+
+  // ---------------------------------------------------------
+  // LOW-LEVEL SENDERS
+  // ---------------------------------------------------------
+  async sendEmail(to, subject, templateName, data = {}) {
+    let htmlContent;
     try {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
-
-      const endOfYesterday = new Date(yesterday);
-      endOfYesterday.setHours(23, 59, 59, 999);
-
-      const completedSessions = await Consultation.find({
-        status: 'completed',
-        sessionEndTime: {
-          $gte: yesterday,
-          $lte: endOfYesterday
-        }
-      }).populate('patientId', 'name email phone notificationPreferences');
-
-      console.log(
-        `💬 Found ${completedSessions.length} completed sessions from yesterday`
+      const templatePath = path.join(
+        __dirname,
+        '../templates',
+        `${templateName}.html`
       );
+      const templateSource = fs.readFileSync(templatePath, 'utf8');
+      const template = handlebars.compile(templateSource);
 
-      for (const consultation of completedSessions) {
-        const patient = consultation.patientId;
-        if (!patient) continue;
-
-        // Skip if feedback already exists
-        const existingFeedback = await Feedback.findOne({
-          sessionId: consultation._id
-        });
-        if (existingFeedback) continue;
-
-        const prefs = patient.notificationPreferences || {};
-        if (prefs.feedbackRequest === false) continue;
-
-        // Use unified feedback notification (in-app + email + SMS)
-        const session = {
-          therapyName:
-            consultation.therapyType || consultation.sessionType || 'Panchakarma',
-          consultationId: consultation._id,
-          scheduledEndTime: consultation.sessionEndTime || consultation.scheduledAt
-        };
-
-        await NotificationService.notifyFeedbackAfterTherapy({
-          session,
-          patient,
-          provider: null
-        });
-      }
-
-      console.log('✅ Daily feedback notifications completed');
-    } catch (err) {
-      console.error('❌ Error in sendDailyFeedbackRequests:', err);
-    }
-  }
-
-  // =========================================================
-  // 4. PRESCRIPTION END REMINDERS
-  // =========================================================
-
-  static async schedulePrescriptionEndReminders() {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      // Example: plan for prescriptions ending within next 3 days
-      const threeDaysAhead = new Date(today);
-      threeDaysAhead.setDate(today.getDate() + 3);
-
-      const prescriptions = await Prescription.find({
-        endDate: { $gte: today, $lte: threeDaysAhead }
-      }).populate('patientId', 'name email phone notificationPreferences');
-
-      console.log(
-        `💊 Found ${prescriptions.length} prescriptions ending within next 3 days`
-      );
-
-      for (const prescription of prescriptions) {
-        const patient = prescription.patientId;
-        if (!patient) continue;
-
-        const prefs = patient.notificationPreferences || {};
-        // Add per-feature flag if you have one; for now, just respect global.
-        if (prefs.smsNotifications === false && prefs.emailNotifications === false) {
-          continue;
-        }
-
-        await NotificationService.schedulePrescriptionEndReminder({
-          prescription,
-          patient
-        });
-      }
-
-      console.log('✅ Prescription end reminders scheduled');
-    } catch (err) {
-      console.error('❌ Error in schedulePrescriptionEndReminders:', err);
-    }
-  }
-
-  // =========================================================
-  // 5. DAILY THERAPY REMINDERS FROM GENERATED SESSIONS
-  // =========================================================
-
-  static async scheduleTodayTherapyReminders() {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const endOfToday = new Date(today);
-      endOfToday.setHours(23, 59, 59, 999);
-
-      // Find sessions scheduled for today in TreatmentPlan.generatedSessions
-      const plans = await TreatmentPlan.find({
-        'generatedSessions.scheduledDate': {
-          $gte: today,
-          $lte: endOfToday
-        }
-      }).populate('patientId', 'name email phone notificationPreferences');
-
-      if (!plans.length) {
-        console.log('🧘 No generated sessions found for today');
-        return;
-      }
-
-      let count = 0;
-
-      for (const plan of plans) {
-        const patient = plan.patientId;
-        if (!patient) continue;
-
-        const prefs = patient.notificationPreferences || {};
-        // If user disabled appointmentReminder, skip
-        if (prefs.appointmentReminder === false) continue;
-
-        const sessionsForToday = plan.generatedSessions.filter((s) => {
-          const d = new Date(s.scheduledDate);
-          return d >= today && d <= endOfToday && s.status === 'scheduled';
-        });
-
-        for (const session of sessionsForToday) {
-          // Enrich with planId so Notification links correctly
-          session.treatmentPlanId = plan._id;
-
-          await NotificationService.scheduleDailyTherapyReminder({
-            session,
-            patient
-          });
-          count++;
-        }
-      }
-
-      console.log(`✅ Scheduled ${count} therapy reminders for today`);
-    } catch (err) {
-      console.error('❌ Error in scheduleTodayTherapyReminders:', err);
-    }
-  }
-
-  // =========================================================
-  // 6. WEEKLY SUMMARY (ADMIN EMAIL ONLY)
-  // =========================================================
-
-  static async sendWeeklySummary() {
-    try {
-      const lastWeek = new Date();
-      lastWeek.setDate(lastWeek.getDate() - 7);
-      lastWeek.setHours(0, 0, 0, 0);
-
-      const now = new Date();
-
-      const weeklyStats = await Consultation.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: lastWeek, $lte: now },
-            status: { $in: ['completed', 'scheduled', 'cancelled'] }
-          }
-        },
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 }
-          }
-        }
-      ]);
-
-      const adminEmails =
-        process.env.ADMIN_EMAILS?.split(',') || ['admin@ayursutra.com'];
-
-      const summaryData = {
-        weekStart: lastWeek.toLocaleDateString('en-IN'),
-        weekEnd: now.toLocaleDateString('en-IN'),
-        stats: weeklyStats
+      const enrichedData = {
+        ...data,
+        clinicName: data.clinicName || 'AyurSutra Wellness Center',
+        clinicEmail:
+          data.clinicEmail || config.SMTP.FROM_EMAIL || 'contact@ayursutra.com',
+        clinicPhone: data.clinicPhone || '+91 98765 43210',
+        frontendUrl: config.FRONTEND_URL || 'http://localhost:5173',
+        dashboardUrl:
+          data.dashboardUrl ||
+          `${config.FRONTEND_URL || 'http://localhost:5173'}/admin/dashboard`,
+        timestamp: new Date().toLocaleString('en-IN', {
+          dateStyle: 'long',
+          timeStyle: 'short'
+        })
       };
 
-      for (const email of adminEmails) {
-        await NotificationService.sendEmail(
-          email.trim(),
-          '📊 Weekly Summary - AyurSutra',
-          'weeklySummary',
-          summaryData
-        );
-      }
-
-      console.log('✅ Weekly summary sent to admins');
+      htmlContent = template(enrichedData);
     } catch (err) {
-      console.error('❌ Error in sendWeeklySummary:', err);
+      console.warn(`⚠️ Template ${templateName}.html not found, using fallback`);
+      htmlContent = this.getFallbackTemplate(templateName, data);
     }
+
+    const mailOptions = {
+      from: `${data.clinicName || 'AyurSutra'} <${
+        config.SMTP.FROM_EMAIL || 'noreply@ayursutra.com'
+      }>`,
+      to,
+      subject,
+      html: htmlContent
+    };
+
+    console.log(`📧 Sending email to ${to} with template ${templateName}`);
+    const result = await this.emailTransporter.sendMail(mailOptions);
+    console.log(`✅ Email sent to ${to}: ${result.messageId}`);
+
+    return {
+      success: true,
+      messageId: result.messageId,
+      recipient: to,
+      template: templateName
+    };
+  }
+
+  async sendSMS(to, message) {
+    if (!this.twilioClient || !config.TWILIO.PHONE_NUMBER) {
+      console.warn('⚠️ SMS service not configured - SMS logged instead');
+      console.log(`📱 SMS to ${to}: ${message}`);
+      return {
+        success: true,
+        messageId: 'console-log',
+        recipient: to,
+        note: 'SMS logged to console (Twilio not configured)'
+      };
+    }
+
+    const result = await this.twilioClient.messages.create({
+      body: message,
+      from: config.TWILIO.PHONE_NUMBER,
+      to
+    });
+
+    console.log(`✅ SMS sent to ${to}: ${result.sid}`);
+
+    return {
+      success: true,
+      messageId: result.sid,
+      recipient: to
+    };
+  }
+
+  // ---------------------------------------------------------
+  // CORE ORCHESTRATION
+  // ---------------------------------------------------------
+  async createAndDispatchNotification({
+    recipientId,
+    eventType,
+    category,
+    consultationId,
+    treatmentPlanId,
+    prescriptionId,
+    feedbackId,
+    title,
+    body,
+    templateKey,
+    variables,
+    channels = { inApp: true, email: false, sms: false },
+    priority = 'normal',
+    scheduledAt = null,
+    expiresAt = null,
+    metadata = {}
+  }) {
+    const notification = new Notification({
+      recipientId,
+      eventType,
+      category,
+      consultationId,
+      treatmentPlanId,
+      prescriptionId,
+      feedbackId,
+      title,
+      body,
+      templateKey,
+      variables,
+      channels: {
+        inApp: {
+          enabled: !!channels.inApp
+        },
+        email: {
+          enabled: !!channels.email
+        },
+        sms: {
+          enabled: !!channels.sms
+        }
+      },
+      priority,
+      scheduledAt,
+      expiresAt,
+      metadata
+    });
+
+    await notification.save();
+
+    if (scheduledAt && scheduledAt > new Date()) {
+      // scheduled – cron/worker will send later
+      return notification;
+    }
+
+    // send immediately
+    await this.dispatchNow(notification);
+    return notification;
+  }
+
+  async dispatchNow(notificationDoc) {
+    const notification =
+      notificationDoc instanceof Notification
+        ? notificationDoc
+        : await Notification.findById(notificationDoc);
+
+    if (!notification) return;
+
+    const user = await User.findById(notification.recipientId).lean();
+    if (!user) return;
+
+    const { email, phone, name } = user;
+    const { channels, title, body, templateKey, variables } = notification;
+
+    const now = new Date();
+    const firstSentAt = notification.firstSentAt || now;
+
+    // EMAIL
+    if (channels.email.enabled && email) {
+      try {
+        channels.email.status = 'sent';
+        const subject = title;
+        const templateName = templateKey || 'genericNotification';
+        await this.sendEmail(email, subject, templateName, {
+          userName: name,
+          ...variables
+        });
+        channels.email.status = 'delivered';
+        channels.email.deliveredAt = now;
+      } catch (err) {
+        channels.email.status = 'failed';
+        channels.email.lastError = err.message;
+      }
+    }
+
+    // SMS
+    if (channels.sms.enabled && phone) {
+      try {
+        channels.sms.status = 'sent';
+        await this.sendSMS(phone, body);
+        channels.sms.status = 'delivered';
+        channels.sms.deliveredAt = now;
+      } catch (err) {
+        channels.sms.status = 'failed';
+        channels.sms.lastError = err.message;
+      }
+    }
+
+    // IN-APP
+    if (channels.inApp.enabled) {
+      channels.inApp.status = 'delivered';
+      channels.inApp.deliveredAt = now;
+    }
+
+    notification.firstSentAt = firstSentAt;
+    notification.lastAttemptAt = now;
+    notification.retryCount = (notification.retryCount || 0) + 1;
+    await notification.save();
+  }
+
+  // ---------------------------------------------------------
+  // HIGH-LEVEL HELPERS
+  // ---------------------------------------------------------
+
+  // 1) OTP / EMAIL VERIFY
+  async notifyOtp(user, otp) {
+    const title = 'Your AyurSutra verification code';
+    const body = `Your OTP is ${otp}. It is valid for 10 minutes.`;
+
+    return this.createAndDispatchNotification({
+      recipientId: user._id,
+      eventType: 'OTP',
+      category: 'otp',
+      title,
+      body,
+      templateKey: 'authOtp',
+      variables: {
+        userName: user.name,
+        otp
+      },
+      channels: {
+        inApp: false,
+        email: !!user.email,
+        sms: !!user.phone
+      },
+      priority: 'urgent'
+    });
+  }
+
+  async notifyEmailVerification(user, verificationToken) {
+    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    const title = 'Verify Your AyurSutra Account';
+    const body = 'Please verify your email address to activate your account.';
+
+    return this.createAndDispatchNotification({
+      recipientId: user._id,
+      eventType: 'OTP',
+      category: 'otp',
+      title,
+      body,
+      templateKey: 'emailVerification',
+      variables: {
+        userName: user.name,
+        verificationUrl
+      },
+      channels: {
+        inApp: true,
+        email: !!user.email,
+        sms: false
+      },
+      priority: 'high'
+    });
+  }
+
+  // 2) CONSULTATION BOOKED
+  async notifyConsultationBooked({ consultation, patient, doctor }) {
+    const when = new Date(consultation.scheduledAt);
+    const dateStr = when.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const timeStr = when.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const title = `Consultation booked with Dr. ${doctor.name}`;
+    const body = `Your consultation is scheduled on ${dateStr} at ${timeStr}.`;
+
+    // To patient
+    await this.createAndDispatchNotification({
+      recipientId: patient._id,
+      eventType: 'CONSULTATION_BOOKED',
+      category: 'consultation',
+      consultationId: consultation._id,
+      title,
+      body,
+      templateKey: 'consultationBookedPatient',
+      variables: {
+        patientName: patient.name,
+        doctorName: doctor.name,
+        date: dateStr,
+        time: timeStr
+      },
+      channels: {
+        inApp: true,
+        email: !!patient.email,
+        sms: false   // enable when ready
+      },
+      priority: 'normal'
+    });
+
+    // To doctor
+    const doctorTitle = `New consultation booked with ${patient.name}`;
+    const doctorBody = `You have a new consultation on ${dateStr} at ${timeStr}.`;
+
+    return this.createAndDispatchNotification({
+      recipientId: doctor.userId || doctor._id,
+      eventType: 'CONSULTATION_BOOKED',
+      category: 'consultation',
+      consultationId: consultation._id,
+      title: doctorTitle,
+      body: doctorBody,
+      templateKey: 'consultationBookedDoctor',
+      variables: {
+        patientName: patient.name,
+        doctorName: doctor.name,
+        date: dateStr,
+        time: timeStr
+      },
+      channels: {
+        inApp: true,
+        email: !!doctor.email,
+        sms: !!doctor.phone
+      },
+      priority: 'normal'
+    });
+  }
+
+  // 3) AFTER TREATMENT PLAN CREATION
+  async notifyTreatmentPlanCreated(planId) {
+    console.log('🔔 notifyTreatmentPlanCreated called for', planId);
+
+    const plan = await TreatmentPlan.findById(planId)
+      .populate('patientId doctorId assignedTherapistId')
+      .lean();
+
+    if (!plan) {
+      console.warn('⚠️ notifyTreatmentPlanCreated: plan not found', planId);
+      return;
+    }
+
+    const startDate = plan.schedulingPreferences?.startDate
+      ? new Date(plan.schedulingPreferences.startDate).toLocaleDateString('en-IN')
+      : 'To be scheduled';
+
+    const patient = plan.patientId;
+    const doctor = plan.doctorId;
+    const therapist = plan.assignedTherapistId;
+
+    console.log('👤 Plan notify:', {
+      patientName: patient?.name,
+      doctorName: doctor?.name,
+      therapistName: therapist?.name
+    });
+
+    const title = `New Panchakarma plan: ${plan.treatmentName}`;
+    const body = `Your ${plan.panchakarmaType} plan has been created. Start date: ${startDate}.`;
+
+    // to patient
+    if (patient?._id) {
+      await this.createAndDispatchNotification({
+        recipientId: patient._id,
+        eventType: 'TREATMENT_PLAN_CREATED',
+        category: 'treatment',
+        treatmentPlanId: plan._id,
+        title,
+        body,
+        templateKey: 'treatmentPlanCreatedPatient',
+        variables: {
+          patientName: patient.name,
+          doctorName: doctor?.name || 'Doctor',
+          therapistName: therapist?.name,
+          treatmentName: plan.treatmentName,
+          panchakarmaType: plan.panchakarmaType,
+          startDate
+        },
+        channels: {
+          inApp: true,
+          email: !!patient.email,
+          sms: !!patient.phone
+        },
+        priority: 'normal'
+      });
+    }
+
+    // to therapist
+    if (therapist) {
+      const thTitle = `New patient assigned: ${patient?.name || 'Patient'}`;
+      const thBody = `A new ${plan.panchakarmaType} plan has been assigned to you.`;
+
+      await this.createAndDispatchNotification({
+        recipientId: therapist.userId || therapist._id,
+        eventType: 'TREATMENT_PLAN_CREATED',
+        category: 'treatment',
+        treatmentPlanId: plan._id,
+        title: thTitle,
+        body: thBody,
+        templateKey: 'treatmentPlanCreatedTherapist',
+        variables: {
+          patientName: patient?.name,
+          doctorName: doctor?.name || 'Doctor',
+          treatmentName: plan.treatmentName
+        },
+        channels: {
+          inApp: true,
+          email: !!therapist.email,
+          sms: !!therapist.phone
+        },
+        priority: 'normal'
+      });
+    }
+
+    return true;
+  }
+
+async schedulePrePostPlanNotifications(plan) {
+  console.log('🔔 schedulePrePostPlanNotifications called for', plan._id);
+
+  const startDate = plan.schedulingPreferences?.startDate;
+  if (!startDate) return;
+
+  const patientId = plan.patientId;
+  const patient = await User.findById(patientId).lean();
+  if (!patient) return;
+
+  const start = new Date(startDate);
+  const dayBefore = new Date(start);
+  dayBefore.setDate(start.getDate() - 1);
+
+  const planEnd = plan.estimatedCompletionDate || null;
+
+  // PRE (day before start)
+  await this.createAndDispatchNotification({
+    recipientId: patient._id,
+    eventType: 'TREATMENT_PLAN_REMINDER_PRE',
+    category: 'treatment',
+    treatmentPlanId: plan._id,
+    title: 'Your Panchakarma plan starts soon',
+    body: `Your ${plan.panchakarmaType} treatment starts on ${start.toLocaleDateString(
+      'en-IN'
+    )}. Please follow the pre-treatment instructions below.`,
+    templateKey: 'treatmentPlanPreReminder',
+    variables: {
+      patientName: patient.name,
+      treatmentName: plan.treatmentName,
+      panchakarmaType: plan.panchakarmaType,
+      startDate: start.toLocaleDateString('en-IN'),
+      preInstructions: plan.prePanchakarmaInstructions || ''
+    },
+    channels: {
+      inApp: true,
+      email: !!patient.email,
+      sms: !!patient.phone
+    },
+    priority: 'high',
+    scheduledAt: dayBefore
+  });
+
+  // POST (day after end, if known)
+  if (planEnd) {
+    const dayAfterEnd = new Date(planEnd);
+    dayAfterEnd.setDate(planEnd.getDate() + 1);
+
+    await this.createAndDispatchNotification({
+      recipientId: patient._id,
+      eventType: 'TREATMENT_PLAN_REMINDER_POST',
+      category: 'treatment',
+      treatmentPlanId: plan._id,
+      title: `Post-treatment care for ${plan.treatmentName}`,
+      body: `Your ${plan.panchakarmaType} plan has ended. Please follow the post-treatment care instructions below.`,
+      templateKey: 'treatmentPlanPostReminder',
+      variables: {
+        patientName: patient.name,
+        treatmentName: plan.treatmentName,
+        panchakarmaType: plan.panchakarmaType,
+        endDate: planEnd.toLocaleDateString('en-IN'),
+        postInstructions: plan.postPanchakarmaInstructions || ''
+      },
+      channels: {
+        inApp: true,
+        email: !!patient.email,
+        sms: !!patient.phone
+      },
+      priority: 'normal',
+      scheduledAt: dayAfterEnd
+    });
   }
 }
 
-module.exports = NotificationScheduler;
+// 5) PRESCRIPTION FOLLOW-UP REMINDER (1 day before followUpDate)
+async schedulePrescriptionFollowUpReminder({ prescription, patient }) {
+  // If no follow-up date, nothing to schedule
+  if (!prescription.followUpDate) return;
+
+  const followUp = new Date(prescription.followUpDate);
+  const dayBeforeFollowUp = new Date(followUp);
+  dayBeforeFollowUp.setDate(followUp.getDate() - 1);
+
+  const title = 'Follow-up consultation is due soon';
+  const body = `Your follow-up visit is scheduled on ${followUp.toLocaleDateString(
+    'en-IN'
+  )}. Please plan to visit your doctor.`;
+
+  return this.createAndDispatchNotification({
+    recipientId: patient._id,
+    eventType: 'PRESCRIPTION_FOLLOWUP_REMINDER',
+    category: 'prescription',
+    prescriptionId: prescription._id,
+    title,
+    body,
+    templateKey: 'prescriptionFollowUpReminder',
+    variables: {
+      patientName: patient.name,
+      followUpDate: followUp.toLocaleDateString('en-IN'),
+      chiefComplaint: prescription.chiefComplaint,
+      diagnosis: prescription.diagnosis || ''
+    },
+    channels: {
+      inApp: true,
+      email: !!patient.email,
+      sms: !!patient.phone
+    },
+    priority: 'normal',
+    scheduledAt: dayBeforeFollowUp
+  });
+}
+
+  getFallbackTemplate(templateName, data) {
+    return `
+      <div style="font-family: Arial, sans-serif; padding: 16px;">
+        <h2>${data.title || 'Notification'}</h2>
+        <p>${data.body || 'You have a new notification from AyurSutra.'}</p>
+      </div>
+    `;
+  }
+
+  async testEmailConnection() {
+    try {
+      await this.emailTransporter.verify();
+      console.log('✅ Email server connection verified');
+      return true;
+    } catch (error) {
+      console.error('❌ Email server connection failed:', error.message);
+      return false;
+    }
+  }
+
+  async testSMSConnection() {
+    try {
+      if (!this.twilioClient) {
+        console.log('⚠️ SMS service not configured');
+        return false;
+      }
+
+      await this.twilioClient.api
+        .accounts(config.TWILIO.ACCOUNT_SID)
+        .fetch();
+      console.log('✅ SMS service connection verified');
+      return true;
+    } catch (error) {
+      console.error('❌ SMS service connection failed:', error.message);
+      return false;
+    }
+  }
+
+  async testAllConnections() {
+    const results = {
+      email: await this.testEmailConnection(),
+      sms: await this.testSMSConnection()
+    };
+
+    console.log('📊 Notification Service Status:', results);
+    return results;
+  }
+}
+
+module.exports = new NotificationService();

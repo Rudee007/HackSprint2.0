@@ -9,6 +9,8 @@ const jwt = require('jsonwebtoken');
  * POST /api/auth/register
  */
 
+// controllers/auth.controller.js (register)
+
 const register = asyncHandler(async (req, res) => {
   const { name, email, phone, password, role, location, address } = req.body;
 
@@ -31,39 +33,37 @@ const register = asyncHandler(async (req, res) => {
 
   const notifications = [];
 
-  // Send email verification if applicable
+  // Email verification notification
   if (email && result.verificationData?.emailToken) {
     try {
-      await notificationService.sendEmailVerification(
-        email,
-        result.verificationData.emailToken,
-        name
+      await notificationService.notifyEmailVerification(
+        result.user,                  // full user doc
+        result.verificationData.emailToken
       );
-      notifications.push('verification_email_sent');
+      notifications.push('verification_email_notification_created');
     } catch (err) {
-      logger.warn('Failed to send verification email', {
+      logger.warn('Failed to create/send verification email notification', {
         userId: result.user._id,
         error: err.message
       });
-      notifications.push('verification_email_failed');
+      notifications.push('verification_email_notification_failed');
     }
   }
 
-  // Send phone OTP if applicable
+  // Phone OTP notification
   if (phone && result.verificationData?.phoneOTP) {
     try {
-      await notificationService.sendPhoneOTP(
-        phone,
-        result.verificationData.phoneOTP,
-        name
+      await notificationService.notifyOtp(
+        result.user,
+        result.verificationData.phoneOTP
       );
-      notifications.push('otp_sent');
+      notifications.push('otp_notification_created');
     } catch (err) {
-      logger.warn('Failed to send OTP', {
+      logger.warn('Failed to create/send OTP notification', {
         userId: result.user._id,
         error: err.message
       });
-      notifications.push('otp_failed');
+      notifications.push('otp_notification_failed');
     }
   }
 
@@ -274,27 +274,25 @@ const verifyEmail = asyncHandler(async (req, res) => {
  * Resend email verification
  * POST /api/auth/resend-email-verification
  */
+// resendEmailVerification
 const resendEmailVerification = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({
       success: false,
-      error: {
-        code: 'MISSING_EMAIL',
-        message: 'Email is required.'
-      },
+      error: { code: 'MISSING_EMAIL', message: 'Email is required.' },
       timestamp: new Date().toISOString()
     });
   }
 
   const result = await authService.resendEmailVerification(email);
+  // result: { user, verificationToken }
 
   try {
-    await notificationService.sendEmailVerification(
-      email,
-      result.verificationToken,
-      result.user.name
+    await notificationService.notifyEmailVerification(
+      result.user,
+      result.verificationToken
     );
 
     logger.info('Email verification resent', { userId: result.user._id });
@@ -325,24 +323,23 @@ const resendEmailVerification = asyncHandler(async (req, res) => {
  * Resend phone OTP
  * POST /api/auth/resend-phone-otp
  */
+// resendPhoneOTP
 const resendPhoneOTP = asyncHandler(async (req, res) => {
   const { phone } = req.body;
 
   if (!phone) {
     return res.status(400).json({
       success: false,
-      error: {
-        code: 'MISSING_PHONE',
-        message: 'Phone number is required.'
-      },
+      error: { code: 'MISSING_PHONE', message: 'Phone number is required.' },
       timestamp: new Date().toISOString()
     });
   }
 
   const result = await authService.resendPhoneOTP(phone);
+  // result: { user, otp }
 
   try {
-    await notificationService.sendPhoneOTP(phone, result.otp, result.user.name);
+    await notificationService.notifyOtp(result.user, result.otp);
 
     logger.info('Phone OTP resent', { userId: result.user._id });
 

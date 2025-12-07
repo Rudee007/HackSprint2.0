@@ -3,7 +3,8 @@ const consultationService = require('../services/consultation.service');
 const notificationService = require('../services/notification.service');
 const websocketService = require('../services/websocket.service');
 const therapistService = require('../services/therapist.service')
-// ✅ EXTERNAL ERROR HANDLER (Prevents binding issues)
+
+
 const handleError = (res, error) => {
   console.error('Consultation Controller Error:', error);
   
@@ -30,9 +31,6 @@ const handleError = (res, error) => {
 
 class ConsultationController {
 
-  // ═══════════════════════════════════════════════════════════
-  // EXISTING METHODS (Enhanced with therapy support)
-  // ═══════════════════════════════════════════════════════════
 
   createConsultation = async (req, res) => {
     try {
@@ -46,14 +44,13 @@ class ConsultationController {
         notes, 
         meetingLink, 
         sessionType,
-        // 🔥 NEW: Therapy-specific fields
         therapyData 
       } = req.body;
       
-      // Comprehensive validation
+      // === VALIDATION ===
       const requiredFields = { patientId, providerId, providerType, type, scheduledAt };
       const missingFields = Object.entries(requiredFields)
-        .filter(([key, value]) => !value)
+        .filter(([_, value]) => !value)
         .map(([key]) => key);
       
       if (missingFields.length > 0 || fee === undefined) {
@@ -70,7 +67,6 @@ class ConsultationController {
         });
       }
       
-      // Authorization check
       if (req.user.role === 'patient' && req.user.id !== patientId) {
         return res.status(403).json({
           success: false,
@@ -88,49 +84,32 @@ class ConsultationController {
         notes,
         meetingLink,
         sessionType: sessionType || (providerType === 'therapist' ? 'therapy' : 'consultation'),
-        // 🔥 NEW: Add therapy data if provided
         ...(therapyData && { therapyData })
       };
       
-      console.log('📋 Creating consultation:', consultationData);
+      console.log('📋 Creating consultation (admin):', consultationData);
       
+      // Create + populate
       const consultation = await consultationService.createConsultation(consultationData);
-      
-      // ✅ POPULATE FIELDS FOR NOTIFICATIONS
       const populatedConsultation = await consultationService.getConsultationById(consultation._id);
-      
-      // ✅ TRIGGER ADMIN NOTIFICATION: New Appointment Booked
+  
+      // === NOTIFICATIONS: patient + doctor ===
       try {
-        console.log('📧 Sending new appointment notification to admin...');
-        await notificationService.sendNewAppointmentAlert({
-          _id: populatedConsultation._id,
-          patientName: populatedConsultation.patientId?.name || 'Unknown Patient',
-          therapyType: populatedConsultation.sessionType || populatedConsultation.type || 'General Consultation',
-          scheduledAt: populatedConsultation.scheduledAt,
-          therapistName: populatedConsultation.providerId?.name || 'Not assigned yet',
-          fee: populatedConsultation.fee
-        });
-        console.log('✅ Admin notification sent successfully');
+        const patient = populatedConsultation.patientId;
+        const doctor = populatedConsultation.providerId;
+  
+        if (patient && doctor) {
+          await notificationService.notifyConsultationBooked({
+            consultation: populatedConsultation,
+            patient,
+            doctor
+          });
+        }
       } catch (notifError) {
-        console.error('⚠️ Admin notification failed:', notifError.message);
+        console.error('⚠️ Consultation notifications failed (admin create):', notifError.message);
       }
-
-      // ✅ TRIGGER PATIENT CONFIRMATION EMAIL
-      try {
-        console.log('📧 Sending appointment confirmation to patient...');
-        await notificationService.sendAppointmentConfirmation({
-          patientEmail: populatedConsultation.patientId?.email,
-          patientName: populatedConsultation.patientId?.name,
-          therapyType: populatedConsultation.sessionType || populatedConsultation.type,
-          scheduledAt: populatedConsultation.scheduledAt,
-          centerName: 'AyurSutra Wellness Center'
-        });
-        console.log('✅ Patient confirmation sent successfully');
-      } catch (notifError) {
-        console.error('⚠️ Patient confirmation failed:', notifError.message);
-      }
-
-      // ✅ TRIGGER WEBSOCKET NOTIFICATION (Enhanced)
+  
+      // === OPTIONAL: WebSocket broadcast (unchanged) ===
       try {
         const wsService = req.app.get('wsService');
         if (wsService) {
@@ -143,8 +122,7 @@ class ConsultationController {
             providerType: populatedConsultation.providerType,
             timestamp: new Date()
           });
-          
-          // 🔥 NEW: Send to therapist if therapy session
+  
           if (populatedConsultation.providerType === 'therapist') {
             wsService.emitToUser(populatedConsultation.providerId, 'new_session_assigned', {
               sessionId: populatedConsultation._id,
@@ -153,24 +131,24 @@ class ConsultationController {
               scheduledAt: populatedConsultation.scheduledAt
             });
           }
-          
-          console.log('✅ WebSocket notifications sent');
+  
+          console.log('✅ WebSocket notifications sent (admin create)');
         }
       } catch (wsError) {
-        console.error('⚠️ WebSocket notification failed:', wsError.message);
+        console.error('⚠️ WebSocket notification failed (admin create):', wsError.message);
       }
       
       return res.status(201).json({
         success: true,
         message: 'Consultation booked successfully',
-        data: consultation
+        data: populatedConsultation
       });
-
+  
     } catch (error) {
       return handleError(res, error);
     }
   };
-
+  
   updateConsultation = async (req, res) => {
     try {
       const { id } = req.params;

@@ -23,9 +23,9 @@ const notificationSchema = new Schema(
         'TREATMENT_PLAN_CREATED',
         'TREATMENT_PLAN_REMINDER_PRE',
         'TREATMENT_PLAN_REMINDER_POST',
-        'PRESCRIPTION_END_REMINDER',
         'THERAPY_DAILY_REMINDER',
         'FEEDBACK_AFTER_THERAPY',
+        'PRESCRIPTION_FOLLOWUP_REMINDER',
         'SYSTEM'
       ],
       required: [true, 'Notification event type is required']

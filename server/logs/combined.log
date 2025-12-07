@@ -4645,3 +4645,1632 @@
 {"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 01:17:18"}
 {"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 01:22:49"}
 {"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 01:22:49"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:08:56"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:08:56"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:10:40"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:10:40"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 1 existing bookings","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📋 Building sessions for plan 6933fa267f2890429e39d7a4","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ Plan 6933fa267f2890429e39d7a4: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ CP filtering complete in 64ms","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Total feasible slots: 850","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Average slots per session: 70.8","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"✅ MIP optimization complete in 45ms","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-06 15:10:54"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 15:10:54"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:19:09"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:19:09"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:45:25"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 15:45:25"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:11:52"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:11:52"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 14 existing bookings","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📋 Building sessions for plan 69341691f5609f46df134b2c","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ Plan 69341691f5609f46df134b2c: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ CP filtering complete in 21ms","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Total feasible slots: 201","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Average slots per session: 40.2","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"✅ MIP optimization complete in 7ms","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📊 Optimization score: 100.0/100","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-06 17:12:09"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 17:12:09"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:27:16"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:27:16"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 19 existing bookings","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📋 Building sessions for plan 69341a35f5ac67c2ccd2ac9a","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ Plan 69341a35f5ac67c2ccd2ac9a: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ CP filtering complete in 21ms","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Total feasible slots: 171","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Average slots per session: 34.2","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"✅ MIP optimization complete in 7ms","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-06 17:27:41"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 17:27:41"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:34:06"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:34:07"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 24 existing bookings","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📋 Building sessions for plan 69341bcaeba1460df8e97b34","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ Plan 69341bcaeba1460df8e97b34: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ CP filtering complete in 22ms","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Total feasible slots: 152","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Average slots per session: 30.4","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"✅ MIP optimization complete in 6ms","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📊 Optimization score: 90.0/100","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-06 17:34:26"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 17:34:26"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:52:02"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:52:02"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 29 existing bookings","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📋 Building sessions for plan 69341ffa7b93bcdf7fafae65","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ Plan 69341ffa7b93bcdf7fafae65: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ CP filtering complete in 22ms","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Total feasible slots: 128","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Average slots per session: 25.6","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"✅ MIP optimization complete in 6ms","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 17:52:18"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 33 existing bookings","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📋 Building sessions for plan 6934203d7b93bcdf7fafaf12","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ Plan 6934203d7b93bcdf7fafaf12: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ CP filtering complete in 21ms","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Total feasible slots: 98","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Average slots per session: 19.6","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"✅ MIP optimization complete in 6ms","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-06 17:53:25"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 17:53:25"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:58:18"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-06 17:58:18"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 17:58:42"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 17:58:42"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 17:58:42"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 37 existing bookings","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📋 Building sessions for plan 6934217a8acdfdc9ca719610","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ Plan 6934217a8acdfdc9ca719610: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ CP filtering complete in 49ms","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Total feasible slots: 480","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Average slots per session: 40.0","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"✅ MIP optimization complete in 18ms","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 17:58:43"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 48 existing bookings","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📋 Building sessions for plan 6934219c8acdfdc9ca7196ce","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ Plan 6934219c8acdfdc9ca7196ce: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Date range: 2025-12-05 to 2026-03-06","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"   🔍 DEBUG Session 4:","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Therapy: Nasya Karma (Nasal Therapy)","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Phase: pradhanakarma (Days 4-10)","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Required Day: 4","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Total slots checked: 1404","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Slots outside window: 1350","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Slots in window: 54","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Slots failed constraints: 54","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Search window: 2025-12-08 to 2025-12-11","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Target date: 2025-12-08","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"      - Constraint violations:","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"        * THERAPIST_BUSY: 51 violations","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"        * DURATION_FIT: 3 violations","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"⚠️ Session 4 (Nasya Karma (Nasal Therapy)) has NO feasible slots","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"   Phase: pradhanakarma, RequiredDay: 4","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ CP filtering complete in 48ms","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Total feasible slots: 413","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Sessions with no slots: 1/12","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Average slots per session: 34.4","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-06 17:59:16"}
+{"level":"warn","message":"⚠️ Skipping session 4 (has conflict or no feasible slots)","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"✅ MIP optimization complete in 14ms","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Scheduled: 11/12","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Conflicts: 1/12","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   Success rate: 91.7%","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📊 Optimization score: 45.8/100","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   ✅ Created: 11","timestamp":"2025-12-06 17:59:16"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-06 17:59:16"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:23:23"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:23:23"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 1 existing bookings","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📋 Building sessions for plan 69351668a5ccb1a4d63e63db","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ Plan 69351668a5ccb1a4d63e63db: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Date range: 2025-12-06 to 2026-03-07","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ CP filtering complete in 35ms","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Total feasible slots: 233","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Average slots per session: 46.6","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"✅ MIP optimization complete in 15ms","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 11:23:44"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 6 existing bookings","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📋 Building sessions for plan 6935168da5ccb1a4d63e6483","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ Plan 6935168da5ccb1a4d63e6483: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Date range: 2025-12-06 to 2026-03-07","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ CP filtering complete in 42ms","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Total feasible slots: 188","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Average slots per session: 37.6","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"✅ MIP optimization complete in 13ms","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-07 11:24:21"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 11:24:21"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:37:14"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:37:14"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 8 existing bookings","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📋 Building sessions for plan 693519a704a52ded7cfe0e01","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-6 (6 days)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"      Therapy: Snehapana (Internal Oleation), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 1/3: requiredDay=4","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 2/3: requiredDay=5","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 3/3: requiredDay=6","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 7","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 7-7 (1 days)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"      Therapy: Virechana Karma (Therapeutic Purgation), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 1/1: requiredDay=7","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 8","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 8-15 (8 days)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 5, Frequency: daily","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 1/5: requiredDay=8","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 2/5: requiredDay=9","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 3/5: requiredDay=10","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 4/5: requiredDay=11","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"         Session 5/5: requiredDay=12","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 16","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ Plan 693519a704a52ded7cfe0e01: Created 12 sessions spanning Days 1-15","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   purvakarma: 6 sessions, Days 1-6","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 7-7","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   paschatkarma: 5 sessions, Days 8-12","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ CP filtering complete in 61ms","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Total feasible slots: 661","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Average slots per session: 55.1","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 12","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   purvakarma: Days 1-6 (6 sessions)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   pradhanakarma: Days 7-7 (1 sessions)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   paschatkarma: Days 8-12 (5 sessions)","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"✅ MIP optimization complete in 34ms","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📊 Optimization score: 72.9/100","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-07 11:37:35"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 11:37:35"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:45:57"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:45:57"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 19 existing bookings","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📋 Building sessions for plan 69351bbb9971f11afa37b802","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ Plan 69351bbb9971f11afa37b802: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Date range: 2025-12-08 to 2026-03-09","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ CP filtering complete in 69ms","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Total feasible slots: 608","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Average slots per session: 50.7","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"✅ MIP optimization complete in 32ms","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-07 11:46:27"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 11:46:28"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-07 11:46:28"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 11:46:28"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:49:05"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 11:49:05"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 32 existing bookings","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📋 Building sessions for plan 69351c7124cf485bd327ce77","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ Plan 69351c7124cf485bd327ce77: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ CP filtering complete in 38ms","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Total feasible slots: 108","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Average slots per session: 21.6","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"✅ MIP optimization complete in 9ms","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📊 Optimization score: 60.0/100","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-07 11:49:29"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 11:49:29"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 12:08:08"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 12:08:08"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 0 existing bookings","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📋 Building sessions for plan 693520ea78290d8ab701f0b0","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-7 (7 days)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"      Therapy: Snehapana (Internal Oleation), Sessions: 5, Frequency: daily","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 1/5: requiredDay=1","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 2/5: requiredDay=2","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 3/5: requiredDay=3","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 4/5: requiredDay=4","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 5/5: requiredDay=5","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 1/2: requiredDay=6","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 8","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 8-8 (1 days)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"      Therapy: Vamana Karma (Therapeutic Emesis), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 1/1: requiredDay=8","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 9","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 9-21 (13 days)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 6, Frequency: alternate_days","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 1/6: requiredDay=9","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 2/6: requiredDay=11","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 3/6: requiredDay=13","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 4/6: requiredDay=15","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 5/6: requiredDay=17","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"         Session 6/6: requiredDay=19","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 22","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ Plan 693520ea78290d8ab701f0b0: Created 14 sessions spanning Days 1-21","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ Model built: 14 sessions across 1 plans","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   purvakarma: 7 sessions, Days 1-7","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 8-8","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   paschatkarma: 6 sessions, Days 9-19","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Date range: 2025-12-08 to 2026-03-09","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"🔎 Finding feasible slots for 14 sessions...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ CP filtering complete in 71ms","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Total feasible slots: 1012","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Sessions with no slots: 0/14","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Average slots per session: 72.3","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 19","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   purvakarma: Days 1-7 (7 sessions)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   pradhanakarma: Days 8-8 (1 sessions)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   paschatkarma: Days 9-19 (6 sessions)","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"✅ MIP optimization complete in 49ms","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Scheduled: 14/14","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Conflicts: 0/14","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📋 Creating 14 draft consultations...","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   ✅ Created: 14","timestamp":"2025-12-07 12:08:34"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 12:08:34"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 12:13:37"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 12:13:37"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 13 existing bookings","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"📋 Building sessions for plan 6935224f70f1e443b49e6639","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-6 (6 days)","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"      Therapy: Snehapana (Internal Oleation), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 1/3: requiredDay=4","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 2/3: requiredDay=5","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 3/3: requiredDay=6","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 7","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 7-14 (8 days)","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"      Therapy: Basti Karma - Yoga Basti (Enema Therapy), Sessions: 8, Frequency: daily","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 1/8: requiredDay=7","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 2/8: requiredDay=8","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 3/8: requiredDay=9","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 4/8: requiredDay=10","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 5/8: requiredDay=11","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 6/8: requiredDay=12","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 7/8: requiredDay=13","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 8/8: requiredDay=14","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 15","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 15-21 (7 days)","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 3, Frequency: alternate_days","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 1/3: requiredDay=15","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 2/3: requiredDay=17","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"         Session 3/3: requiredDay=19","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 22","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"✅ Plan 6935224f70f1e443b49e6639: Created 17 sessions spanning Days 1-21","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"✅ Model built: 17 sessions across 1 plans","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   purvakarma: 6 sessions, Days 1-6","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   pradhanakarma: 8 sessions, Days 7-14","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   paschatkarma: 3 sessions, Days 15-19","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   Date range: 2025-12-09 to 2026-03-10","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"🔎 Finding feasible slots for 17 sessions...","timestamp":"2025-12-07 12:14:31"}
+{"level":"info","message":"✅ CP filtering complete in 92ms","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   Total feasible slots: 1037","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   Sessions with no slots: 0/17","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   Average slots per session: 61.0","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 19","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   purvakarma: Days 1-6 (6 sessions)","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   pradhanakarma: Days 7-14 (8 sessions)","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   paschatkarma: Days 15-19 (3 sessions)","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"✅ MIP optimization complete in 53ms","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   Scheduled: 17/17","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   Conflicts: 0/17","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"📋 Creating 17 draft consultations...","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   ✅ Created: 17","timestamp":"2025-12-07 12:14:32"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 12:14:32"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 12:16:18"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 12:16:18"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 31 existing bookings","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📋 Building sessions for plan 6935230270f1e443b49e6724","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ Plan 6935230270f1e443b49e6724: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ CP filtering complete in 71ms","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Total feasible slots: 566","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Average slots per session: 47.2","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"✅ MIP optimization complete in 21ms","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-07 12:17:30"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 12:17:30"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 13:02:08"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 13:02:08"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 0 existing bookings","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📋 Building sessions for plan 69352e41b1027316260423e1","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ Plan 69352e41b1027316260423e1: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ CP filtering complete in 61ms","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Total feasible slots: 782","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Average slots per session: 65.2","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"✅ MIP optimization complete in 44ms","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-07 13:05:29"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 13:05:29"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 13:14:30"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 13:14:30"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 13 existing bookings","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📋 Building sessions for plan 69353117ad32fb6d5f042a61","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ Plan 69353117ad32fb6d5f042a61: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Date range: 2025-12-06 to 2026-03-07","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ CP filtering complete in 57ms","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Total feasible slots: 759","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Average slots per session: 63.3","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"✅ MIP optimization complete in 38ms","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📊 Optimization score: 79.2/100","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-07 13:17:35"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 13:17:35"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 13:35:47"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 13:35:48"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 23 existing bookings","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"📋 Building sessions for plan 6935357138fb70ffeb54f8fc","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-6 (6 days)","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"      Therapy: Snehapana (Internal Oleation), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 1/3: requiredDay=4","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 2/3: requiredDay=5","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 3/3: requiredDay=6","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 7","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 7-7 (1 days)","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"      Therapy: Virechana Karma (Therapeutic Purgation), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 1/1: requiredDay=7","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 8","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 8-15 (8 days)","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 5, Frequency: daily","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 1/5: requiredDay=8","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 2/5: requiredDay=9","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 3/5: requiredDay=10","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 4/5: requiredDay=11","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"         Session 5/5: requiredDay=12","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 16","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"✅ Plan 6935357138fb70ffeb54f8fc: Created 12 sessions spanning Days 1-15","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   purvakarma: 6 sessions, Days 1-6","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 7-7","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   paschatkarma: 5 sessions, Days 8-12","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 13:36:09"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"✅ CP filtering complete in 76ms","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   Total feasible slots: 591","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   Average slots per session: 49.3","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 12","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   purvakarma: Days 1-6 (6 sessions)","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   pradhanakarma: Days 7-7 (1 sessions)","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   paschatkarma: Days 8-12 (5 sessions)","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"✅ MIP optimization complete in 33ms","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-07 13:36:10"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 13:36:10"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 22:09:22"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 22:09:22"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 22:09:54"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 22:09:54"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 36 availability slots across 6 days","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 35 existing bookings","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📋 Building sessions for plan 6935ae1ebf4004ac799cd20c","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-7 (7 days)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"      Therapy: Snehapana (Internal Oleation), Sessions: 5, Frequency: daily","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 1/5: requiredDay=1","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 2/5: requiredDay=2","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 3/5: requiredDay=3","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 4/5: requiredDay=4","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 5/5: requiredDay=5","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 1/2: requiredDay=6","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 8","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 8-8 (1 days)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"      Therapy: Vamana Karma (Therapeutic Emesis), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 1/1: requiredDay=8","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 9","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 9-21 (13 days)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 6, Frequency: alternate_days","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 1/6: requiredDay=9","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 2/6: requiredDay=11","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 3/6: requiredDay=13","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 4/6: requiredDay=15","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 5/6: requiredDay=17","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"         Session 6/6: requiredDay=19","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 22","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ Plan 6935ae1ebf4004ac799cd20c: Created 14 sessions spanning Days 1-21","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ Model built: 14 sessions across 1 plans","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   purvakarma: 7 sessions, Days 1-7","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 8-8","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   paschatkarma: 6 sessions, Days 9-19","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1404 slots across 91 days","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ Grid generated: 1404 total time slots","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"🔎 Finding feasible slots for 14 sessions...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ CP filtering complete in 91ms","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Total feasible slots: 705","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Sessions with no slots: 0/14","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Average slots per session: 50.4","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 19","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   purvakarma: Days 1-7 (7 sessions)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   pradhanakarma: Days 8-8 (1 sessions)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   paschatkarma: Days 9-19 (6 sessions)","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"✅ MIP optimization complete in 34ms","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Scheduled: 14/14","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Conflicts: 0/14","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📊 Optimization score: 50.0/100","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📋 Creating 14 draft consultations...","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   ✅ Created: 14","timestamp":"2025-12-07 22:11:02"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 22:11:02"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 22:49:49"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 22:49:49"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 23:03:20"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 23:03:20"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 23:09:59"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 23:09:59"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 42 availability slots across 7 days","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 0 existing bookings","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📋 Building sessions for plan 6935bc0441b8b7f36e567244","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"         Session 1/2: requiredDay=1","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"         Session 2/2: requiredDay=3","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-4 (1 days)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"      Therapy: Raktamokshana - Jalaukavacharana (Leech Therapy), Sessions: 1, Frequency: daily","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"         Session 1/1: requiredDay=4","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 5","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 5-7 (3 days)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"      Therapy: Sarvanga Abhyanga (Full Body Oil Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"         Session 1/2: requiredDay=5","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"         Session 2/2: requiredDay=7","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 8","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ Plan 6935bc0441b8b7f36e567244: Created 5 sessions spanning Days 1-7","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ Model built: 5 sessions across 1 plans","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   purvakarma: 2 sessions, Days 1-3","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   pradhanakarma: 1 sessions, Days 4-4","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 5-7","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1638 slots across 91 days","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ Grid generated: 1638 total time slots","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"🔎 Finding feasible slots for 5 sessions...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ CP filtering complete in 36ms","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Total feasible slots: 286","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Sessions with no slots: 0/5","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Average slots per session: 57.2","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 7","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   purvakarma: Days 1-3 (2 sessions)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   pradhanakarma: Days 4-4 (1 sessions)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   paschatkarma: Days 5-7 (2 sessions)","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"✅ MIP optimization complete in 17ms","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Scheduled: 5/5","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Conflicts: 0/5","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📋 Creating 5 draft consultations...","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   ✅ Created: 5","timestamp":"2025-12-07 23:10:20"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 23:10:20"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 23:28:08"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-07 23:28:08"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 42 availability slots across 7 days","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 5 existing bookings","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📋 Building sessions for plan 6935c0418401d334cd372f14","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ Plan 6935c0418401d334cd372f14: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Date range: 2025-12-07 to 2026-03-08","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1638 slots across 91 days","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ Grid generated: 1638 total time slots","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ CP filtering complete in 50ms","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Total feasible slots: 903","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Average slots per session: 75.3","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"✅ MIP optimization complete in 35ms","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-07 23:28:25"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-07 23:28:25"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-08 00:34:17"}
+{"filters":{},"level":"info","message":"Retrieved 8 therapies","timestamp":"2025-12-08 00:34:17"}
+{"level":"info","message":"🚀 Starting scheduling for 1 treatment plan(s)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📋 Single patient mode: CP + MIP","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📊 Fetching scheduling data...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"🔍 Extracted 1 unique therapist(s), 1 patient(s)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"🔍 Fetching 1 therapist profile(s) from database...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ Found 1 therapist record(s) in database","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 42 availability slots across 7 days","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ All 1 therapist(s) successfully loaded into therapistMap","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ Data fetched: 1 plans, 12 existing bookings","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"🏗️ Building scheduling model...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📋 Building sessions for plan 6935cfc4d74ce4b0fd9756f3","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Phase 1 (purvakarma): Days 1-3 (3 days)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 3, Frequency: daily","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 1/3: requiredDay=1","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 2/3: requiredDay=2","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 3/3: requiredDay=3","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   ✅ Phase 1 complete. Next phase starts at Day 4","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Phase 2 (pradhanakarma): Days 4-10 (7 days)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"      Therapy: Nasya Karma (Nasal Therapy), Sessions: 7, Frequency: daily","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 1/7: requiredDay=4","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 2/7: requiredDay=5","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 3/7: requiredDay=6","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 4/7: requiredDay=7","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 5/7: requiredDay=8","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 6/7: requiredDay=9","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 7/7: requiredDay=10","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   ✅ Phase 2 complete. Next phase starts at Day 11","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Phase 3 (paschatkarma): Days 11-14 (4 days)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"      Therapy: Mukha Abhyanga (Facial Massage), Sessions: 2, Frequency: alternate_days","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 1/2: requiredDay=11","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"         Session 2/2: requiredDay=13","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   ✅ Phase 3 complete. Next phase starts at Day 15","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ Plan 6935cfc4d74ce4b0fd9756f3: Created 12 sessions spanning Days 1-14","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ Model built: 12 sessions across 1 plans","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📊 Phase distribution in model:","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   purvakarma: 3 sessions, Days 1-3","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   pradhanakarma: 7 sessions, Days 4-10","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   paschatkarma: 2 sessions, Days 11-13","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"🔍 CP Layer: Starting constraint programming filter...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📅 Generating time slot grid...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"🏗️ Building time slot grid...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Date range: 2025-12-10 to 2026-03-11","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Therapists: 1","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   ✅ Therapist 69173ab584c635afad10a900: 1638 slots across 91 days","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ Grid generated: 1638 total time slots","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"🔎 Finding feasible slots for 12 sessions...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ CP filtering complete in 75ms","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Total feasible slots: 853","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Sessions with no slots: 0/12","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Average slots per session: 71.1","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"⚙️ MIP Layer: Starting optimization...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📋 Sorting sessions by required day for sequential assignment...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ Sessions sorted: Day 1 to Day 13","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📊 Phase distribution:","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   purvakarma: Days 1-3 (3 sessions)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   pradhanakarma: Days 4-10 (7 sessions)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   paschatkarma: Days 11-13 (2 sessions)","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"💰 Calculating costs for all feasible slots...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ Slot costs calculated","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"🎯 Assigning slots to sessions (sequential day-by-day)...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"✅ MIP optimization complete in 41ms","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Scheduled: 12/12","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Conflicts: 0/12","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   Success rate: 100.0%","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📊 Optimization score: 75.0/100","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📋 Creating draft consultations...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📋 Creating 12 draft consultations...","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"📊 Consultation creation complete:","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   ✅ Created: 12","timestamp":"2025-12-08 00:34:36"}
+{"level":"info","message":"   ❌ Failed: 0","timestamp":"2025-12-08 00:34:36"}

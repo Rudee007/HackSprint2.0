@@ -8,6 +8,8 @@ const Consultation = require('../models/Consultation');
 const Therapy = require('../models/Therapy')
 const CourseTemplate = require('../models/CourseTemplate')
 const Therapist = require('../models/Therapist')
+const notificationService = require('./notification.service');
+
 class DoctorService {
   
   /**
@@ -901,8 +903,7 @@ async createTreatmentPlan(treatmentData) {
 
     if (prePanchakarmaInstructions && prePanchakarmaInstructions.trim()) {
       try {
-        const NotificationService = require('./notification.service');
-        await NotificationService.sendPreTreatmentInstructions({
+        await notificationService.sendPreTreatmentInstructions({
           patientEmail: patient.email,
           patientName: patient.name,
           treatmentType: panchakarmaType,

@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
-/* ───────── API (UNCHANGED) ─────────────────────────────────────────────── */
 const api = axios.create({ baseURL:"http://localhost:3003/api" });
 api.interceptors.request.use((c)=>{
   const t = localStorage.getItem("accessToken");
@@ -24,14 +23,12 @@ const fetchSlots = (pid,date)=>
 
 const bookSlot = (data)=>api.post("/booking/create",data);
 
-/* ───────── constants (UNCHANGED) ───────────────────────────────────────── */
 const SEVERITY=[
   { value:"always",    label:"Severe / Constant", desc:"Persistent & intense", color:"red"},
   { value:"often",     label:"Moderate / Frequent", desc:"Noticeable impact", color:"amber"},
   { value:"sometimes", label:"Mild / Occasional", desc:"Minor discomfort", color:"green"}
 ];
 
-/* ───────── Slot-picker modal (ENHANCED CSS) ───────────────────────────────── */
 const SlotPicker=({provider,onClose,onBooked})=>{
   const { user } = useAuth();
   const [slots,setSlots]=useState([]);
@@ -79,7 +76,6 @@ const SlotPicker=({provider,onClose,onBooked})=>{
         onClick={e=>e.stopPropagation()}
         className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
       >
-        {/* Modal Header */}
         <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white relative">
           <button
             onClick={onClose}
@@ -99,7 +95,6 @@ const SlotPicker=({provider,onClose,onBooked})=>{
           </div>
         </div>
 
-        {/* Modal Content */}
         <div className="p-6">
           {busy ? (
             <div className="flex flex-col items-center justify-center py-12">

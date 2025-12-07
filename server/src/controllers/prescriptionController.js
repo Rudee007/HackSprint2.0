@@ -5,122 +5,138 @@ const Prescription = require('../models/Prescription');
 const Medicine = require('../models/Medicine');
 const User = require('../models/User');
 const { generatePrescriptionPDF } = require('../utils/pdfGenerator');
-
+const notificationService = require('../services/notification.service');
 // ═══════════════════════════════════════════════════════════
 // CREATE PRESCRIPTION
 // ═══════════════════════════════════════════════════════════
 // backend/controllers/prescriptionController.js
 
 exports.createPrescription = async (req, res) => {
-    try {
-      const {
-        patientId,
-        consultationId,
-        chiefComplaint,
-        diagnosis,
-        medicines,
-        generalInstructions,
-        dietInstructions,
-        lifestyleInstructions,
-        followUpDays
-      } = req.body;
-  
-      // Validation
-      if (!patientId || !chiefComplaint || !medicines || medicines.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Patient, chief complaint, and at least one medicine are required'
-        });
-      }
-  
-      // Calculate follow-up date
-      const followUpDate = followUpDays 
-        ? new Date(Date.now() + parseInt(followUpDays) * 24 * 60 * 60 * 1000)
-        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  
-      // 🔥 RETRY LOGIC FOR DUPLICATE KEY ERRORS
-      let prescription;
-      let retries = 3;
-      let created = false;
-  
-      while (retries > 0 && !created) {
-        try {
-          // Create prescription
-          prescription = await Prescription.create({
-            patientId,
-            doctorId: req.user._id,
-            centerId: req.user.centerId,
-            consultationId,
-            chiefComplaint,
-            diagnosis,
-            medicines,
-            generalInstructions,
-            dietInstructions,
-            lifestyleInstructions,
-            followUpDate,
-            status: 'active'
-          });
-  
-          created = true;
-  
-        } catch (createError) {
-          if (createError.code === 11000 && retries > 1) {
-            // Duplicate key error, retry
-            console.log(`Duplicate prescription number, retrying... (${retries - 1} attempts left)`);
-            retries--;
-            await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
-          } else {
-            throw createError;
-          }
-        }
-      }
-  
-      if (!created) {
-        throw new Error('Failed to create prescription after multiple attempts');
-      }
-  
-      // Update medicine stock
-      for (const med of medicines) {
-        await Medicine.findByIdAndUpdate(
-          med.medicineId,
-          { $inc: { stock: -med.quantity } },
-          { new: true }
-        );
-      }
-  
-      // Populate prescription
-      await prescription.populate([
-        { path: 'patientId', select: 'name email phone' },
-        { path: 'doctorId', select: 'name email phone' },
-        { path: 'medicines.medicineId', select: 'name genericName category price' }
-      ]);
-  
-      res.status(201).json({
-        success: true,
-        message: 'Prescription created successfully',
-        data: prescription
-      });
-  
-    } catch (error) {
-      console.error('❌ Error creating prescription:', error);
-      
-      // Better error message for duplicate key
-      if (error.code === 11000) {
-        return res.status(409).json({
-          success: false,
-          message: 'Prescription number conflict. Please try again.',
-          error: 'Duplicate prescription number'
-        });
-      }
-      
-      res.status(500).json({
+  try {
+    const {
+      patientId,
+      consultationId,
+      chiefComplaint,
+      diagnosis,
+      medicines,
+      generalInstructions,
+      dietInstructions,
+      lifestyleInstructions,
+      followUpDays
+    } = req.body;
+
+    // Validation
+    if (!patientId || !chiefComplaint || !medicines || medicines.length === 0) {
+      return res.status(400).json({
         success: false,
-        message: error.message || 'Failed to create prescription',
-        error: error.message
+        message: 'Patient, chief complaint, and at least one medicine are required'
       });
     }
-  };
-  
+
+    // Calculate follow-up date (final date for this prescription course)
+    const followUpDate = followUpDays
+      ? new Date(Date.now() + parseInt(followUpDays, 10) * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    // 🔥 RETRY LOGIC FOR DUPLICATE KEY ERRORS
+    let prescription;
+    let retries = 3;
+    let created = false;
+
+    while (retries > 0 && !created) {
+      try {
+        prescription = await Prescription.create({
+          patientId,
+          doctorId: req.user._id,
+          centerId: req.user.centerId,
+          consultationId,
+          chiefComplaint,
+          diagnosis,
+          medicines,
+          generalInstructions,
+          dietInstructions,
+          lifestyleInstructions,
+          followUpDate,
+          status: 'active'
+        });
+
+        created = true;
+      } catch (createError) {
+        if (createError.code === 11000 && retries > 1) {
+          console.log(
+            `Duplicate prescription number, retrying... (${retries - 1} attempts left)`
+          );
+          retries--;
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        } else {
+          throw createError;
+        }
+      }
+    }
+
+    if (!created) {
+      throw new Error('Failed to create prescription after multiple attempts');
+    }
+
+    // Update medicine stock
+    for (const med of medicines) {
+      await Medicine.findByIdAndUpdate(
+        med.medicineId,
+        { $inc: { stock: -med.quantity } },
+        { new: true }
+      );
+    }
+
+    // Populate prescription for response and notifications
+    await prescription.populate([
+      { path: 'patientId', select: 'name email phone' },
+      { path: 'doctorId', select: 'name email phone' },
+      {
+        path: 'medicines.medicineId',
+        select: 'name genericName category price'
+      }
+    ]);
+
+    // 🔔 Schedule follow-up reminder (1 day before followUpDate)
+    try {
+      const patient = prescription.patientId; // populated
+      if (prescription.followUpDate && patient?._id) {
+        await notificationService.schedulePrescriptionFollowUpReminder({
+          prescription,
+          patient
+        });
+      }
+    } catch (notifErr) {
+      console.error(
+        '⚠️ Failed to schedule prescription follow-up reminder:',
+        notifErr.message
+      );
+      // Do not block main response
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Prescription created successfully',
+      data: prescription
+    });
+  } catch (error) {
+    console.error('❌ Error creating prescription:', error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Prescription number conflict. Please try again.',
+        error: 'Duplicate prescription number'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create prescription',
+      error: error.message
+    });
+  }
+};
 // ═══════════════════════════════════════════════════════════
 // GET SINGLE PRESCRIPTION (Following Consultation Pattern)
 // ═══════════════════════════════════════════════════════════

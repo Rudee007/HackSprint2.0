@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Follow-up Reminder</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 24px;">
+      <h2 style="margin-top: 0; color: #2c3e50;">
+        Follow-up Reminder – {{clinicName}}
+      </h2>
+
+      <p>Dear {{patientName}},</p>
+
+      <p>
+        This is a friendly reminder that your follow-up visit is scheduled on
+        <strong>{{followUpDate}}</strong>.
+      </p>
+
+      {{#if chiefComplaint}}
+        <p><strong>Chief complaint:</strong> {{chiefComplaint}}</p>
+      {{/if}}
+
+      {{#if diagnosis}}
+        <p><strong>Diagnosis:</strong> {{diagnosis}}</p>
+      {{/if}}
+
+      <p>
+        Please plan to visit your doctor on or before this date, or contact the clinic
+        if you need to reschedule.
+      </p>
+
+      <p>Wishing you good health,<br />{{clinicName}}</p>
+
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;" />
+
+      <p style="font-size: 12px; color: #777;">
+        This is an automated reminder from {{clinicName}}.<br />
+        If you have already completed your follow-up, you can ignore this message.
+      </p>
+    </div>
+  </body>
+</html>
