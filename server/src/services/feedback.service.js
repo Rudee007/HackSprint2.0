@@ -142,7 +142,6 @@ class FeedbackService {
     }
   }
   
-  // ============ ADMIN OPERATIONS ============
   
   async getAllFeedback(options = {}) {
     const { filters = {}, page = 1, limit = 20, timeRange = '1month' } = options;

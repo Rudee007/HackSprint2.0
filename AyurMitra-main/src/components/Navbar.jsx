@@ -76,7 +76,7 @@ const Navbar = () => {
     },
     { 
       name: 'Admin', 
-      path: '/admin-dashboard', 
+      path: '/admin-login', 
       icon: Shield, 
       description: 'Schedule therapy sessions',
       color: 'from-teal-500 to-cyan-600'

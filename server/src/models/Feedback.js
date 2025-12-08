@@ -1,276 +1,252 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const FeedbackSchema = new Schema({
-  // Core References
-  patientId: { 
-    type: Schema.Types.Mixed, 
-    ref: 'User', 
-    required: true,
-    validate: {
-      validator: async function(id) {
-        const user = await mongoose.model('User').findById(id);
-        return user && user.role === 'patient';
+const FeedbackSchema = new Schema(
+  {
+    // ========== CORE REFERENCES ==========
+    patientId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      validate: {
+        validator: async function (id) {
+          const user = await mongoose.model('User').findById(id);
+          return user && user.role === 'patient';
+        },
+        message: 'Referenced user must be a patient',
       },
-      message: 'Referenced user must be a patient'
-    }
-  },
-  
-  sessionId: { 
-    type: Schema.Types.Mixed, 
-    ref: 'Consultation', 
-    required: true 
-  },
-  
-  providerId: { 
-    type: Schema.Types.Mixed, 
-    ref: 'User', 
-    required: true 
-  },
+    },
 
-  // Therapy Information
-  therapyType: {
-    type: String,
-    enum: ['abhyanga', 'shirodhara', 'panchakarma', 'consultation', 'follow_up'],
-    required: true
-  },
-
-  // ============ RATING CATEGORIES (1-5 scale) ============
-  ratings: {
-    overallSatisfaction: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
+    // Can be consultation or therapy session (generated session)
+    sessionId: {
+      type: Schema.Types.ObjectId,
+      required: true,
     },
-    treatmentEffectiveness: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
-    },
-    patientCare: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
-    },
-    facilityQuality: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
-    },
-    therapistProfessionalism: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
-    },
-    communicationQuality: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
-    }
-  },
-
-  // ============ HEALTH PROGRESS TRACKING ============
-  healthMetrics: {
-    // Before and after session comparisons (1-10 scale)
-    painLevel: {
-      before: { type: Number, min: 1, max: 10, required: true },
-      after: { type: Number, min: 1, max: 10, required: true }
-    },
-    energyLevel: {
-      before: { type: Number, min: 1, max: 10, required: true },
-      after: { type: Number, min: 1, max: 10, required: true }
-    },
-    sleepQuality: {
-      before: { type: Number, min: 1, max: 10, required: false },
-      after: { type: Number, min: 1, max: 10, required: false }
-    },
-    stressLevel: {
-      before: { type: Number, min: 1, max: 10, required: false },
-      after: { type: Number, min: 1, max: 10, required: false }
-    },
-    overallWellbeing: {
-      before: { type: Number, min: 1, max: 10, required: false },
-      after: { type: Number, min: 1, max: 10, required: false }
-    },
-    mobilityLevel: {
-      before: { type: Number, min: 1, max: 10, required: false },
-      after: { type: Number, min: 1, max: 10, required: false }
-    }
-  },
-
-  // ============ SPECIFIC IMPROVEMENTS ============
-  improvements: [{
-    aspect: {
+    sessionType: {
       type: String,
-      enum: ['joint_pain', 'digestion', 'sleep', 'stress', 'energy', 'mobility', 'skin_condition', 'mental_clarity'],
-      required: true
+      enum: ['consultation', 'therapy_session'],
+      required: true,
     },
-    progressLevel: {
-      type: Number,
-      min: 0,
-      max: 100,
-      required: true
+
+    providerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true, // doctor or therapist
     },
-    notes: String,
-    significance: {
+
+    therapyType: {
       type: String,
-      enum: ['minor', 'moderate', 'significant', 'major'],
-      default: 'moderate'
-    }
-  }],
+      enum: ['abhyanga', 'shirodhara', 'panchakarma', 'consultation', 'follow_up', 'other'],
+      required: true,
+    },
 
-  // ============ SIDE EFFECTS MONITORING ============
-  sideEffects: [{
-    type: {
+    // ========== ROUTING / VISIBILITY ==========
+    visibility: {
+      toDoctor: { type: Boolean, default: true }, // clinical + safety signals
+      toAdmin: { type: Boolean, default: true },  // service + facility + complaints
+    },
+
+    assignedDoctorId: { type: Schema.Types.ObjectId, ref: 'User' }, // optional override
+    assignedAdminId: { type: Schema.Types.ObjectId, ref: 'User' },  // for escalation
+
+    // ========== RATING CATEGORIES (1-5) ==========
+    ratings: {
+      overallSatisfaction: { type: Number, min: 1, max: 5, required: true },
+      treatmentEffectiveness: { type: Number, min: 1, max: 5, required: true }, // doctor focus
+      patientCare: { type: Number, min: 1, max: 5, required: true },            // shared
+      facilityQuality: { type: Number, min: 1, max: 5, required: true },        // admin focus
+      therapistProfessionalism: { type: Number, min: 1, max: 5, required: true },
+      communicationQuality: { type: Number, min: 1, max: 5, required: true },
+    },
+
+    // ========== HEALTH PROGRESS (doctor facing) ==========
+    healthMetrics: {
+      painLevel: {
+        before: { type: Number, min: 1, max: 10, required: true },
+        after: { type: Number, min: 1, max: 10, required: true },
+      },
+      energyLevel: {
+        before: { type: Number, min: 1, max: 10, required: true },
+        after: { type: Number, min: 1, max: 10, required: true },
+      },
+      sleepQuality: {
+        before: { type: Number, min: 1, max: 10 },
+        after: { type: Number, min: 1, max: 10 },
+      },
+      stressLevel: {
+        before: { type: Number, min: 1, max: 10 },
+        after: { type: Number, min: 1, max: 10 },
+      },
+      overallWellbeing: {
+        before: { type: Number, min: 1, max: 10 },
+        after: { type: Number, min: 1, max: 10 },
+      },
+      mobilityLevel: {
+        before: { type: Number, min: 1, max: 10 },
+        after: { type: Number, min: 1, max: 10 },
+      },
+    },
+
+    // ========== SPECIFIC IMPROVEMENTS (doctor dashboards) ==========
+    improvements: [
+      {
+        aspect: {
+          type: String,
+          enum: [
+            'joint_pain',
+            'digestion',
+            'sleep',
+            'stress',
+            'energy',
+            'mobility',
+            'skin_condition',
+            'mental_clarity',
+          ],
+          required: true,
+        },
+        progressLevel: { type: Number, min: 0, max: 100, required: true },
+        notes: String,
+        significance: {
+          type: String,
+          enum: ['minor', 'moderate', 'significant', 'major'],
+          default: 'moderate',
+        },
+      },
+    ],
+
+    // ========== SIDE EFFECTS / SAFETY (doctor + critical alerts) ==========
+    sideEffects: [
+      {
+        type: {
+          type: String,
+          enum: [
+            'fatigue',
+            'nausea',
+            'headache',
+            'skin_irritation',
+            'dizziness',
+            'muscle_soreness',
+            'other',
+          ],
+          required: true,
+        },
+        severity: { type: Number, min: 1, max: 5, required: true },
+        durationUnit: {
+          type: String,
+          enum: ['minutes', 'hours', 'days', 'ongoing'],
+          required: true,
+        },
+        durationValue: { type: Number, min: 0 }, // optional numeric for analytics
+        description: String,
+        resolved: { type: Boolean, default: false },
+      },
+    ],
+
+    // ========== QUALITATIVE FEEDBACK ==========
+    textFeedback: {
+      positiveAspects: String,
+      concernsOrIssues: String, // both doctor and admin may see
+      suggestions: String,
+      additionalComments: String,
+    },
+
+    // ========== RECOMMENDATION / NPS ==========
+    recommendationScore: { type: Number, min: 0, max: 10, required: true },
+    wouldReturnForTreatment: { type: Boolean, required: true },
+    wouldRecommendToOthers: { type: Boolean, required: true },
+
+    // ========== METADATA ==========
+    submissionMethod: {
       type: String,
-      enum: ['fatigue', 'nausea', 'headache', 'skin_irritation', 'dizziness', 'muscle_soreness', 'other'],
-      required: true
+      enum: ['mobile_app', 'web_portal', 'in_person', 'phone_call', 'email'],
+      default: 'web_portal',
     },
-    severity: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
-    },
-    duration: {
+
+    isAnonymous: { type: Boolean, default: false },
+
+    timeToComplete: { type: Number, min: 1, max: 60 }, // minutes
+
+    // ========== WORKFLOW STATE ==========
+    status: {
       type: String,
-      enum: ['minutes', 'hours', 'days', 'ongoing'],
-      required: true
+      enum: ['submitted', 'triaged', 'reviewed', 'responded', 'archived'],
+      default: 'submitted',
     },
-    description: String,
-    resolved: {
-      type: Boolean,
-      default: false
-    }
-  }],
 
-  // ============ QUALITATIVE FEEDBACK ============
-  textFeedback: {
-    positiveAspects: String,
-    concernsOrIssues: String,
-    suggestions: String,
-    additionalComments: String
-  },
-
-  // ============ RECOMMENDATION METRICS ============
-  recommendationScore: {
-    type: Number,
-    min: 0,
-    max: 10,
-    required: true
-  },
-
-  wouldReturnForTreatment: {
-    type: Boolean,
-    required: true
-  },
-
-  wouldRecommendToOthers: {
-    type: Boolean,
-    required: true
-  },
-
-  // ============ METADATA ============
-  submissionMethod: {
-    type: String,
-    enum: ['mobile_app', 'web_portal', 'in_person', 'phone_call', 'email'],
-    default: 'web_portal'
-  },
-
-  isAnonymous: {
-    type: Boolean,
-    default: false
-  },
-
-  timeToComplete: {
-    type: Number, // in minutes
-    min: 1,
-    max: 60
-  },
-
-  // ============ SYSTEM FIELDS ============
-  status: {
-    type: String,
-    enum: ['submitted', 'reviewed', 'responded', 'archived'],
-    default: 'submitted'
-  },
-
-  adminResponse: {
-    responseText: String,
-    respondedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    respondedAt: Date,
-    actionTaken: {
-      type: String,
-      enum: ['no_action', 'follow_up_scheduled', 'treatment_adjusted', 'escalated', 'resolved']
-    }
-  },
-
-  flags: {
-    requiresAttention: {
-      type: Boolean,
-      default: false
+    // separate responses
+    doctorResponse: {
+      responseText: String,
+      respondedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      respondedAt: Date,
+      actionTaken: {
+        type: String,
+        enum: ['no_action', 'treatment_adjusted', 'follow_up_scheduled', 'escalated'],
+      },
     },
-    criticalFeedback: {
-      type: Boolean,
-      default: false
+
+    adminResponse: {
+      responseText: String,
+      respondedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      respondedAt: Date,
+      actionTaken: {
+        type: String,
+        enum: ['no_action', 'service_improvement', 'staff_feedback', 'escalated', 'resolved'],
+      },
     },
-    hasComplaint: {
-      type: Boolean,
-      default: false
-    }
+
+    // ========== FLAGS FOR ROUTING / ALERTING ==========
+    flags: {
+      requiresAttention: { type: Boolean, default: false }, // for queues
+      criticalFeedback: { type: Boolean, default: false },  // high‑severity
+      hasComplaint: { type: Boolean, default: false },      // for admin
+      autoRoutedToDoctor: { type: Boolean, default: false },
+      autoRoutedToAdmin: { type: Boolean, default: false },
+    },
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
+);
 
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// ============ VIRTUAL FIELDS ============
-
-// Calculate overall improvement percentage
-FeedbackSchema.virtual('overallImprovement').get(function() {
-  const metrics = this.healthMetrics;
+// ========== VIRTUALS ==========
+FeedbackSchema.virtual('overallImprovement').get(function () {
+  const metrics = this.healthMetrics || {};
   let totalImprovement = 0;
   let metricCount = 0;
 
-  Object.keys(metrics).forEach(key => {
-    if (metrics[key].before && metrics[key].after) {
-      // For metrics where lower is better (pain, stress)
-      const lowerIsBetter = ['painLevel', 'stressLevel'];
-      const improvement = lowerIsBetter.includes(key) 
-        ? ((metrics[key].before - metrics[key].after) / metrics[key].before) * 100
-        : ((metrics[key].after - metrics[key].before) / metrics[key].before) * 100;
-      
-      totalImprovement += Math.max(0, improvement);
-      metricCount++;
-    }
+  Object.keys(metrics).forEach((key) => {
+    const metric = metrics[key];
+    if (!metric || metric.before == null || metric.after == null) return;
+
+    const lowerIsBetter = ['painLevel', 'stressLevel'];
+    const raw =
+      lowerIsBetter.includes(key)
+        ? ((metric.before - metric.after) / metric.before) * 100
+        : ((metric.after - metric.before) / metric.before) * 100;
+
+    const improvement = Math.max(0, raw || 0);
+    totalImprovement += improvement;
+    metricCount += 1;
   });
 
   return metricCount > 0 ? Math.round(totalImprovement / metricCount) : 0;
 });
 
-// Calculate average rating
-FeedbackSchema.virtual('averageRating').get(function() {
-  const ratings = this.ratings;
-  const ratingValues = Object.values(ratings).filter(rating => typeof rating === 'number');
-  return ratingValues.length > 0 
-    ? Math.round((ratingValues.reduce((sum, rating) => sum + rating, 0) / ratingValues.length) * 10) / 10
-    : 0;
+FeedbackSchema.virtual('averageRating').get(function () {
+  const r = this.ratings || {};
+  const values = Object.values(r).filter((v) => typeof v === 'number');
+  if (!values.length) return 0;
+  const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
+  return Math.round(avg * 10) / 10;
 });
 
-// Check if feedback is positive
-FeedbackSchema.virtual('isPositiveFeedback').get(function() {
+FeedbackSchema.virtual('isPositiveFeedback').get(function () {
   return this.averageRating >= 4 && this.recommendationScore >= 7;
 });
 
-// ============ INDEXES ============
+// ========== INDEXES ==========
 FeedbackSchema.index({ patientId: 1, createdAt: -1 });
 FeedbackSchema.index({ sessionId: 1 });
 FeedbackSchema.index({ providerId: 1, createdAt: -1 });
@@ -279,51 +255,80 @@ FeedbackSchema.index({ 'ratings.overallSatisfaction': -1 });
 FeedbackSchema.index({ status: 1 });
 FeedbackSchema.index({ 'flags.requiresAttention': 1 });
 FeedbackSchema.index({ 'flags.criticalFeedback': 1 });
+FeedbackSchema.index({ 'flags.hasComplaint': 1 });
+FeedbackSchema.index({ 'visibility.toDoctor': 1 });
+FeedbackSchema.index({ 'visibility.toAdmin': 1 });
 
-// ============ PRE-SAVE MIDDLEWARE ============
-FeedbackSchema.pre('save', function(next) {
-  // Auto-flag feedback that requires attention
-  if (this.averageRating <= 2 || this.recommendationScore <= 3) {
+// ========== PRE-SAVE HOOK ==========
+FeedbackSchema.pre('save', function (next) {
+  const avgRating = this.averageRating || 0;
+
+  if (avgRating <= 2 || this.recommendationScore <= 3) {
     this.flags.requiresAttention = true;
   }
 
-  // Auto-flag critical feedback
-  if (this.sideEffects.some(se => se.severity >= 4) || 
-      this.textFeedback.concernsOrIssues?.toLowerCase().includes('complaint')) {
+  const hasSevereSideEffects =
+    Array.isArray(this.sideEffects) &&
+    this.sideEffects.some((se) => se && se.severity >= 4);
+
+  const hasComplaintText =
+    this.textFeedback &&
+    typeof this.textFeedback.concernsOrIssues === 'string' &&
+    this.textFeedback.concernsOrIssues.toLowerCase().includes('complaint');
+
+  if (hasSevereSideEffects || hasComplaintText) {
     this.flags.criticalFeedback = true;
     this.flags.hasComplaint = true;
+  }
+
+  // auto routing hints
+  if (hasSevereSideEffects) {
+    this.flags.autoRoutedToDoctor = true;
+  }
+  if (hasComplaintText || this.ratings.facilityQuality <= 3) {
+    this.flags.autoRoutedToAdmin = true;
   }
 
   next();
 });
 
-// ============ INSTANCE METHODS ============
+// ========== INSTANCE METHODS ==========
+FeedbackSchema.methods.getImprovementSummary = function () {
+  const metrics = this.healthMetrics || {};
+  const summary = {};
+  const lowerIsBetter = ['painLevel', 'stressLevel'];
 
-// Get improvement summary
-FeedbackSchema.methods.getImprovementSummary = function() {
-  const improvements = {};
-  Object.keys(this.healthMetrics).forEach(key => {
-    const metric = this.healthMetrics[key];
-    if (metric.before && metric.after) {
-      const lowerIsBetter = ['painLevel', 'stressLevel'];
-      improvements[key] = {
-        before: metric.before,
-        after: metric.after,
-        change: metric.after - metric.before,
-        improvement: lowerIsBetter.includes(key) 
-          ? ((metric.before - metric.after) / metric.before) * 100
-          : ((metric.after - metric.before) / metric.before) * 100
-      };
-    }
+  Object.keys(metrics).forEach((key) => {
+    const metric = metrics[key];
+    if (!metric || metric.before == null || metric.after == null) return;
+
+    const change = metric.after - metric.before;
+    const improvement =
+      lowerIsBetter.includes(key)
+        ? ((metric.before - metric.after) / metric.before) * 100
+        : ((metric.after - metric.before) / metric.before) * 100;
+
+    summary[key] = {
+      before: metric.before,
+      after: metric.after,
+      change,
+      improvement,
+    };
   });
-  return improvements;
+
+  return summary;
 };
 
-// Check if requires immediate attention
-FeedbackSchema.methods.requiresImmediateAttention = function() {
-  return this.flags.criticalFeedback || 
-         this.averageRating <= 2 || 
-         this.sideEffects.some(se => se.severity >= 4);
+FeedbackSchema.methods.requiresImmediateAttention = function () {
+  const severeSideEffects =
+    Array.isArray(this.sideEffects) &&
+    this.sideEffects.some((se) => se && se.severity >= 4);
+
+  return (
+    this.flags.criticalFeedback ||
+    this.averageRating <= 2 ||
+    severeSideEffects
+  );
 };
 
 module.exports = mongoose.model('Feedback', FeedbackSchema);

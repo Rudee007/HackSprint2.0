@@ -16,7 +16,6 @@ const Home = () => {
     setIsLoaded(true);
   }, []);
 
-  // Language is managed by I18nProvider; no local sync needed
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -96,8 +95,6 @@ const Home = () => {
         <Footer />
       </motion.div>
 
-      {/* Floating Action Button */}
-      {/* Language Selector */}
       <div className="fixed bottom-8 left-8 z-50">
         <div className="bg-white/90 backdrop-blur-md border border-gray-200 shadow-xl rounded-xl px-3 py-2 flex items-center space-x-2">
           <span className="text-xs text-gray-500">Lang</span>
