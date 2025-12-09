@@ -1,58 +1,59 @@
 // src/App.jsx
-import React from 'react';
+import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
   useLocation,
-} from 'react-router-dom';
+} from "react-router-dom";
 
-import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import AboutUs from './pages/AboutUs';
-import Service from './pages/Service';
-import Contact from './pages/Contact';
-import PanchakarmePage from './pages/PanchakarmePage';
-import PatientLogin from './pages/PatientLogin';
-import DoctorLogin from './pages/DoctorLogin';
-import TherapistLogin from './pages/TherapistLogin';
-import Signup from './pages/Signup';
-import IntialPatientProfile from './components/InitialPatientProfile';
-import TherapistPatientDetails from './pages/TherapistPatientDetails';
-import PatientDashboard from './pages/PatientDashboard';
-import DoctorDashboard from './pages/DoctorDashboard';
-import TherapistDashboard from './pages/TherapistDashboard';
-import ManagementDashboard from './pages/ManagementDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminLogin from './pages/AdminLogin'; // ✅ NEW: Admin Login
+import Navbar from "./components/Navbar";
+import Home from "./pages/Home";
+import AboutUs from "./pages/AboutUs";
+import Service from "./pages/Service";
+import Contact from "./pages/Contact";
+import PanchakarmePage from "./pages/PanchakarmePage";
+import PatientLogin from "./pages/PatientLogin";
+import DoctorLogin from "./pages/DoctorLogin";
+import TherapistLogin from "./pages/TherapistLogin";
+import Signup from "./pages/Signup";
+import IntialPatientProfile from "./components/InitialPatientProfile";
+import TherapistPatientDetails from "./pages/TherapistPatientDetails";
+import PatientDashboard from "./pages/PatientDashboard";
+import DoctorDashboard from "./pages/DoctorDashboard";
+import TherapistDashboard from "./pages/TherapistDashboard";
+import ManagementDashboard from "./pages/ManagementDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminLogin from "./pages/AdminLogin";
 
-import ProtectedRoute from './components/ProtectedRoute';
-import DoctorProtectedRoute from './components/DoctorProtectedRoute';
-import TherapistProtectedRoute from './components/TherapistProtectedRoute';
+import ProtectedRoute from "./components/ProtectedRoute";
+import DoctorProtectedRoute from "./components/DoctorProtectedRoute";
+import TherapistProtectedRoute from "./components/TherapistProtectedRoute";
 
-import PatientDetailsForm from './components/PatientDetailsForm';
-import AppointmentBooking from './components/AppointmentBooking';
-import DoctorDetail from './components/DoctorRegistrationForm';
-import ConfirmAppointment from './components/ConfirmAppointment';
-import DoctorRegistrationForm from './components/DoctorRegistrationForm';
-import ConsultationHistory from './components/ConsultationHistory';
-import { I18nProvider } from './utils/i18n.jsx';
-import { AuthProvider } from './context/AuthContext';
+import PatientDetailsForm from "./components/PatientDetailsForm";
+import AppointmentBooking from "./components/AppointmentBooking";
+import DoctorDetail from "./components/DoctorRegistrationForm";
+import ConfirmAppointment from "./components/ConfirmAppointment";
+import DoctorRegistrationForm from "./components/DoctorRegistrationForm";
+import ConsultationHistory from "./components/ConsultationHistory";
+import { I18nProvider } from "./utils/i18n.jsx";
+import { AuthProvider } from "./context/AuthContext";
 
-import { RealTimeProvider } from './context/RealTimeContext';
-import RealTimeSessionDashboard from './components/realtime/RealTimeSessionDashboard';
+import { RealTimeProvider } from "./context/RealTimeContext";
+import RealTimeSessionDashboard from "./components/realtime/RealTimeSessionDashboard";
 
 /* ---------- Layout wrapper that decides when to hide Navbar ---------- */
 function AppContent() {
   const { pathname } = useLocation();
 
-  // ✅ UPDATED: Hide Navbar for doctor, therapist, and admin routes
+  // ---------- CHANGE: do NOT hide Navbar for patient dashboard ----------
+  // Keep hiding for other dashboard types (doctor/therapist/admin/management).
   const hideNavbar =
-    pathname.startsWith('/doctor') || 
-    pathname.startsWith('/therapist') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/management');
+    pathname.startsWith("/doctor") ||
+    pathname.startsWith("/therapist") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/management");
 
   return (
     <div className="min-h-screen">
@@ -66,17 +67,17 @@ function AppContent() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/panchakarma" element={<PanchakarmePage />} />
         <Route path="/register" element={<Signup />} />
-        <Route path="/login" element={<Navigate to="/patient-login" replace />} />
+        <Route
+          path="/login"
+          element={<Navigate to="/patient-login" replace />}
+        />
         <Route path="/patient-login" element={<PatientLogin />} />
         <Route path="/doctor-login" element={<DoctorLogin />} />
         <Route path="/therapist-login" element={<TherapistLogin />} />
         <Route path="/initial-profile" element={<IntialPatientProfile />} />
 
-        {/* ---------- Patient routes (with Navbar) ---------- */}
-        <Route
-          path="/patient-dashboard"
-          element={<PatientDashboard />}
-        />
+        {/* ---------- Patient routes (now show global Navbar) ---------- */}
+        <Route path="/patient-dashboard" element={<PatientDashboard />} />
 
         {/* ---------- Doctor routes (no Navbar) ---------- */}
         <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
@@ -109,7 +110,10 @@ function AppContent() {
           }
         />
 
-  <Route path='/therapist/patients/:patientId' element={TherapistPatientDetails}/>
+        <Route
+          path="/therapist/patients/:patientId"
+          element={TherapistPatientDetails}
+        />
         {/* ---------- Management routes ---------- */}
         <Route
           path="/management-dashboard"
@@ -120,18 +124,18 @@ function AppContent() {
           }
         />
 
-        {/* ✅ NEW: Admin routes (no Navbar) */}
+        {/* ---------- Admin routes (no Navbar) ---------- */}
         <Route path="/admin-login" element={<AdminLogin />} />
-         <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        
-        ✅ NEW: Admin sub-routes for direct navigation
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
+        {/* Admin sub-routes */}
         <Route path="/admin/users" element={<AdminDashboard />} />
         <Route path="/admin/appointments" element={<AdminDashboard />} />
         <Route path="/admin/feedback" element={<AdminDashboard />} />
         <Route path="/admin/analytics" element={<AdminDashboard />} />
         <Route path="/admin/verification" element={<AdminDashboard />} />
         <Route path="/admin/monitoring" element={<AdminDashboard />} />
-        <Route path="/admin/notifications" element={<AdminDashboard />} /> 
+        <Route path="/admin/notifications" element={<AdminDashboard />} />
 
         {/* ---------- Misc. routes ---------- */}
         <Route

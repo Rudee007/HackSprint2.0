@@ -37,27 +37,7 @@ const fetchSlots = (pid, date) =>
 
 const bookSlot = (data) => api.post("/booking/create", data);
 
-/* ───────── constants (UNCHANGED) ───────────────────────────────────────── */
-const SEVERITY = [
-  {
-    value: "always",
-    label: "Severe / Constant",
-    desc: "Persistent & intense",
-    color: "red",
-  },
-  {
-    value: "often",
-    label: "Moderate / Frequent",
-    desc: "Noticeable impact",
-    color: "amber",
-  },
-  {
-    value: "sometimes",
-    label: "Mild / Occasional",
-    desc: "Minor discomfort",
-    color: "green",
-  },
-];
+
 
 /* ───────── Slot-picker modal (UNCHANGED) ───────────────────────────────── */
 const SlotPicker = ({ provider, onClose, onBooked, language }) => {
@@ -198,7 +178,6 @@ export default function AppointmentBooking({ onBack, language = "en" }) {
     age: "",
     gender: "",
     symptoms: "",
-    severity: "sometimes",
   });
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
@@ -374,7 +353,6 @@ export default function AppointmentBooking({ onBack, language = "en" }) {
         age: +form.age,
         gender: form.gender,
         symptoms: form.symptoms.trim().toLowerCase(),
-        severity: form.severity,
       };
       const { data } = await axios.post(
         "http://127.0.0.1:8000/recommend",
@@ -495,40 +473,7 @@ export default function AppointmentBooking({ onBack, language = "en" }) {
               isSpeechSupported={isSpeechSupported()}
             />
 
-            {/* Severity Level - Enhanced Radio Group */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                {t.severityLevel} *
-              </label>
-              <div className="grid md:grid-cols-3 gap-4">
-                {SEVERITY.map((sev) => (
-                  <motion.button
-                    key={sev.value}
-                    type="button"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => change("severity", sev.value)}
-                    className={`p-4 rounded-2xl border-2 transition-all text-left ${
-                      form.severity === sev.value
-                        ? `border-${sev.color}-500 bg-${sev.color}-50 shadow-lg`
-                        : "border-gray-200 hover:border-gray-300 hover:shadow-md"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`font-bold text-${sev.color}-700`}>
-                        {t[sev.label]}
-                      </span>
-                      {form.severity === sev.value && (
-                        <CheckCircle
-                          className={`w-5 h-5 text-${sev.color}-600`}
-                        />
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">{t[sev.desc]}</p>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
+
 
             {/* Submit Button */}
             <motion.button

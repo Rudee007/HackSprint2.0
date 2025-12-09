@@ -261,7 +261,7 @@ export default function AppointmentBooking({ onBack, language = 'en' }){
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
-                {t.severityLevel} *
+                {t.severityLevel}
               </label>
               <div className="grid md:grid-cols-3 gap-4">
                 {SEVERITY.map(sev=>(

@@ -1,4 +1,4 @@
-// 🔥 FIXED & PRODUCTION-READY: ConsultationHistory Component
+// 🔥 FIXED & PRODUCTION-READY: ConsultationHistory Component 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,76 +15,157 @@ import {
   MapPin,
   Clock,
   User as UserIcon,
-  X
+  X,
+  CheckCircle
 } from "lucide-react";
 import api from "../utils/api";
 import Feedback from "./Feedback";
+import ConsentForm from "./ConsentForm";
 
-export default function ConsultationHistory({ 
-  patientId, 
-  onBookFirst, 
+export default function ConsultationHistory({
+  patientId,
+  consultations: providedConsultations = null,
+  onBookFirst,
   onBack,
-  onFeedbackSubmit 
+  onFeedbackSubmit
 }) {
   /* ──────────────────── State Management ──────────────────── */
   const [consults, setConsults] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [filterStatus, setFilterStatus] = useState("all");
-  
-  // Feedback Modal State
+
+  // Feedback Modal State 
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [selectedConsultation, setSelectedConsultation] = useState(null);
+
+  // Consent State
+  const [consentStates, setConsentStates] = useState({});
 
   const LIMIT = 10;
 
   /* ───────── Fetch Consultations on Mount / Page Change ──────── */
   useEffect(() => {
-    if (!patientId) {
-      setError("Patient ID not found. Please log in again.");
-      setLoading(false);
+    if (providedConsultations) {
+      applyExternalConsultations(providedConsultations);
+      setPage(1);
       return;
     }
-    fetchConsultations();
-  }, [patientId, page, filterStatus]);
+    if (!patientId) return;
+    setPage(1);
+    fetchConsultations(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId, providedConsultations]);
 
-  const fetchConsultations = async () => {
-    setLoading(true);
-    setError("");
+  const normalizeConsultation = (consultation) => {
+    const provider =
+      consultation.providerId ||
+      consultation.provider ||
+      consultation.doctorId ||
+      consultation.doctor ||
+      {};
+
+    return {
+      _id: consultation._id || consultation.id || crypto.randomUUID?.() || String(Math.random()),
+      type:
+        consultation.type ||
+        consultation.mode ||
+        consultation.consultationType ||
+        "consultation",
+      scheduledAt:
+        consultation.scheduledAt ||
+        consultation.date ||
+        consultation.slot?.startTime ||
+        new Date().toISOString(),
+      status:
+        consultation.status ||
+        consultation.consultationStatus ||
+        "scheduled",
+      providerId: provider,
+      fee: consultation.fee ?? consultation.amount ?? consultation.price,
+      notes: consultation.notes || consultation.description || consultation.reason
+    };
+  };
+
+  const applyExternalConsultations = (list = []) => {
+    const normalized = list.map(normalizeConsultation);
+    setConsults(normalized);
+    setTotalCount(normalized.length);
+    setTotalPages(Math.max(1, Math.ceil(normalized.length / LIMIT)));
+  };
+
+  const fetchConsultations = async (resetPage = false) => {
+    // Avoid API call if no patient is selected 
+    if (!patientId) return;
+
+    // If parent passes data, prefer it and skip API to keep UI consistent
+    if (providedConsultations) {
+      applyExternalConsultations(providedConsultations);
+      return;
+    }
 
     try {
-      // 🔥 FIXED: Use correct endpoint that matches Dashboard
-      const params = { 
-        page, 
+      setLoading(true);
+      setError("");
+
+      const params = {
+        page: resetPage ? 1 : page,
         limit: LIMIT,
         ...(filterStatus !== "all" && { status: filterStatus })
       };
-      
-      const { data } = await api.get(`/consultations/patient/${patientId}`, { params });
 
-      if (data.success) {
-        setConsults(data.data || []);
-        setTotalPages(data.pagination?.totalPages || 1);
-        setTotalCount(data.pagination?.total || 0);
-      } else {
-        setError("Failed to load consultations.");
+      const response = await api.get(`/consultations/patient/${patientId}`, { params });
+      const data = response.data?.data || response.data?.consultations || [];
+      const pagination = response.data?.pagination || response.data?.data?.pagination;
+
+      const normalized = data.map(normalizeConsultation);
+
+      setConsults(normalized);
+      setTotalCount(
+        pagination?.total ??
+        response.data?.total ??
+        normalized.length
+      );
+      setTotalPages(
+        pagination?.pages ??
+        Math.max(
+          1,
+          Math.ceil(
+            (pagination?.total ?? normalized.length) / (pagination?.limit ?? LIMIT)
+          )
+        )
+      );
+      if (resetPage && pagination?.page) {
+        setPage(pagination.page);
       }
     } catch (err) {
       console.error("Error fetching consultations:", err);
-      
-      if (err.response?.status === 404) {
-        setConsults([]);
-        setTotalCount(0);
-      } else {
-        setError("Error fetching consultations. Please try again.");
-      }
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error?.message ||
+        err.message ||
+        "Failed to load consultations";
+      setError(message);
+      setConsults([]);
+      setTotalCount(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (providedConsultations) {
+      applyExternalConsultations(providedConsultations);
+      return;
+    }
+    if (!patientId) return;
+    fetchConsultations(page === 1 && filterStatus === "all");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filterStatus]);
 
   /* ───────────── Helper Functions ─────────── */
   const getStatusBadge = (status) => {
@@ -95,12 +176,12 @@ export default function ConsultationHistory({
       pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
       confirmed: "bg-purple-100 text-purple-800 border-purple-200"
     };
-    
+
     return statusStyles[status] || "bg-gray-100 text-gray-700 border-gray-200";
   };
 
   const getConsultationIcon = (type) => {
-    switch(type) {
+    switch (type) {
       case "video": return <Video className="w-5 h-5" />;
       case "audio": return <Phone className="w-5 h-5" />;
       case "in_person": return <MapPin className="w-5 h-5" />;
@@ -109,7 +190,7 @@ export default function ConsultationHistory({
   };
 
   const getConsultationLabel = (type) => {
-    switch(type) {
+    switch (type) {
       case "video": return "Video Consultation";
       case "audio": return "Audio Consultation";
       case "in_person": return "In-Person Visit";
@@ -119,19 +200,19 @@ export default function ConsultationHistory({
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
     });
   };
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-IN', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
@@ -151,12 +232,34 @@ export default function ConsultationHistory({
       }
       setFeedbackModalOpen(false);
       setSelectedConsultation(null);
-      
-      // Refresh consultations to show feedback submitted
+
+      // Refresh consultations to show feedback submitted 
       await fetchConsultations();
     } catch (err) {
       console.error("Error submitting feedback:", err);
     }
+  };
+
+  const handleConsentDecision = (consultationId, accepted) => {
+    setConsentStates(prev => ({
+      ...prev,
+      [consultationId]: {
+        ...prev[consultationId],
+        decision: accepted ? 'accepted' : 'declined',
+        showForm: false
+      }
+    }));
+  };
+
+  const toggleConsentView = (consultationId) => {
+    setConsentStates(prev => ({
+      ...prev,
+      [consultationId]: {
+        ...prev[consultationId],
+        viewChecked: !prev[consultationId]?.viewChecked,
+        showForm: !prev[consultationId]?.viewChecked
+      }
+    }));
   };
 
   /* ────────────────  Loading State  ───────────────── */
@@ -216,7 +319,7 @@ export default function ConsultationHistory({
             Back to Dashboard
           </button>
         )}
-        
+
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-12 text-center">
           <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Calendar className="w-12 h-12 text-gray-400" />
@@ -225,7 +328,7 @@ export default function ConsultationHistory({
             No Consultations Yet
           </h2>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            {filterStatus !== "all" 
+            {filterStatus !== "all"
               ? `No ${filterStatus} consultations found. Try changing the filter.`
               : "Start your wellness journey by booking your first consultation with our Ayurvedic specialists."
             }
@@ -281,7 +384,7 @@ export default function ConsultationHistory({
             value={filterStatus}
             onChange={(e) => {
               setFilterStatus(e.target.value);
-              setPage(1); // Reset to first page on filter change
+              setPage(1); // Reset to first page on filter change 
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
           >
@@ -295,87 +398,139 @@ export default function ConsultationHistory({
       </div>
 
       {/* Consultations Cards */}
-      <div className="space-y-4 mb-8">
+      <div className="space-y-6 mb-8">
         <AnimatePresence mode="popLayout">
           {consults.map((consultation, index) => (
-            <motion.div
-              key={consultation._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-all"
-            >
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                {/* Left: Consultation Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
-                      {getConsultationIcon(consultation.type)}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {getConsultationLabel(consultation.type)}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="w-4 h-4" />
-                        {formatDate(consultation.scheduledAt)} at {formatTime(consultation.scheduledAt)}
+            <div key={consultation._id} className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-all"
+              >
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  {/* Left: Consultation Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                        {getConsultationIcon(consultation.type)}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {getConsultationLabel(consultation.type)}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          {formatDate(consultation.scheduledAt)} at {formatTime(consultation.scheduledAt)}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Doctor Info */}
-                  <div className="flex items-center gap-2 text-gray-700 mb-2">
-                    <UserIcon className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium">
-                      Dr. {consultation.providerId?.name || "Provider"}
-                    </span>
-                    {consultation.providerId?.speciality && (
-                      <span className="text-sm text-gray-500">
-                        • {consultation.providerId.speciality}
+                    {/* Doctor Info */}
+                    <div className="flex items-center gap-2 text-gray-700 mb-2">
+                      <UserIcon className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium">
+                        Dr. {consultation.providerId?.name || consultation.provider?.name || "Provider"}
                       </span>
+                      {(consultation.providerId?.speciality || consultation.provider?.speciality) && (
+                        <span className="text-sm text-gray-500">
+                          • {consultation.providerId?.speciality || consultation.provider?.speciality}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Notes */}
+                    {consultation.notes && (
+                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                        <span className="font-medium">Notes:</span> {consultation.notes}
+                      </p>
                     )}
                   </div>
 
-                  {/* Notes */}
-                  {consultation.notes && (
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                      <span className="font-medium">Notes:</span> {consultation.notes}
-                    </p>
-                  )}
+                  {/* Right: Status & Actions */}
+                  <div className="flex flex-col items-start md:items-end gap-3">
+                    {/* Status Badge */}
+                    <span
+                      className={`px-4 py-1.5 rounded-full text-sm font-semibold border ${getStatusBadge(
+                        consultation.status
+                      )}`}
+                    >
+                      {consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1)}
+                    </span>
+
+                    {/* Fee */}
+                    {consultation.fee && (
+                      <div className="text-lg font-bold text-emerald-700">
+                        ₹{consultation.fee}
+                      </div>
+                    )}
+
+                    {/* Feedback Button */}
+                    {consultation.status === "completed" && (
+                      <button
+                        onClick={() => handleFeedbackClick(consultation)}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-200 transition-colors"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        Give Feedback
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Right: Status & Actions */}
-                <div className="flex flex-col items-start md:items-end gap-3">
-                  {/* Status Badge */}
-                  <span
-                    className={`px-4 py-1.5 rounded-full text-sm font-semibold border ${getStatusBadge(
-                      consultation.status
-                    )}`}
-                  >
-                    {consultation.status.charAt(0).toUpperCase() + consultation.status.slice(1)}
-                  </span>
-
-                  {/* Fee */}
-                  {consultation.fee && (
-                    <div className="text-lg font-bold text-emerald-700">
-                      ₹{consultation.fee}
+                {/* Consent Section - Only for scheduled Panchakarma consultations */}
+                {consultation.status === "scheduled" &&
+                  (consultation.providerId?.speciality === "Panchakarma" || consultation.provider?.speciality === "Panchakarma") &&
+                  !consentStates[consultation._id]?.decision && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <input
+                          id={`view-consent-${consultation._id}`}
+                          type="checkbox"
+                          checked={consentStates[consultation._id]?.viewChecked || false}
+                          onChange={() => toggleConsentView(consultation._id)}
+                          className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <label
+                          htmlFor={`view-consent-${consultation._id}`}
+                          className="text-sm font-medium text-gray-700 cursor-pointer"
+                        >
+                          View and Confirm your Consent Form
+                        </label>
+                      </div>
                     </div>
                   )}
 
-                  {/* Feedback Button */}
-                  {consultation.status === "completed" && (
-                    <button
-                      onClick={() => handleFeedbackClick(consultation)}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-200 transition-colors"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      Give Feedback
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
+                {consentStates[consultation._id]?.decision && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${consentStates[consultation._id].decision === 'accepted'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-red-50 text-red-700'
+                      }`}>
+                      {consentStates[consultation._id].decision === 'accepted' ? (
+                        <CheckCircle className="w-5 h-5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5" />
+                      )}
+                      <span className="font-medium">
+                        Consent {consentStates[consultation._id].decision === 'accepted' ? 'Accepted' : 'Declined'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
+              {/* Consent Form Modal */}
+              <AnimatePresence>
+                {consentStates[consultation._id]?.showForm && (
+                  <ConsentForm
+                    consultation={consultation}
+                    onDecision={(accepted) => handleConsentDecision(consultation._id, accepted)}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
           ))}
         </AnimatePresence>
       </div>
@@ -439,7 +594,7 @@ export default function ConsultationHistory({
                       Consultation Feedback
                     </h2>
                     <p className="text-sm text-gray-600">
-                      Dr. {selectedConsultation.providerId?.name || "Provider"} • {formatDate(selectedConsultation.scheduledAt)}
+                      Dr. {selectedConsultation.providerId?.name || selectedConsultation.provider?.name || "Provider"} • {formatDate(selectedConsultation.scheduledAt)}
                     </p>
                   </div>
                 </div>

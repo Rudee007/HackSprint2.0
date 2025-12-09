@@ -408,7 +408,7 @@ export default function AppointmentBooking({ user, onBookingComplete, onBack }) 
       {/* Severity Level */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          Severity Level *
+          Severity Level
         </label>
         <div className="grid md:grid-cols-3 gap-3">
           {SEVERITY_LEVELS.map((level) => (

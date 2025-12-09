@@ -15,6 +15,7 @@ import {
   Volume2,
 } from "lucide-react";
 import axios from "axios";
+import { translations } from "../i18n/translations";
 
 // 🔥 API Configuration (unchanged)
 const api = axios.create({
@@ -43,7 +44,8 @@ api.interceptors.request.use((config) => {
  * Permission prompt and microphone access are handled by the browser.
  */
 
-const PatientProfileForm = ({ profile, onComplete }) => {
+const PatientProfileForm = ({ profile, onComplete, language = "en" }) => {
+  const t = translations[language] || translations.en;
   const [formData, setFormData] = useState({
     name: "",
     age: "",
@@ -98,7 +100,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
         }
       } catch (err) {
         console.error("Error loading profile:", err);
-        setError("Failed to load profile data");
+        setError(t.failedToLoadProfile || "Failed to load profile data");
       } finally {
         setIsLoading(false);
       }
@@ -236,11 +238,11 @@ const PatientProfileForm = ({ profile, onComplete }) => {
   const validateRequired = () => {
     const errs = {};
     if (!formData.name || formData.name.trim().length < 2)
-      errs.name = "Enter full name";
+      errs.name = t.enterFullNameError || "Enter full name";
     if (!formData.age || Number(formData.age) <= 0)
-      errs.age = "Enter a valid age";
+      errs.age = t.enterValidAge || "Enter a valid age";
     if (!formData.phone || formData.phone.trim().length < 7)
-      errs.phone = "Enter valid phone";
+      errs.phone = t.enterValidPhone || "Enter valid phone";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -301,7 +303,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
     e.preventDefault();
     setError("");
     if (!validateRequired()) {
-      setError("Please correct highlighted fields.");
+      setError(t.pleaseCorrectFields || "Please correct highlighted fields.");
       return;
     }
 
@@ -351,7 +353,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-        <span className="ml-2 text-gray-600">Loading profile...</span>
+        <span className="ml-2 text-gray-600">{t.loadingProfile || "Loading profile..."}</span>
       </div>
     );
   }
@@ -363,11 +365,9 @@ const PatientProfileForm = ({ profile, onComplete }) => {
       <button
         type="button"
         onClick={() => toggleListening(fieldName)}
-        className={`inline-flex items-center justify-center ${
-          small ? "w-9 h-9" : "px-3 py-2"
-        } rounded-lg border ${
-          listening ? "bg-emerald-600 text-white" : "bg-white"
-        } shadow-sm hover:opacity-90 focus:outline-none`}
+        className={`inline-flex items-center justify-center ${small ? "w-9 h-9" : "px-3 py-2"
+          } rounded-lg border ${listening ? "bg-emerald-600 text-white" : "bg-white"
+          } shadow-sm hover:opacity-90 focus:outline-none`}
         title={
           isSupported
             ? listening
@@ -401,16 +401,16 @@ const PatientProfileForm = ({ profile, onComplete }) => {
               <User className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-2xl font-extrabold">Patient Profile</h2>
+              <h2 className="text-2xl font-extrabold">{t.patientProfile || "Patient Profile"}</h2>
               <p className="text-sm opacity-90">
-                Complete details for better Ayurvedic assessment
+                {t.completeDetailsForAssessment || "Complete details for better Ayurvedic assessment"}
               </p>
             </div>
           </div>
           <div className="ml-auto text-sm text-white/90">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20">
               <Heart className="w-4 h-4 text-rose-200" />
-              <span className="font-medium">Panchakarma Friendly</span>
+              <span className="font-medium">{t.panchakarmaFriendly || "Panchakarma Friendly"}</span>
             </div>
           </div>
         </div>
@@ -457,8 +457,8 @@ const PatientProfileForm = ({ profile, onComplete }) => {
             <div className="space-y-3">
               <FieldLabel
                 icon={User}
-                label="Full Name *"
-                hint="As on official documents"
+                label={t.fullName || "Full Name *"}
+                hint={t.asOnOfficialDocuments || "As on official documents"}
               />
               <div className="relative">
                 <input
@@ -466,12 +466,11 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  placeholder="Enter your full name"
-                  className={`w-full p-3 rounded-xl border ${
-                    fieldErrors.name
+                  placeholder={t.enterFullName || "Enter your full name"}
+                  className={`w-full p-3 rounded-xl border ${fieldErrors.name
                       ? "border-red-300 bg-red-50"
                       : "border-transparent bg-white"
-                  } shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12`}
+                    } shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12`}
                   disabled={isSaving}
                   required
                 />
@@ -492,21 +491,20 @@ const PatientProfileForm = ({ profile, onComplete }) => {
 
             {/* Age with mic (works but may produce words) */}
             <div className="space-y-3">
-              <FieldLabel icon={Calendar} label="Age *" hint="Years" />
+              <FieldLabel icon={Calendar} label={t.ageLabel || "Age *"} hint={t.years || "Years"} />
               <div className="relative">
                 <input
                   type="number"
                   name="age"
                   value={formData.age}
                   onChange={handleInputChange}
-                  placeholder="Age"
+                  placeholder={t.ageLabel || "Age"}
                   min="1"
                   max="120"
-                  className={`w-full p-3 rounded-xl border ${
-                    fieldErrors.age
+                  className={`w-full p-3 rounded-xl border ${fieldErrors.age
                       ? "border-red-300 bg-red-50"
                       : "border-transparent bg-white"
-                  } shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12`}
+                    } shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12`}
                   disabled={isSaving}
                   required
                 />
@@ -520,7 +518,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                 )}
               </div>
               {fieldErrors.age && (
-                <div className="text-sm text-red-500">{fieldErrors.age}</div>
+                <div className="text-sm text-red-500">{t.enterValidAge || fieldErrors.age}</div>
               )}
             </div>
 
@@ -528,8 +526,8 @@ const PatientProfileForm = ({ profile, onComplete }) => {
             <div className="space-y-3">
               <FieldLabel
                 icon={Phone}
-                label="Phone Number *"
-                hint="Used for appointment reminders"
+                label={t.phoneNumber || "Phone Number *"}
+                hint={t.usedForReminders || "Used for appointment reminders"}
               />
               <div className="relative">
                 <input
@@ -537,12 +535,11 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="Enter phone number"
-                  className={`w-full p-3 rounded-xl border ${
-                    fieldErrors.phone
+                  placeholder={t.enterPhoneNumber || "Enter phone number"}
+                  className={`w-full p-3 rounded-xl border ${fieldErrors.phone
                       ? "border-red-300 bg-red-50"
                       : "border-transparent bg-white"
-                  } shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12`}
+                    } shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12`}
                   disabled={isSaving}
                   required
                 />
@@ -556,13 +553,13 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                 )}
               </div>
               {fieldErrors.phone && (
-                <div className="text-sm text-red-500">{fieldErrors.phone}</div>
+                <div className="text-sm text-red-500">{t.enterValidPhone || fieldErrors.phone}</div>
               )}
             </div>
 
             {/* Gender */}
             <div className="space-y-3">
-              <FieldLabel icon={MapPin} label="Gender" />
+              <FieldLabel icon={MapPin} label={t.genderLabel || "Gender"} />
               <select
                 name="gender"
                 value={formData.gender}
@@ -570,16 +567,16 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                 className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
                 disabled={isSaving}
               >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="">{t.selectGenderOption || "Select gender"}</option>
+                <option value="male">{t.male || "Male"}</option>
+                <option value="female">{t.female || "Female"}</option>
+                <option value="other">{t.other || "Other"}</option>
               </select>
             </div>
 
             {/* Blood group */}
             <div className="space-y-3">
-              <FieldLabel icon={Heart} label="Blood Group" />
+              <FieldLabel icon={Heart} label={t.bloodGroup || "Blood Group"} />
               <select
                 name="bloodGroup"
                 value={formData.bloodGroup}
@@ -587,7 +584,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                 className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
                 disabled={isSaving}
               >
-                <option value="">Select blood group</option>
+                <option value="">{t.selectBloodGroup || "Select blood group"}</option>
                 <option value="A+">A+</option>
                 <option value="A-">A-</option>
                 <option value="B+">B+</option>
@@ -602,8 +599,8 @@ const PatientProfileForm = ({ profile, onComplete }) => {
             <div className="space-y-3 md:col-span-2">
               <FieldLabel
                 icon={Phone}
-                label="Emergency Contact"
-                hint="Number we can call during urgent situations"
+                label={t.emergencyContact || "Emergency Contact"}
+                hint={t.urgentSituations || "Number we can call during urgent situations"}
               />
               <div className="relative">
                 <input
@@ -611,7 +608,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                   name="emergencyContact"
                   value={formData.emergencyContact}
                   onChange={handleInputChange}
-                  placeholder="Emergency contact number"
+                  placeholder={t.emergencyContactPlaceholder || "Emergency contact number"}
                   className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12"
                   disabled={isSaving}
                 />
@@ -658,15 +655,15 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    Ayurvedic Health Assessment
+                    {t.ayurvedicHealthAssessment || "Ayurvedic Health Assessment"}
                   </h3>
                   <p className="text-sm text-slate-600">
-                    Quick snapshot of lifestyle & symptoms
+                    {t.quickSnapshot || "Quick snapshot of lifestyle & symptoms"}
                   </p>
                 </div>
               </div>
               <div className="text-xs text-slate-500">
-                This section helps the vaidya get started
+                {t.helpsVaidyaGetStarted || "This section helps the vaidya get started"}
               </div>
             </div>
 
@@ -675,10 +672,10 @@ const PatientProfileForm = ({ profile, onComplete }) => {
               <div className="space-y-2">
                 <label className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-slate-700">
-                    Current Symptoms
+                    {t.currentSymptoms || "Current Symptoms"}
                   </span>
                   <span className="text-xs text-slate-500">
-                    Press Enter to add
+                    {t.pressEnterToAdd || "Press Enter to add"}
                   </span>
                 </label>
 
@@ -688,7 +685,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                     value={symptomInput}
                     onChange={(e) => setSymptomInput(e.target.value)}
                     onKeyDown={onSymptomKeyDown}
-                    placeholder="e.g., fatigue, indigestion"
+                    placeholder={t.symptomPlaceholder || "e.g., fatigue, indigestion"}
                     className="flex-1 p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition pr-12"
                     disabled={isSaving}
                     aria-label="Add symptom"
@@ -700,10 +697,10 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                       onClick={() => addSymptom(symptomInput)}
                       disabled={isSaving}
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow hover:opacity-95"
-                      title="Add symptom"
+                      title={t.add || "Add symptom"}
                     >
                       <PlusCircle className="w-4 h-4" />
-                      Add
+                      {t.add || "Add"}
                     </button>
                     <MicButton fieldName="symptom_input_local" />
                   </div>
@@ -736,7 +733,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                     ))
                   ) : (
                     <div className="text-sm text-slate-500">
-                      No symptoms added yet
+                      {t.noSymptomsAddedYet || "No symptoms added yet"}
                     </div>
                   )}
                 </div>
@@ -744,7 +741,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
 
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-slate-700">
-                  Sleep Pattern
+                  {t.sleepPattern || "Sleep Pattern"}
                 </label>
                 <div className="relative">
                   <select
@@ -754,18 +751,18 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                     className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
                     disabled={isSaving}
                   >
-                    <option value="">Select sleep pattern</option>
+                    <option value="">{t.selectSleepPattern || "Select sleep pattern"}</option>
                     <option value="excellent">
-                      Excellent (7-8 hours, restful)
+                      {t.excellent || "Excellent (7-8 hours, restful)"}
                     </option>
                     <option value="good">
-                      Good (6-7 hours, mostly restful)
+                      {t.good || "Good (6-7 hours, mostly restful)"}
                     </option>
                     <option value="fair">
-                      Fair (5-6 hours, sometimes restless)
+                      {t.fair || "Fair (5-6 hours, sometimes restless)"}
                     </option>
                     <option value="poor">
-                      Poor (less than 5 hours, often restless)
+                      {t.poor || "Poor (less than 5 hours, often restless)"}
                     </option>
                   </select>
                 </div>
@@ -773,7 +770,7 @@ const PatientProfileForm = ({ profile, onComplete }) => {
 
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-slate-700">
-                  Digestion
+                  {t.digestion || "Digestion"}
                 </label>
                 <select
                   name="digestion"
@@ -782,23 +779,23 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                   className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
                   disabled={isSaving}
                 >
-                  <option value="">Select digestion status</option>
+                  <option value="">{t.selectDigestionStatus || "Select digestion status"}</option>
                   <option value="strong">
-                    Strong (no issues, good appetite)
+                    {t.strong || "Strong (no issues, good appetite)"}
                   </option>
                   <option value="moderate">
-                    Moderate (occasional discomfort)
+                    {t.moderate || "Moderate (occasional discomfort)"}
                   </option>
-                  <option value="weak">Weak (frequent digestive issues)</option>
+                  <option value="weak">{t.weak || "Weak (frequent digestive issues)"}</option>
                   <option value="irregular">
-                    Irregular (varies day to day)
+                    {t.irregular || "Irregular (varies day to day)"}
                   </option>
                 </select>
               </div>
 
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-slate-700">
-                  Stress Level
+                  {t.stressLevel || "Stress Level"}
                 </label>
                 <select
                   name="stressLevel"
@@ -807,24 +804,24 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                   className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
                   disabled={isSaving}
                 >
-                  <option value="">Select stress level</option>
-                  <option value="low">Low (calm, relaxed)</option>
-                  <option value="moderate">Moderate (manageable stress)</option>
-                  <option value="high">High (frequent stress/anxiety)</option>
-                  <option value="severe">Severe (overwhelming stress)</option>
+                  <option value="">{t.selectStressLevel || "Select stress level"}</option>
+                  <option value="low">{t.low || "Low (calm, relaxed)"}</option>
+                  <option value="moderate">{t.moderateStress || "Moderate (manageable stress)"}</option>
+                  <option value="high">{t.high || "High (frequent stress/anxiety)"}</option>
+                  <option value="severe">{t.severe || "Severe (overwhelming stress)"}</option>
                 </select>
               </div>
 
               <div className="md:col-span-2">
                 <label className="text-sm font-semibold text-slate-700">
-                  Diet Habits
+                  {t.dietHabits || "Diet Habits"}
                 </label>
                 <div className="relative">
                   <textarea
                     name="dietHabits"
                     value={formData.dietHabits}
                     onChange={handleInputChange}
-                    placeholder="Typical diet, preferences, food timing"
+                    placeholder={t.dietPlaceholder || "Typical diet, preferences, food timing"}
                     rows="3"
                     className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition resize-none pr-12"
                     disabled={isSaving}
@@ -839,21 +836,20 @@ const PatientProfileForm = ({ profile, onComplete }) => {
                   )}
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
-                  Be specific: e.g., vegetarian, spicy food, oily food, meal
-                  timings
+                  {t.beSpecific || "Be specific: e.g., vegetarian, spicy food, oily food, meal timings"}
                 </div>
               </div>
 
               <div className="md:col-span-2">
                 <label className="text-sm font-semibold text-slate-700">
-                  Exercise Habits
+                  {t.exerciseHabits || "Exercise Habits"}
                 </label>
                 <div className="relative">
                   <textarea
                     name="exerciseHabits"
                     value={formData.exerciseHabits}
                     onChange={handleInputChange}
-                    placeholder="Your exercise routine, frequency"
+                    placeholder={t.exercisePlaceholder || "Your exercise routine, frequency"}
                     rows="2"
                     className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition resize-none pr-12"
                     disabled={isSaving}
@@ -875,14 +871,14 @@ const PatientProfileForm = ({ profile, onComplete }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">
-                Address
+                {t.address || "Address"}
               </label>
               <div className="relative">
                 <textarea
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
-                  placeholder="Complete address"
+                  placeholder={t.completeAddress || "Complete address"}
                   rows="3"
                   className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition resize-none pr-12"
                   disabled={isSaving}
@@ -900,14 +896,14 @@ const PatientProfileForm = ({ profile, onComplete }) => {
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">
-                Medical History & Allergies
+                {t.medicalHistoryAllergies || "Medical History & Allergies"}
               </label>
               <div className="relative">
                 <textarea
                   name="medicalHistory"
                   value={formData.medicalHistory}
                   onChange={handleInputChange}
-                  placeholder="Existing conditions, medications, allergies"
+                  placeholder={t.medicalHistoryPlaceholder || "Existing conditions, medications, allergies"}
                   rows="5"
                   className="w-full p-3 rounded-xl border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 transition resize-none pr-12"
                   disabled={isSaving}
@@ -934,37 +930,36 @@ const PatientProfileForm = ({ profile, onComplete }) => {
               {isSaving ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  Updating Profile...
+                  {t.updatingProfile || "Updating Profile..."}
                 </>
               ) : (
                 <>
                   <Save className="w-5 h-5" />
-                  Save Profile
+                  {t.saveProfile || "Save Profile"}
                 </>
               )}
             </button>
 
             <div className="text-xs text-slate-500 mt-2 text-center">
-              Changes are saved to backend when available; otherwise stored
-              locally.
+              {t.changesSavedInfo || "Changes are saved to backend when available; otherwise stored locally."}
             </div>
 
             {/* Speech status / errors */}
             <div className="mt-3 text-center">
               {!isSupported ? (
                 <div className="text-xs text-rose-600">
-                  Speech recognition not supported in this browser.
+                  {t.speechNotSupported || "Speech recognition not supported in this browser."}
                 </div>
               ) : speechError ? (
                 <div className="text-xs text-rose-600">{speechError}</div>
               ) : listeningField ? (
                 <div className="text-xs text-emerald-700">
-                  Listening for:{" "}
+                  {t.listeningFor || "Listening for:"}{" "}
                   <span className="font-medium">{listeningField}</span>
                 </div>
               ) : (
                 <div className="text-xs text-slate-500">
-                  Tap any mic to dictate into that field.
+                  {t.tapMicToDictate || "Tap any mic to dictate into that field."}
                 </div>
               )}
             </div>
