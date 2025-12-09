@@ -3,8 +3,9 @@ const consultationService = require('../services/consultation.service');
 const notificationService = require('../services/notification.service');
 const websocketService = require('../services/websocket.service');
 const therapistService = require('../services/therapist.service')
-
-
+const TreatmentPlan = require('../models/TreatmentPlan');
+const mongoose = require('mongoose');
+const Consultation = require('../models/Consultation');
 const handleError = (res, error) => {
   console.error('Consultation Controller Error:', error);
   
@@ -32,6 +33,516 @@ const handleError = (res, error) => {
 class ConsultationController {
 
 
+
+  /**
+ * 🔄 PATIENT RESCHEDULE REQUEST
+ * Flow:
+ * 1. Get consultation → Extract treatmentPlanId
+ * 2. Find ALL future consultations with same treatmentPlanId
+ * 3. Cancel all future consultations
+ * 4. Get doctorId from TreatmentPlan
+ * 5. Create consultation with doctor (1-2 days from now)
+ * 6. Notify patient + doctor
+ */
+/**
+ * 🔄 PATIENT RESCHEDULE REQUEST
+ * Flow:
+ * 1. Get consultation → Extract treatmentPlanId
+ * 2. Find ALL future consultations with same treatmentPlanId
+ * 3. Cancel all future consultations
+ * 4. Get doctorId from TreatmentPlan
+ * 5. Create consultation with doctor (1-2 days from now)
+ * 6. Notify patient + doctor
+ */
+
+patientRescheduleRequest = async (req, res) => {
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🔄 [PATIENT RESCHEDULE] Request received');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const patientUserId = req.user.id;
+    
+    console.log('👤 [USER] Request info:', {
+      userId: patientUserId,
+      userIdType: typeof patientUserId,
+      sessionId: id,
+      sessionIdType: typeof id,
+      reason,
+      reasonLength: reason?.length,
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 1: GET THE CONSULTATION
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 1] Fetching consultation by ID...');
+    
+    const consultation = await Consultation.findById(id)
+      .populate('patientId', 'name email');
+    
+    if (!consultation) {
+      console.error('❌ [STEP 1] Consultation not found!');
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found',
+      });
+    }
+
+    console.log('✅ [STEP 1] Consultation found:', {
+      _id: consultation._id,
+      patientId: consultation.patientId?._id,
+      sessionType: consultation.sessionType,
+      scheduledAt: consultation.scheduledAt,
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 2: AUTHORIZATION
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 2] Checking authorization...');
+    
+    if (consultation.patientId._id.toString() !== patientUserId.toString()) {
+      console.error('❌ [STEP 2] Authorization failed!');
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized: You can only cancel your own sessions',
+      });
+    }
+
+    console.log('✅ [STEP 2] Authorization passed');
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 3: VERIFY THERAPY SESSION WITH TREATMENT PLAN
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 3] Verifying therapy session...');
+    
+    if (consultation.sessionType !== 'therapy' || !consultation.therapyData?.treatmentPlanId) {
+      console.error('❌ [STEP 3] Not a valid therapy session with treatment plan!');
+      return res.status(400).json({
+        success: false,
+        message: 'This feature is only for therapy sessions that are part of a treatment plan',
+      });
+    }
+
+    const treatmentPlanId = consultation.therapyData.treatmentPlanId;
+    console.log('✅ [STEP 3] Valid therapy session, treatment plan:', treatmentPlanId);
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 4: GET TREATMENT PLAN WITH DOCTOR
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 4] Fetching treatment plan...');
+    
+    const treatmentPlan = await TreatmentPlan.findById(treatmentPlanId)
+      .populate('doctorId', 'name email');
+    
+    if (!treatmentPlan) {
+      console.error('❌ [STEP 4] Treatment plan not found!');
+      return res.status(404).json({
+        success: false,
+        message: 'Treatment plan not found',
+      });
+    }
+
+    console.log('✅ [STEP 4] Treatment plan found:', {
+      _id: treatmentPlan._id,
+      treatmentName: treatmentPlan.treatmentName,
+      doctorId_PopulatedValue: treatmentPlan.doctorId,
+    });
+
+    // 🔥 DECLARE DOCTOR VARIABLE IN PROPER SCOPE
+    let doctorFromDoctorModel = null;
+
+    // Method 1: Check raw document first
+    console.log('🔍 [DEBUG] Method 1 - Fetching raw treatment plan...');
+    const rawTreatmentPlan = await TreatmentPlan.findById(treatmentPlanId).lean();
+    
+    console.log('🔍 [DEBUG] Method 1 - Raw document result:', {
+      doctorId: rawTreatmentPlan.doctorId,
+      type: typeof rawTreatmentPlan.doctorId,
+      toString: rawTreatmentPlan.doctorId?.toString(),
+      isNull: rawTreatmentPlan.doctorId === null,
+      isUndefined: rawTreatmentPlan.doctorId === undefined,
+    });
+
+    // Method 2: Try to find doctor in User collection
+    if (rawTreatmentPlan.doctorId) {
+      console.log('🔍 [DEBUG] Method 2 - Searching for doctor in User collection...');
+      console.log('   Searching with ID:', rawTreatmentPlan.doctorId.toString());
+      
+      doctorFromDoctorModel = await mongoose.model('User').findById(rawTreatmentPlan.doctorId);
+      
+      console.log('🔍 [DEBUG] Method 2 - Doctor search result:');
+      console.log('   ├─ Found:', !!doctorFromDoctorModel);
+      console.log('   ├─ Type:', typeof doctorFromDoctorModel);
+      console.log('   ├─ Is null:', doctorFromDoctorModel === null);
+      console.log('   ├─ Is undefined:', doctorFromDoctorModel === undefined);
+      
+      if (doctorFromDoctorModel) {
+        console.log('   ├─ _id:', doctorFromDoctorModel._id);
+        console.log('   ├─ name:', doctorFromDoctorModel.name);
+        console.log('   ├─ email:', doctorFromDoctorModel.email);
+        console.log('   ├─ role:', doctorFromDoctorModel.role);
+        console.log('   ├─ phone:', doctorFromDoctorModel.phone);
+        console.log('   ├─ createdAt:', doctorFromDoctorModel.createdAt);
+        console.log('   └─ All fields:', JSON.stringify(doctorFromDoctorModel, null, 2));
+      } else {
+        console.log('   └─ Doctor not found in User collection');
+      }
+    } else {
+      console.warn('⚠️ [DEBUG] Raw doctorId is null/undefined, skipping doctor search');
+    }
+
+    // 🔥 DETAILED DEBUG OF doctorFromDoctorModel
+    console.log('\n🔍 [DEBUG] ═══ DETAILED doctorFromDoctorModel INSPECTION ═══');
+    console.log('Variable name: doctorFromDoctorModel');
+    console.log('Value:', doctorFromDoctorModel);
+    console.log('Type:', typeof doctorFromDoctorModel);
+    console.log('Is null:', doctorFromDoctorModel === null);
+    console.log('Is undefined:', doctorFromDoctorModel === undefined);
+    console.log('Is truthy:', !!doctorFromDoctorModel);
+    console.log('Constructor:', doctorFromDoctorModel?.constructor?.name);
+
+    if (doctorFromDoctorModel) {
+      console.log('\n📋 [DEBUG] Doctor Object Properties:');
+      console.log('─────────────────────────────────────────');
+      
+      // Check all properties
+      const doctorKeys = Object.keys(doctorFromDoctorModel.toObject ? doctorFromDoctorModel.toObject() : doctorFromDoctorModel);
+      console.log('Available keys:', doctorKeys);
+      
+      console.log('\n📝 [DEBUG] Individual Field Values:');
+      console.log('─────────────────────────────────────────');
+      console.log('_id:', doctorFromDoctorModel._id);
+      console.log('  → toString():', doctorFromDoctorModel._id?.toString());
+      console.log('  → type:', typeof doctorFromDoctorModel._id);
+      
+      console.log('\nname:', doctorFromDoctorModel.name);
+      console.log('  → type:', typeof doctorFromDoctorModel.name);
+      console.log('  → length:', doctorFromDoctorModel.name?.length);
+      
+      console.log('\nemail:', doctorFromDoctorModel.email);
+      console.log('  → type:', typeof doctorFromDoctorModel.email);
+      console.log('  → length:', doctorFromDoctorModel.email?.length);
+      
+      console.log('\nrole:', doctorFromDoctorModel.role);
+      console.log('  → type:', typeof doctorFromDoctorModel.role);
+      console.log('  → is doctor?:', doctorFromDoctorModel.role === 'doctor');
+      
+      console.log('\nphone:', doctorFromDoctorModel.phone);
+      console.log('specialization:', doctorFromDoctorModel.specialization);
+      console.log('licenseNumber:', doctorFromDoctorModel.licenseNumber);
+      
+      console.log('\n🗂️ [DEBUG] Full Object (toObject):');
+      console.log('─────────────────────────────────────────');
+      try {
+        const plainObject = doctorFromDoctorModel.toObject ? doctorFromDoctorModel.toObject() : doctorFromDoctorModel;
+        console.log(JSON.stringify(plainObject, null, 2));
+      } catch (err) {
+        console.log('Could not convert to plain object:', err.message);
+        console.log('Raw object:', doctorFromDoctorModel);
+      }
+      
+      console.log('\n🔑 [DEBUG] Accessing Nested Properties:');
+      console.log('─────────────────────────────────────────');
+      console.log('doctorFromDoctorModel?._id:', doctorFromDoctorModel?._id);
+      console.log('doctorFromDoctorModel?.name:', doctorFromDoctorModel?.name);
+      console.log('doctorFromDoctorModel?.email:', doctorFromDoctorModel?.email);
+      
+    } else {
+      console.log('\n❌ [DEBUG] doctorFromDoctorModel is NULL or UNDEFINED');
+      console.log('Cannot access properties');
+    }
+    console.log('═══════════════════════════════════════════════════════════\n');
+
+    // 🆕 CHECK: Verify doctor exists
+    if (!doctorFromDoctorModel) {
+      console.error('❌ [STEP 4] Doctor not found!');
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found for this treatment plan. Please contact support.',
+        debug: {
+          treatmentPlanId: treatmentPlan._id.toString(),
+          rawDoctorId: rawTreatmentPlan.doctorId?.toString(),
+          doctorFromDoctorModel: doctorFromDoctorModel,
+        }
+      });
+    }
+
+    // 🔥 EXTRACT DOCTOR DETAILS
+    console.log('🔍 [STEP 4] Extracting doctor details...');
+    
+    const doctorId = doctorFromDoctorModel._id;
+    const doctorName = doctorFromDoctorModel.name;
+    const doctorEmail = doctorFromDoctorModel.email;
+    
+    console.log('✅ [STEP 4] Doctor extracted successfully:');
+    console.log('   doctorId:', doctorId);
+    console.log('   doctorId type:', typeof doctorId);
+    console.log('   doctorId toString:', doctorId?.toString());
+    console.log('   doctorName:', doctorName);
+    console.log('   doctorName type:', typeof doctorName);
+    console.log('   doctorEmail:', doctorEmail);
+    console.log('   doctorEmail type:', typeof doctorEmail);
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 5: FIND ALL FUTURE SESSIONS
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 5] Finding future sessions...');
+    const now = new Date();
+    
+    const futureSessions = await Consultation.find({
+      'therapyData.treatmentPlanId': treatmentPlanId,
+      sessionType: 'therapy',
+      status: { $in: ['scheduled', 'confirmed', 'patient_arrived', 'therapist_ready'] },
+      scheduledAt: { $gte: now },
+    });
+
+    console.log(`✅ [STEP 5] Found ${futureSessions.length} future sessions`);
+
+    if (futureSessions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No future sessions found to cancel',
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 6: CANCEL ALL FUTURE SESSIONS
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 6] Cancelling sessions...');
+    const cancelledSessionIds = [];
+    
+    for (let i = 0; i < futureSessions.length; i++) {
+      const sess = futureSessions[i];
+      
+      if (!sess.statusHistory) {
+        sess.statusHistory = [];
+      }
+      sess.statusHistory.push({
+        status: 'cancelled',
+        timestamp: new Date(),
+        updatedBy: patientUserId,
+        reason: `Patient requested rescheduling: ${reason || 'Not provided'}`,
+        previousStatus: sess.status,
+      });
+
+      sess.status = 'cancelled';
+      sess.sessionStatus = 'cancelled';
+      
+      if (!sess.notes) {
+        sess.notes = '';
+      }
+      sess.notes += `\n\n[CANCELLED BY PATIENT - ${new Date().toISOString()}]\n` +
+                     `Reason: ${reason || 'Not provided'}\n` +
+                     `Rescheduling requested.`;
+      
+      await sess.save();
+      cancelledSessionIds.push(sess._id);
+      
+      console.log(`   ✅ [${i + 1}/${futureSessions.length}] Cancelled ${sess._id}`);
+    }
+
+    console.log(`✅ [STEP 6] Cancelled ${cancelledSessionIds.length} sessions`);
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 7: UPDATE TREATMENT PLAN
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 7] Updating treatment plan...');
+    
+    treatmentPlan.status = 'paused';
+    treatmentPlan.pausedAt = new Date();
+    treatmentPlan.schedulingStatus = 'pending';
+    treatmentPlan.cancelledSessions = (treatmentPlan.cancelledSessions || 0) + futureSessions.length;
+    
+    if (!treatmentPlan.schedulingErrors) {
+      treatmentPlan.schedulingErrors = [];
+    }
+    treatmentPlan.schedulingErrors.push({
+      errorType: 'patient_reschedule_request',
+      message: `Patient cancelled ${futureSessions.length} future sessions. Reason: ${reason || 'Not provided'}`,
+      timestamp: new Date(),
+    });
+    
+    await treatmentPlan.save();
+    console.log('✅ [STEP 7] Treatment plan paused');
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 8: CREATE DOCTOR CONSULTATION
+    // ═══════════════════════════════════════════════════════════
+    console.log('🔍 [STEP 8] Creating doctor consultation...');
+    
+    const consultationDate = new Date();
+    consultationDate.setDate(consultationDate.getDate() + 1);
+    consultationDate.setHours(10, 0, 0, 0);
+    
+    console.log('   Using doctor details:');
+    console.log('   ├─ doctorId:', doctorId);
+    console.log('   ├─ doctorName:', doctorName);
+    console.log('   └─ doctorEmail:', doctorEmail);
+    
+    const doctorConsultation = new Consultation({
+      patientId: consultation.patientId._id,
+      providerId: doctorId,
+      providerModel: 'User',  // ← Changed from 'Doctor' to 'User'
+      providerType: 'doctor',
+      type: 'follow_up',
+      sessionType: 'followup',
+      
+      scheduledAt: consultationDate,
+      scheduledDate: consultationDate,
+      scheduledTime: '10:00',
+      
+      estimatedDuration: 30,
+      fee: 0,
+      
+      notes: `🔄 **RESCHEDULING CONSULTATION**\n\n` +
+             `Patient requested to reschedule their treatment plan.\n\n` +
+             `**Treatment Plan:**\n` +
+             `- Name: ${treatmentPlan.treatmentName}\n` +
+             `- Type: ${treatmentPlan.panchakarmaType}\n` +
+             `- Completed: ${treatmentPlan.completedSessions}/${treatmentPlan.totalSessionsPlanned}\n\n` +
+             `**Cancellation:**\n` +
+             `- Sessions: ${futureSessions.length}\n` +
+             `- Reason: ${reason || 'Not provided'}\n\n` +
+             `**Action Required:**\n` +
+             `Discuss rescheduling options with the patient.`,
+      
+      status: 'scheduled',
+      sessionStatus: 'scheduled',
+      
+      therapyData: {
+        treatmentPlanId: treatmentPlanId,
+        doctorId: doctorId,
+        isReschedulingConsultation: true,
+        originalCancelledSessions: futureSessions.length,
+        originalCompletedSessions: treatmentPlan.completedSessions,
+      },
+    });
+
+    await doctorConsultation.save();
+    console.log('✅ [STEP 8] Doctor consultation created:', doctorConsultation._id);
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 9: NOTIFICATIONS (ASYNC)
+    // ═══════════════════════════════════════════════════════════
+    console.log('✅ [STEP 9] Queuing notifications...');
+    
+    setImmediate(() => {
+      console.log('📧 Sending notifications (async)...');
+      // Add your notification code here
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 10: SUCCESS RESPONSE
+    // ═══════════════════════════════════════════════════════════
+    console.log('📤 [STEP 10] Sending success response');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    return res.json({
+      success: true,
+      message: 'Rescheduling request processed successfully',
+      data: {
+        treatmentPlan: {
+          _id: treatmentPlan._id,
+          treatmentName: treatmentPlan.treatmentName,
+          status: treatmentPlan.status,
+          completedSessions: treatmentPlan.completedSessions,
+          totalSessionsPlanned: treatmentPlan.totalSessionsPlanned,
+        },
+        
+        cancelledSessions: {
+          count: cancelledSessionIds.length,
+          sessionIds: cancelledSessionIds,
+        },
+        
+        doctorConsultation: {
+          _id: doctorConsultation._id,
+          doctorName: doctorName,
+          scheduledAt: doctorConsultation.scheduledAt,
+          fee: 0,
+        },
+        
+        nextSteps: [
+          `${cancelledSessionIds.length} future therapy sessions cancelled`,
+          `Consultation with Dr. ${doctorName} scheduled for ${consultationDate.toLocaleDateString()}`,
+          'Doctor will discuss rescheduling options',
+          'New treatment schedule will be created',
+        ],
+      },
+    });
+
+  } catch (error) {
+    console.error('❌ [ERROR] Patient reschedule failed');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process rescheduling request',
+      error: error.message,
+    });
+  }
+};
+
+   syncTreatmentPlanProgress = async (treatmentPlanId) => {
+    try {
+      if (!treatmentPlanId) return;
+  
+      console.log(`🔄 Syncing TreatmentPlan: ${treatmentPlanId}`);
+  
+      // Count ACTUAL completed therapy sessions
+      const completedCount = await Consultation.countDocuments({
+        'therapyData.treatmentPlanId': treatmentPlanId,
+        sessionType: 'therapy',
+        status: 'completed' // ✅ This is the key filter
+      });
+  
+      console.log(`📊 Found ${completedCount} completed sessions for plan ${treatmentPlanId}`);
+  
+      // Update treatment plan
+      const treatmentPlan = await TreatmentPlan.findById(treatmentPlanId);
+      
+      if (!treatmentPlan) {
+        console.log(`⚠️ TreatmentPlan ${treatmentPlanId} not found`);
+        return;
+      }
+  
+      const oldCompleted = treatmentPlan.completedSessions;
+      treatmentPlan.completedSessions = completedCount;
+  
+      // Recalculate progress percentage
+      if (treatmentPlan.totalSessionsPlanned > 0) {
+        treatmentPlan.progress = Math.round(
+          (completedCount / treatmentPlan.totalSessionsPlanned) * 100
+        );
+      }
+  
+      // Mark as started if first session completed
+      if (completedCount === 1 && !treatmentPlan.startedAt) {
+        treatmentPlan.startedAt = new Date();
+        console.log(`✅ TreatmentPlan started`);
+      }
+  
+      // Mark as completed if all sessions done
+      if (completedCount >= treatmentPlan.totalSessionsPlanned && treatmentPlan.status === 'active') {
+        treatmentPlan.status = 'completed';
+        treatmentPlan.completedAt = new Date();
+        console.log(`🎉 TreatmentPlan completed!`);
+      }
+  
+      await treatmentPlan.save();
+      
+      console.log(`✅ TreatmentPlan synced: ${oldCompleted} → ${completedCount} sessions (${treatmentPlan.progress}%)`);
+  
+      return treatmentPlan;
+  
+    } catch (error) {
+      console.error('❌ Error syncing treatment plan:', error);
+      throw error;
+    }
+  };
+  
   createConsultation = async (req, res) => {
     try {
       const { 

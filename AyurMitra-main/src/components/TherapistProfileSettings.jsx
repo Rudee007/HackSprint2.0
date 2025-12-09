@@ -1,8 +1,3 @@
-// src/components/TherapistProfileSettings.jsx
-// 🔥 UPDATED FOR NEW THERAPIST SCHEMA & CONTROLLERS
-// - Profile tabs call onUpdateProfile
-// - Availability tab auto-generates monday–sunday slots and calls onUpdateAvailability
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {

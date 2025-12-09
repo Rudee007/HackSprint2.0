@@ -81,19 +81,16 @@ if (response.data.success) {
   
   login(userData, token);
 
-  // ✅ Check if doctor profile exists
   const existingProfile = localStorage.getItem('user');
 
   console.log(existingProfile);
   
   if (existingProfile) {
-    // Profile exists, go to dashboard
     setSuccess('Login successful! Redirecting to dashboard...');
     setTimeout(() => {
       navigate('/doctor-dashboard');
     }, 1500);
   } else {
-    // No profile, go to registration form
     setSuccess('Login successful! Please complete your profile...');
     setTimeout(() => {
       navigate('/doctor-form');

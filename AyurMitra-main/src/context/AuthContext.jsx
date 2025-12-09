@@ -101,10 +101,8 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  // Listen for storage changes (cross-tab synchronization)
   useEffect(() => {
     const handleStorageChange = (event) => {
-      // ✅ Listen for both user and admin storage changes
       const authKeys = ['user', 'adminData', 'accessToken', 'adminToken', 'id', 'session'];
       if (authKeys.includes(event.key)) {
         console.log('🔄 Storage changed:', event.key);
@@ -138,12 +136,10 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
   };
 
-  // Login function
   const login = (userData, authToken) => {
     console.log('👤 Logging in...', { userData, hasToken: !!authToken });
     
     if (authToken) {
-      // Store based on role
       if (userData.role === 'super_admin' || userData.role === 'admin') {
         localStorage.setItem('adminToken', authToken);
         localStorage.setItem('adminData', JSON.stringify(userData));
@@ -157,17 +153,17 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('id', userData.id || userData._id);
     }
     
-    checkAuthStatus(); // This will update the state
+    checkAuthStatus();
   };
 
   const value = {
     isAuthenticated,
     user,
-    token, // ✅ Expose token
+    token, 
     loading,
     login,
     logout,
-    checkAuthStatus // Expose for manual refresh if needed
+    checkAuthStatus
   };
 
   return (

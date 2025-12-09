@@ -1,6 +1,7 @@
 // controllers/therapist.controller.js - WITH DEBUGGING
 const therapistService = require('../services/therapist.service');
 const Therapist = require('../models/Therapist');
+const User = require('../models/User');
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -1233,64 +1234,133 @@ async function updateTreatmentPlanProgress(req, res) {
  * @route   GET /api/therapists/available
  * @access  Private (doctor only)
  */
+// controllers/therapist.controller.js
+
 async function getAvailableTherapists(req, res) {
   console.log('🔥 [CONTROLLER] getAvailableTherapists - START');
-  console.log('📋 Query params:', req.query);
-  
+  console.log('📋 Raw query params:', req.query);
+
   try {
     const filters = {
       specialization: req.query.specialization,
       therapy: req.query.therapy,
       skillLevel: req.query.skillLevel,
-      date: req.query.date
+      date: req.query.date,
+      patientId: req.query.patientId, // from frontend
     };
 
-    console.log('🔍 Filters applied:', filters);
+    console.log('🧩 [CONTROLLER] Parsed filters:', filters);
 
-    // Build query
     const query = {
       isActive: true,
-      verificationStatus: 'approved'
+      verificationStatus: 'approved',
     };
 
-    // Filter by specialization
+    // existing filters…
     if (filters.specialization) {
       query.specialization = { $in: [filters.specialization] };
     }
-
-    // Filter by therapy certification
     if (filters.therapy) {
       query['certifications.therapy'] = filters.therapy;
     }
-
-    // Filter by skill level
     if (filters.skillLevel) {
       query['certifications.level'] = filters.skillLevel;
     }
 
-    console.log('📊 Query:', JSON.stringify(query, null, 2));
+    // ⬅ gender rule: female patient → female therapist
+    let userFilter = { role: 'therapist', isActive: true };
+
+    console.log('🧪 [CONTROLLER] Initial userFilter:', userFilter);
+
+    if (filters.patientId) {
+      console.log('🔎 [CONTROLLER] Looking up patient for gender filter, patientId =', filters.patientId);
+
+      const patient = await User.findById(filters.patientId)
+        .select('role profile.gender')
+        .lean();
+
+      console.log('🧍 [CONTROLLER] Loaded patient for filter:', patient);
+
+      if (patient && patient.role === 'patient') {
+        const g = patient.profile?.gender;
+        console.log('👀 [CONTROLLER] Patient gender:', g);
+
+        if (g === 'female') {
+          userFilter['profile.gender'] = 'female';
+          console.log('🎯 [CONTROLLER] Applied gender filter: female patient → female therapists only');
+        }
+        if(g === 'male'){
+
+          userFilter['profile.gender'] =  'male';
+          console.log('🎯 [CONTROLLER] Applied gender filter: male patient → male therapists only');
+        }
+        // if you also want male→male matching, uncomment:
+        // if (g === 'male') {
+        //   userFilter['profile.gender'] = 'male';
+        //   console.log('🎯 [CONTROLLER] Applied gender filter: male patient → male therapists only');
+        // }
+      } else {
+        console.log('⚠️ [CONTROLLER] Patient not found or not role=patient, skipping gender filter');
+      }
+    } else {
+      console.log('ℹ️ [CONTROLLER] No patientId provided, NOT applying gender filter');
+    }
+
+    console.log('🧪 [CONTROLLER] Final userFilter for User.find:', userFilter);
+
+    const therapistUsers = await User.find(userFilter)
+      .select('_id profile.gender name')
+      .lean();
+
+    console.log('📊 [CONTROLLER] therapistUsers count =', therapistUsers.length);
+    console.log(
+      '📊 [CONTROLLER] therapistUsers sample (first 5):',
+      therapistUsers.slice(0, 5).map(u => ({
+        _id: u._id,
+        gender: u.profile?.gender,
+        name: u.name,
+      }))
+    );
+
+    const therapistUserIds = therapistUsers.map(u => u._id);
+    console.log('📊 [CONTROLLER] therapistUserIds length =', therapistUserIds.length);
+
+    // merge therapist user filter into therapist query
+    query.userId = { $in: therapistUserIds };
+
+    console.log('📊 [CONTROLLER] Final Therapist query:', JSON.stringify(query, null, 2));
 
     const therapists = await Therapist.find(query)
-      .populate('userId', 'name email phone')
-      .select('userId certifications availability metrics specialization experienceYears bio isActive')
+      .populate('userId', 'name email phone profile.gender')
+      .select(
+        'userId certifications availability metrics specialization experienceYears bio isActive'
+      )
       .sort({ 'metrics.averageRating': -1, experienceYears: -1 })
       .limit(50)
       .lean();
 
     console.log(`✅ [CONTROLLER] Found ${therapists.length} available therapists`);
+    console.log(
+      '✅ [CONTROLLER] Therapists genders (first 10):',
+      therapists.slice(0, 10).map(t => ({
+        therapistId: t._id,
+        userId: t.userId?._id,
+        name: t.userId?.name,
+        gender: t.userId?.profile?.gender,
+      }))
+    );
 
-    res.json({
+    return res.json({
       success: true,
       data: therapists,
       count: therapists.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error('❌ [CONTROLLER] Get available therapists error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 }

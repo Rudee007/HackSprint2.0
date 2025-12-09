@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MessageSquare, Send, Edit3, Clock, Star, 
-  CheckCircle, AlertCircle, Loader2, Plus, X, 
-  Heart, Search, ChevronDown, User, Zap, Frown
-} from 'lucide-react';
 import axios from 'axios';
+import { 
+  Star, 
+  Loader2, 
+  CheckCircle, 
+  AlertCircle, 
+  Heart,
+  Activity,
+  Smile,
+  Frown,
+  ThumbsUp,
+  MessageSquare
+} from 'lucide-react';
 
-// API Configuration
 const api = axios.create({
   baseURL: 'http://localhost:3003/api',
   timeout: 10000,
@@ -15,957 +20,667 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-const Feedback = ({ sessionId = null }) => {
-  // State Management
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [sessionFeedback, setSessionFeedback] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalFeedbacks, setTotalFeedbacks] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const limit = 5; // Smaller limit for better loading
+const PatientFeedbackForm = ({ 
+  sessionId, 
+  providerId, 
+  therapyType = 'panchakarma',
+  sessionType = 'therapy_session',
+  onSuccess 
+}) => {
+  const [form, setForm] = useState({
+    // Ratings (1-5)
+    overallSatisfaction: 0,
+    treatmentEffectiveness: 0,
+    patientCare: 0,
+    facilityQuality: 0,
+    therapistProfessionalism: 0,
+    communicationQuality: 0,
 
-  // UI State
-  const [showForm, setShowForm] = useState(false);
-  const [editingFeedback, setEditingFeedback] = useState(null);
-  const [formData, setFormData] = useState({
-    sessionId: sessionId || '',
-    category: 'symptoms',
-    rating: 0,
-    symptoms: '',
-    sideEffects: '',
-    improvements: '',
-    comments: '',
-    mood: 'neutral',
-    energyLevel: 5,
-    painLevel: 0,
-    sleepQuality: 5
+    // Health Metrics (1-10 before/after)
+    painBefore: 5,
+    painAfter: 5,
+    energyBefore: 5,
+    energyAfter: 5,
+    stressBefore: 5,
+    stressAfter: 5,
+    sleepBefore: 5,
+    sleepAfter: 5,
+
+    // Side Effects
+    hasSideEffects: false,
+    selectedSideEffects: [],
+
+    // Text Feedback
+    positiveAspects: '',
+    concernsOrIssues: '',
+    suggestions: '',
+
+    // Recommendation
+    recommendationScore: 8,
+    wouldReturnForTreatment: true,
+    wouldRecommendToOthers: true,
   });
 
-  // Session search
-  const [searchSessionId, setSearchSessionId] = useState('');
-  const [showSessionSearch, setShowSessionSearch] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  // Categories
-  const categories = [
-    { value: 'symptoms', label: 'Symptoms', icon: '🩺', color: 'bg-blue-100 text-blue-700' },
-    { value: 'treatment', label: 'Treatment', icon: '💊', color: 'bg-green-100 text-green-700' },
-    { value: 'therapy', label: 'Therapy', icon: '🧘', color: 'bg-purple-100 text-purple-700' },
-    { value: 'general', label: 'General', icon: '💬', color: 'bg-emerald-100 text-emerald-700' }
+  const sideEffectOptions = [
+    { value: 'fatigue', label: 'Fatigue' },
+    { value: 'nausea', label: 'Nausea' },
+    { value: 'headache', label: 'Headache' },
+    { value: 'skin_irritation', label: 'Skin Irritation' },
+    { value: 'dizziness', label: 'Dizziness' },
+    { value: 'muscle_soreness', label: 'Muscle Soreness' },
+    { value: 'other', label: 'Other' },
   ];
 
-  const moods = [
-    { value: 'excellent', label: 'Great', emoji: '😊', color: 'bg-green-100' },
-    { value: 'good', label: 'Good', emoji: '🙂', color: 'bg-blue-100' },
-    { value: 'neutral', label: 'Okay', emoji: '😐', color: 'bg-yellow-100' },
-    { value: 'poor', label: 'Poor', emoji: '😔', color: 'bg-orange-100' },
-    { value: 'terrible', label: 'Bad', emoji: '😞', color: 'bg-red-100' }
-  ];
+  const showError = (msg) => {
+    setError(msg);
+    setTimeout(() => setError(''), 4000);
+  };
 
-  // Scroll hook for header effects
-  const [scrolled, setScrolled] = useState(false);
+  const showSuccess = (msg) => {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(''), 4000);
+  };
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 0);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    loadMyFeedback();
   }, []);
 
-  // API Functions
-  const fetchSessionFeedback = async (sessionIdToFetch) => {
-    if (!sessionIdToFetch) return;
-    
-    setLoading(true);
-    setError('');
-    
+  const loadMyFeedback = async () => {
     try {
-      const response = await api.get(`/feedback/session/${sessionIdToFetch}`);
-      if (response.data.success) {
-        setSessionFeedback(response.data.data.feedback);
-        setSuccess(`Found feedback for session ${sessionIdToFetch}!`);
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (err) {
-      setError(`No feedback found for session ${sessionIdToFetch}.`);
-      setTimeout(() => setError(''), 5000);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load initial feedbacks
-  const loadFeedbacks = async (reset = false) => {
-    const pageToLoad = reset ? 1 : currentPage;
-    
-    if (pageToLoad === 1) {
       setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
-    
-    setError('');
-    
-    try {
-      const response = await api.get(`/feedback/my-feedback?page=${pageToLoad}&limit=${limit}`);
-      
-      if (response.data.success) {
-        const { docs, totalPages: pages, totalDocs } = response.data.data;
-        
-        if (reset) {
-          setFeedbacks(docs || []);
-          setCurrentPage(1);
-        } else {
-          setFeedbacks(prev => [...prev, ...(docs || [])]);
-        }
-        
-        setTotalPages(pages || 1);
-        setTotalFeedbacks(totalDocs || 0);
-        setHasMore(pageToLoad < pages);
+      const res = await api.get('/feedback/me');
+      if (res.data.success) {
+        setFeedbackList(res.data.data || []);
       }
     } catch (err) {
-      setError('Failed to load feedback. Please try again.');
+      console.error('Load feedback error:', err);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  // Load more feedbacks
-  const loadMoreFeedbacks = async () => {
-    if (!hasMore || loadingMore) return;
-    
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
-    
-    setLoadingMore(true);
-    
-    try {
-      const response = await api.get(`/feedback/my-feedback?page=${nextPage}&limit=${limit}`);
-      
-      if (response.data.success) {
-        const { docs, totalPages: pages } = response.data.data;
-        setFeedbacks(prev => [...prev, ...(docs || [])]);
-        setHasMore(nextPage < pages);
-      }
-    } catch (err) {
-      setError('Failed to load more feedback.');
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    setSubmitting(true);
-    setError('');
-    
-    try {
-      let response;
-      if (editingFeedback) {
-        response = await api.put(`/feedback/my-feedback/${editingFeedback._id}`, formData);
-        setSuccess('Feedback updated successfully! 🎉');
-      } else {
-        response = await api.post('/feedback', formData);
-        setSuccess('Thank you for your feedback! 🌿');
-      }
-      
-      if (response.data.success) {
-        resetForm();
-        loadFeedbacks(true); // Reset and reload
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setTimeout(() => setSuccess(''), 5000);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit feedback.');
-      setTimeout(() => setError(''), 5000);
-    } finally {
-      setSubmitting(false);
     }
   };
 
   const validateForm = () => {
-    if (!formData.category) {
-      setError('Please select a feedback category');
+    if (!sessionId) {
+      showError('Session information is missing');
       return false;
     }
-    if (formData.rating === 0) {
-      setError('Please provide a rating');
+    if (!providerId) {
+      showError('Provider information is missing');
       return false;
     }
-    if (!formData.comments.trim()) {
-      setError('Please share your experience');
+    if (form.overallSatisfaction === 0) {
+      showError('Please rate your overall experience');
+      return false;
+    }
+    if (!form.positiveAspects && !form.concernsOrIssues) {
+      showError('Please share at least one comment about your experience');
       return false;
     }
     return true;
   };
 
+  const buildPayload = () => {
+    return {
+      sessionId,
+      sessionType,
+      providerId,
+      therapyType,
+      
+      ratings: {
+        overallSatisfaction: form.overallSatisfaction,
+        treatmentEffectiveness: form.treatmentEffectiveness,
+        patientCare: form.patientCare,
+        facilityQuality: form.facilityQuality,
+        therapistProfessionalism: form.therapistProfessionalism,
+        communicationQuality: form.communicationQuality,
+      },
+
+      healthMetrics: {
+        painLevel: { before: form.painBefore, after: form.painAfter },
+        energyLevel: { before: form.energyBefore, after: form.energyAfter },
+        stressLevel: { before: form.stressBefore, after: form.stressAfter },
+        sleepQuality: { before: form.sleepBefore, after: form.sleepAfter },
+      },
+
+      sideEffects: form.hasSideEffects
+        ? form.selectedSideEffects.map((type) => ({
+            type,
+            severity: 3,
+            durationUnit: 'hours',
+            description: '',
+            resolved: false,
+          }))
+        : [],
+
+      textFeedback: {
+        positiveAspects: form.positiveAspects,
+        concernsOrIssues: form.concernsOrIssues,
+        suggestions: form.suggestions,
+      },
+
+      recommendationScore: form.recommendationScore,
+      wouldReturnForTreatment: form.wouldReturnForTreatment,
+      wouldRecommendToOthers: form.wouldRecommendToOthers,
+    };
+  };
+
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
+    if (!validateForm()) return;
+
+    setSubmitting(true);
+    try {
+      const payload = buildPayload();
+      const res = await api.post('/feedback', payload);
+      
+      if (res.data.success) {
+        showSuccess('Thank you! Your feedback has been submitted successfully.');
+        await loadMyFeedback();
+        resetForm();
+        if (onSuccess) onSuccess();
+      }
+    } catch (err) {
+      console.error('Submit feedback error:', err);
+      showError(err.response?.data?.message || 'Failed to submit feedback');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const resetForm = () => {
-    setFormData({
-      sessionId: sessionId || '',
-      category: 'symptoms',
-      rating: 0,
-      symptoms: '',
-      sideEffects: '',
-      improvements: '',
-      comments: '',
-      mood: 'neutral',
-      energyLevel: 5,
-      painLevel: 0,
-      sleepQuality: 5
+    setForm({
+      overallSatisfaction: 0,
+      treatmentEffectiveness: 0,
+      patientCare: 0,
+      facilityQuality: 0,
+      therapistProfessionalism: 0,
+      communicationQuality: 0,
+      painBefore: 5,
+      painAfter: 5,
+      energyBefore: 5,
+      energyAfter: 5,
+      stressBefore: 5,
+      stressAfter: 5,
+      sleepBefore: 5,
+      sleepAfter: 5,
+      hasSideEffects: false,
+      selectedSideEffects: [],
+      positiveAspects: '',
+      concernsOrIssues: '',
+      suggestions: '',
+      recommendationScore: 8,
+      wouldReturnForTreatment: true,
+      wouldRecommendToOthers: true,
     });
-    setEditingFeedback(null);
-    setShowForm(false);
   };
 
-  const handleEdit = (feedback) => {
-    const createdAt = new Date(feedback.createdAt);
-    const now = new Date();
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-    
-    if (hoursDiff > 24) {
-      setError('Feedback can only be edited within 24 hours');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    
-    setFormData({
-      sessionId: feedback.sessionId || '',
-      category: feedback.category || 'symptoms',
-      rating: feedback.rating || 0,
-      symptoms: feedback.symptoms || '',
-      sideEffects: feedback.sideEffects || '',
-      improvements: feedback.improvements || '',
-      comments: feedback.comments || '',
-      mood: feedback.mood || 'neutral',
-      energyLevel: feedback.energyLevel || 5,
-      painLevel: feedback.painLevel || 0,
-      sleepQuality: feedback.sleepQuality || 5
-    });
-    
-    setEditingFeedback(feedback);
-    setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const toggleSideEffect = (type) => {
+    setForm((prev) => ({
+      ...prev,
+      selectedSideEffects: prev.selectedSideEffects.includes(type)
+        ? prev.selectedSideEffects.filter((t) => t !== type)
+        : [...prev.selectedSideEffects, type],
+    }));
   };
 
-  const isEditable = (createdAt) => {
-    const now = new Date();
-    const created = new Date(createdAt);
-    const hoursDiff = (now - created) / (1000 * 60 * 60);
-    return hoursDiff <= 24;
-  };
+  const StarRating = ({ value, onChange, label }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+      </label>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            className="p-1 hover:scale-110 transition-transform"
+          >
+            <Star
+              className={`w-7 h-7 ${
+                n <= value
+                  ? 'text-amber-500 fill-amber-400'
+                  : 'text-gray-300 hover:text-amber-200'
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        {value === 0
+          ? 'Not rated'
+          : value === 1
+          ? 'Poor'
+          : value === 2
+          ? 'Fair'
+          : value === 3
+          ? 'Good'
+          : value === 4
+          ? 'Very Good'
+          : 'Excellent'}
+      </p>
+    </div>
+  );
 
-  const getCategoryInfo = (category) => {
-    return categories.find(cat => cat.value === category) || categories[0];
-  };
+  const SliderMetric = ({ label, beforeValue, afterValue, onBeforeChange, onAfterChange, icon: Icon }) => (
+    <div className="bg-gray-50 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        {Icon && <Icon className="w-5 h-5 text-emerald-600" />}
+        <h4 className="text-sm font-semibold text-gray-800">{label}</h4>
+      </div>
+      
+      <div className="space-y-3">
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-xs text-gray-600">Before Session</span>
+            <span className="text-sm font-bold text-gray-800">{beforeValue}/10</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={beforeValue}
+            onChange={(e) => onBeforeChange(Number(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+          />
+        </div>
 
-  const getMoodInfo = (mood) => {
-    return moods.find(m => m.value === mood) || moods[2];
-  };
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-xs text-gray-600">After Session</span>
+            <span className="text-sm font-bold text-emerald-700">{afterValue}/10</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={afterValue}
+            onChange={(e) => onAfterChange(Number(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+          />
+        </div>
 
-  const handleSessionSearch = () => {
-    if (searchSessionId.trim()) {
-      fetchSessionFeedback(searchSessionId.trim());
-      setShowSessionSearch(false);
-      setSearchSessionId('');
-    }
-  };
-
-  useEffect(() => {
-    loadFeedbacks();
-    if (sessionId) {
-      fetchSessionFeedback(sessionId);
-    }
-  }, [sessionId]);
+        {/* Improvement indicator */}
+        {afterValue !== beforeValue && (
+          <div className="flex items-center gap-1 text-xs">
+            {afterValue > beforeValue ? (
+              <>
+                <Smile className="w-4 h-4 text-emerald-600" />
+                <span className="text-emerald-700 font-medium">
+                  Improved by {afterValue - beforeValue} points
+                </span>
+              </>
+            ) : (
+              <>
+                <Frown className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-700 font-medium">
+                  Decreased by {beforeValue - afterValue} points
+                </span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-      {/* Sticky Header */}
-      {/* <div className={`
-        sticky top-0 z-50 px-4 py-6 
-        transition-all duration-300 ease-in-out
-        ${scrolled 
-          ? 'bg-white/95 backdrop-blur-md shadow-lg shadow-emerald-100/50 border-b border-emerald-100' 
-          : 'bg-white border-b border-emerald-100'
-        }
-      `}> */}
-        {/* <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-4">
-            <MessageSquare className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-emerald-800 mb-2">
-            Treatment Feedback
-          </h1>
-          <p className="text-gray-600 text-base leading-relaxed">
-            Share your experience to help us improve your care
-          </p>
-        </div> */}
-      {/* </div> */}
+    <div className="max-w-4xl mx-auto">
+      {/* Alert Messages */}
+      {success && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-emerald-800">
+          <CheckCircle className="w-5 h-5" />
+          <span className="font-medium">{success}</span>
+        </div>
+      )}
+      
+      {error && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-red-800">
+          <AlertCircle className="w-5 h-5" />
+          <span className="font-medium">{error}</span>
+        </div>
+      )}
 
-      <div className="max-w-4xl mx-auto px-4 pb-8">
-        {/* Success/Error Messages */}
-        <AnimatePresence>
-          {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mt-6 mb-6 p-4 bg-emerald-100 border border-emerald-300 text-emerald-700 rounded-2xl flex items-start gap-3"
-            >
-              <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" />
-              <span className="text-base leading-relaxed">{success}</span>
-            </motion.div>
-          )}
-          
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mt-6 mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-2xl flex items-start gap-3"
-            >
-              <AlertCircle className="w-6 h-6 mt-0.5 flex-shrink-0" />
-              <span className="text-base leading-relaxed">{error}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Session Search */}
-        <div className="mt-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <button
-              onClick={() => setShowSessionSearch(!showSessionSearch)}
-              className="w-full flex items-center justify-between p-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-medium transition-colors"
-            >
-              <span className="flex items-center gap-3">
-                <Search className="w-5 h-5" />
-                Search Session Feedback
-              </span>
-              <ChevronDown className={`w-5 h-5 transition-transform ${showSessionSearch ? 'rotate-180' : ''}`} />
-            </button>
-            
-            <AnimatePresence>
-              {showSessionSearch && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-6 space-y-4">
-                    <input
-                      type="text"
-                      value={searchSessionId}
-                      onChange={(e) => setSearchSessionId(e.target.value)}
-                      placeholder="Enter Session ID"
-                      className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400"
-                      onKeyPress={(e) => e.key === 'Enter' && handleSessionSearch()}
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleSessionSearch}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-xl font-semibold transition-colors"
-                      >
-                        Search
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowSessionSearch(false);
-                          setSearchSessionId('');
-                          setSessionFeedback(null);
-                        }}
-                        className="px-6 py-4 text-gray-500 hover:text-gray-700 rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+              <MessageSquare className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Session Feedback</h1>
+              <p className="text-sm text-gray-600">Help us improve your care</p>
+            </div>
           </div>
         </div>
 
-        {/* Session Feedback Display */}
-        {sessionFeedback && (
-          <div className="mb-8 bg-white rounded-2xl p-6 shadow-sm border border-blue-200">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-blue-800 mb-2">
-                  Session: {sessionFeedback.sessionId}
-                </h3>
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`w-5 h-5 ${
-                        sessionFeedback.rating >= star
-                          ? 'text-amber-400 fill-amber-400'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  ))}
-                  <span className="text-base text-gray-600 ml-2">
-                    {sessionFeedback.rating}/5
-                  </span>
-                </div>
-              </div>
-              
-              {isEditable(sessionFeedback.createdAt) && (
-                <button
-                  onClick={() => handleEdit(sessionFeedback)}
-                  className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-xl font-medium transition-colors"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Edit
-                </button>
-              )}
-            </div>
-            
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <span className="text-sm font-semibold text-gray-700 block mb-2">Category:</span>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryInfo(sessionFeedback.category).color}`}>
-                  {getCategoryInfo(sessionFeedback.category).icon} {getCategoryInfo(sessionFeedback.category).label}
-                </span>
-              </div>
-              
-              {sessionFeedback.comments && (
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <span className="text-sm font-semibold text-gray-700 block mb-2">Comments:</span>
-                  <p className="text-base text-gray-700 leading-relaxed">{sessionFeedback.comments}</p>
-                </div>
-              )}
-            </div>
+        {/* Overall Rating */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Overall Experience</h2>
+          <StarRating
+            label="How satisfied are you with today's session?"
+            value={form.overallSatisfaction}
+            onChange={(v) => setForm({ ...form, overallSatisfaction: v })}
+          />
+        </div>
+
+        {/* Detailed Ratings */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Rate Your Experience</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <StarRating
+              label="Treatment Effectiveness"
+              value={form.treatmentEffectiveness}
+              onChange={(v) => setForm({ ...form, treatmentEffectiveness: v })}
+            />
+            <StarRating
+              label="Patient Care"
+              value={form.patientCare}
+              onChange={(v) => setForm({ ...form, patientCare: v })}
+            />
+            <StarRating
+              label="Facility Quality"
+              value={form.facilityQuality}
+              onChange={(v) => setForm({ ...form, facilityQuality: v })}
+            />
+            <StarRating
+              label="Therapist Professionalism"
+              value={form.therapistProfessionalism}
+              onChange={(v) => setForm({ ...form, therapistProfessionalism: v })}
+            />
+            <StarRating
+              label="Communication Quality"
+              value={form.communicationQuality}
+              onChange={(v) => setForm({ ...form, communicationQuality: v })}
+            />
           </div>
-        )}
+        </div>
 
-        {/* Feedback Form Button */}
-        {!showForm && (
-          <div className="mb-12 text-center">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-6 px-12 rounded-2xl shadow-lg text-lg transition-all"
-            >
-              <Plus className="w-6 h-6" />
-              Share Your Experience
-            </motion.button>
+        {/* Health Metrics */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">How Do You Feel?</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            <SliderMetric
+              label="Pain Level"
+              icon={Heart}
+              beforeValue={form.painBefore}
+              afterValue={form.painAfter}
+              onBeforeChange={(v) => setForm({ ...form, painBefore: v })}
+              onAfterChange={(v) => setForm({ ...form, painAfter: v })}
+            />
+            <SliderMetric
+              label="Energy Level"
+              icon={Activity}
+              beforeValue={form.energyBefore}
+              afterValue={form.energyAfter}
+              onBeforeChange={(v) => setForm({ ...form, energyBefore: v })}
+              onAfterChange={(v) => setForm({ ...form, energyAfter: v })}
+            />
+            <SliderMetric
+              label="Stress Level"
+              beforeValue={form.stressBefore}
+              afterValue={form.stressAfter}
+              onBeforeChange={(v) => setForm({ ...form, stressBefore: v })}
+              onAfterChange={(v) => setForm({ ...form, stressAfter: v })}
+            />
+            <SliderMetric
+              label="Sleep Quality"
+              beforeValue={form.sleepBefore}
+              afterValue={form.sleepAfter}
+              onBeforeChange={(v) => setForm({ ...form, sleepBefore: v })}
+              onAfterChange={(v) => setForm({ ...form, sleepAfter: v })}
+            />
           </div>
-        )}
+        </div>
 
-        {/* Feedback Form */}
-        <AnimatePresence>
-          {showForm && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="mb-12 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
-            >
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-6 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
-                      <Heart className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-emerald-800">
-                        {editingFeedback ? 'Update Feedback' : 'New Feedback'}
-                      </h2>
-                      <p className="text-sm text-gray-600">Tell us about your experience</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={resetForm}
-                    className="w-10 h-10 bg-white hover:bg-gray-100 rounded-full flex items-center justify-center shadow-sm transition-colors"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="p-6 space-y-8">
-                {/* Session ID */}
-                <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-3">
-                    Session ID (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sessionId}
-                    onChange={(e) => setFormData({...formData, sessionId: e.target.value})}
-                    placeholder="Enter session ID if you have one"
-                    className="w-full px-4 py-4 text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400"
-                  />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-4">
-                    Feedback Category *
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {categories.map((category) => (
-                      <motion.button
-                        key={category.value}
-                        type="button"
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setFormData({...formData, category: category.value})}
-                        className={`p-6 rounded-2xl border-2 transition-all text-center ${
-                          formData.category === category.value
-                            ? `${category.color} border-current shadow-md`
-                            : 'border-gray-200 hover:border-emerald-300 bg-white'
-                        }`}
-                      >
-                        <div className="text-3xl mb-3">{category.icon}</div>
-                        <div className="text-base font-semibold">{category.label}</div>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Rating */}
-                <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-4">
-                    Overall Rating *
-                  </label>
-                  <div className="flex justify-center items-center gap-3 mb-4">
-                    {[1, 2, 3, 4, 5].map((rating) => (
-                      <motion.button
-                        key={rating}
-                        type="button"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setFormData({...formData, rating})}
-                        className="p-2"
-                      >
-                        <Star 
-                          className={`w-12 h-12 ${
-                            formData.rating >= rating 
-                              ? 'text-amber-400 fill-amber-400' 
-                              : 'text-gray-300'
-                          } transition-colors`}
-                        />
-                      </motion.button>
-                    ))}
-                  </div>
-                  {formData.rating > 0 && (
-                    <p className="text-center text-gray-600 text-base">
-                      You rated: {formData.rating} star{formData.rating > 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
-
-                {/* Mood */}
-                <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-4">
-                    Current Mood
-                  </label>
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                    {moods.map((mood) => (
-                      <motion.button
-                        key={mood.value}
-                        type="button"
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setFormData({...formData, mood: mood.value})}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${
-                          formData.mood === mood.value
-                            ? `${mood.color} border-gray-400 shadow-md`
-                            : 'border-gray-200 hover:border-emerald-300 bg-white'
-                        }`}
-                      >
-                        <div className="text-2xl mb-2">{mood.emoji}</div>
-                        <div className="text-sm font-semibold">{mood.label}</div>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Health Metrics */}
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-base font-semibold text-gray-700 mb-4">
-                      Energy Level: {formData.energyLevel}/10
-                    </label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={formData.energyLevel}
-                      onChange={(e) => setFormData({...formData, energyLevel: parseInt(e.target.value)})}
-                      className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <div className="flex justify-between text-sm text-gray-500 mt-2">
-                      <span>Low</span>
-                      <span>High</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-base font-semibold text-gray-700 mb-4">
-                      Pain Level: {formData.painLevel}/10
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="10"
-                      value={formData.painLevel}
-                      onChange={(e) => setFormData({...formData, painLevel: parseInt(e.target.value)})}
-                      className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <div className="flex justify-between text-sm text-gray-500 mt-2">
-                      <span>None</span>
-                      <span>Severe</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-base font-semibold text-gray-700 mb-4">
-                      Sleep Quality: {formData.sleepQuality}/10
-                    </label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={formData.sleepQuality}
-                      onChange={(e) => setFormData({...formData, sleepQuality: parseInt(e.target.value)})}
-                      className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <div className="flex justify-between text-sm text-gray-500 mt-2">
-                      <span>Poor</span>
-                      <span>Excellent</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Detailed Feedback */}
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Symptoms
-                    </label>
-                    <textarea
-                      value={formData.symptoms}
-                      onChange={(e) => setFormData({...formData, symptoms: e.target.value})}
-                      rows={4}
-                      placeholder="Describe any symptoms..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Side Effects
-                    </label>
-                    <textarea
-                      value={formData.sideEffects}
-                      onChange={(e) => setFormData({...formData, sideEffects: e.target.value})}
-                      rows={4}
-                      placeholder="Any side effects..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-base font-semibold text-gray-700 mb-3">
-                      Improvements
-                    </label>
-                    <textarea
-                      value={formData.improvements}
-                      onChange={(e) => setFormData({...formData, improvements: e.target.value})}
-                      rows={4}
-                      placeholder="Positive changes..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 resize-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Comments */}
-                <div>
-                  <label className="block text-base font-semibold text-gray-700 mb-3">
-                    Additional Comments *
-                  </label>
-                  <textarea
-                    value={formData.comments}
-                    onChange={(e) => setFormData({...formData, comments: e.target.value})}
-                    rows={5}
-                    placeholder="Share your overall experience..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 resize-none"
-                    required
-                  />
-                </div>
-
-                {/* Submit */}
-                <div className="flex items-center justify-end gap-4 pt-6 border-t border-gray-100">
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.98 }}
-                    onClick={resetForm}
-                    className="px-8 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium transition-colors"
-                  >
-                    Cancel
-                  </motion.button>
-                  
-                  <motion.button
-                    type="submit"
-                    disabled={submitting}
-                    whileTap={{ scale: submitting ? 1 : 0.98 }}
-                    className="px-10 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        {editingFeedback ? 'Updating...' : 'Submitting...'}
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5" />
-                        {editingFeedback ? 'Update Feedback' : 'Submit Feedback'}
-                      </>
-                    )}
-                  </motion.button>
-                </div>
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Feedback History */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-emerald-800 flex items-center gap-3">
-              <Clock className="w-7 h-7" />
-              Your Feedback History
-            </h2>
-            <div className="text-base text-gray-600 bg-emerald-100 px-4 py-2 rounded-full">
-              {totalFeedbacks} total
-            </div>
-          </div>
-
-          {/* Loading State */}
-          {loading && feedbacks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-gray-100">
-              <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mb-4" />
-              <span className="text-lg text-gray-600">Loading your feedback...</span>
-            </div>
-          ) : feedbacks.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <MessageSquare className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-700 mb-4">No feedback yet</h3>
-              <p className="text-gray-600 text-lg mb-8">
-                Share your first experience to help us improve
-              </p>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowForm(true)}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg text-lg"
+        {/* Side Effects */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Side Effects</h2>
+          
+          <div className="mb-4">
+            <p className="text-sm text-gray-700 mb-3">Did you experience any side effects?</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, hasSideEffects: false, selectedSideEffects: [] })}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                  !form.hasSideEffects
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
               >
-                <Plus className="w-6 h-6" />
-                Add Your First Feedback
-              </motion.button>
+                No Side Effects
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, hasSideEffects: true })}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                  form.hasSideEffects
+                    ? 'bg-amber-50 border-amber-500 text-amber-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                Yes, I experienced side effects
+              </button>
             </div>
-          ) : (
-            <>
-              {/* Feedback Cards */}
-              <div className="space-y-6">
-                {feedbacks.map((feedback, index) => (
-                  <motion.div
-                    key={feedback._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+          </div>
+
+          {form.hasSideEffects && (
+            <div>
+              <p className="text-sm text-gray-700 mb-3">Select all that apply:</p>
+              <div className="flex flex-wrap gap-2">
+                {sideEffectOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggleSideEffect(option.value)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                      form.selectedSideEffects.includes(option.value)
+                        ? 'bg-red-50 border-red-400 text-red-700'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
                   >
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-3xl ${getCategoryInfo(feedback.category).color}`}>
-                          {getCategoryInfo(feedback.category).icon}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-800 mb-2">
-                            {getCategoryInfo(feedback.category).label} Feedback
-                          </h3>
-                          {feedback.sessionId && (
-                            <div className="text-lg text-blue-600 mb-3">
-                              Session: {feedback.sessionId}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 mb-4">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`w-6 h-6 ${
-                                  feedback.rating >= star
-                                    ? 'text-amber-400 fill-amber-400'
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                            <span className="text-lg text-gray-600 ml-2">
-                              {feedback.rating}/5
-                            </span>
-                          </div>
-                          <div className="text-base text-gray-500">
-                            {new Date(feedback.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {isEditable(feedback.createdAt) && (
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleEdit(feedback)}
-                          className="p-3 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
-                          title="Edit feedback"
-                        >
-                          <Edit3 className="w-5 h-5" />
-                        </motion.button>
-                      )}
-                    </div>
-
-                    {/* Health Metrics */}
-                    {(feedback.mood || feedback.energyLevel || feedback.painLevel || feedback.sleepQuality) && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 p-6 bg-gray-50 rounded-xl">
-                        {feedback.mood && (
-                          <div className="text-center">
-                            <div className="text-2xl mb-2">{getMoodInfo(feedback.mood).emoji}</div>
-                            <div className="text-sm text-gray-600 mb-1">Mood</div>
-                            <div className="text-lg font-semibold capitalize text-gray-800">{feedback.mood}</div>
-                          </div>
-                        )}
-                        {feedback.energyLevel && (
-                          <div className="text-center">
-                            <Zap className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                            <div className="text-sm text-gray-600 mb-1">Energy</div>
-                            <div className="text-lg font-semibold text-gray-800">{feedback.energyLevel}/10</div>
-                          </div>
-                        )}
-                        {feedback.painLevel !== undefined && (
-                          <div className="text-center">
-                            <Frown className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                            <div className="text-sm text-gray-600 mb-1">Pain</div>
-                            <div className="text-lg font-semibold text-gray-800">{feedback.painLevel}/10</div>
-                          </div>
-                        )}
-                        {feedback.sleepQuality && (
-                          <div className="text-center">
-                            <div className="text-2xl mb-2">😴</div>
-                            <div className="text-sm text-gray-600 mb-1">Sleep</div>
-                            <div className="text-lg font-semibold text-gray-800">{feedback.sleepQuality}/10</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Content */}
-                    <div className="space-y-4">
-                      {feedback.symptoms && (
-                        <div className="p-4 bg-blue-50 rounded-xl">
-                          <h4 className="text-base font-semibold text-blue-800 mb-2">Symptoms:</h4>
-                          <p className="text-base text-blue-700 leading-relaxed">{feedback.symptoms}</p>
-                        </div>
-                      )}
-                      
-                      {feedback.sideEffects && (
-                        <div className="p-4 bg-orange-50 rounded-xl">
-                          <h4 className="text-base font-semibold text-orange-800 mb-2">Side Effects:</h4>
-                          <p className="text-base text-orange-700 leading-relaxed">{feedback.sideEffects}</p>
-                        </div>
-                      )}
-                      
-                      {feedback.improvements && (
-                        <div className="p-4 bg-green-50 rounded-xl">
-                          <h4 className="text-base font-semibold text-green-800 mb-2">Improvements:</h4>
-                          <p className="text-base text-green-700 leading-relaxed">{feedback.improvements}</p>
-                        </div>
-                      )}
-                      
-                      {feedback.comments && (
-                        <div className="p-4 bg-gray-50 rounded-xl">
-                          <h4 className="text-base font-semibold text-gray-800 mb-2">Comments:</h4>
-                          <p className="text-base text-gray-700 leading-relaxed">{feedback.comments}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Edit Indicator */}
-                    {isEditable(feedback.createdAt) && (
-                      <div className="mt-6 pt-4 border-t border-gray-100">
-                        <div className="flex items-center gap-2 text-sm text-emerald-600">
-                          <Clock className="w-4 h-4" />
-                          Can be edited for {Math.round(24 - (new Date() - new Date(feedback.createdAt)) / (1000 * 60 * 60))} more hours
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
+                    {option.label}
+                  </button>
                 ))}
               </div>
-
-              {/* Load More Button */}
-              {hasMore && (
-                <div className="text-center pt-8">
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={loadMoreFeedbacks}
-                    disabled={loadingMore}
-                    className="inline-flex items-center gap-3 bg-white hover:bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:border-emerald-300 px-8 py-4 rounded-2xl font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-50"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                        Loading more feedback...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-6 h-6" />
-                        Load More Feedback ({feedbacks.length} of {totalFeedbacks})
-                      </>
-                    )}
-                  </motion.button>
-                </div>
-              )}
-
-              {!hasMore && feedbacks.length > 0 && (
-                <div className="text-center pt-8 pb-4">
-                  <div className="inline-flex items-center gap-2 text-gray-500 bg-gray-100 px-4 py-2 rounded-full">
-                    <CheckCircle className="w-4 h-4" />
-                    You've seen all your feedback
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
-      </div>
+
+        {/* Text Feedback */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Share Your Thoughts</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                What went well? What improvements did you notice?
+              </label>
+              <textarea
+                rows={3}
+                value={form.positiveAspects}
+                onChange={(e) => setForm({ ...form, positiveAspects: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all"
+                placeholder="E.g., Pain reduced significantly, felt more relaxed, better sleep..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Any concerns or areas for improvement?
+              </label>
+              <textarea
+                rows={3}
+                value={form.concernsOrIssues}
+                onChange={(e) => setForm({ ...form, concernsOrIssues: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all"
+                placeholder="E.g., Waiting time, room temperature, treatment explanation..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Suggestions (optional)
+              </label>
+              <textarea
+                rows={2}
+                value={form.suggestions}
+                onChange={(e) => setForm({ ...form, suggestions: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all"
+                placeholder="Any suggestions to help us serve you better..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Recommendations */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Recommendations</h2>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-800">
+                Would you return for further treatment?
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.wouldReturnForTreatment}
+                  onChange={(e) => setForm({ ...form, wouldReturnForTreatment: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-800">
+                Would you recommend us to others?
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.wouldRecommendToOthers}
+                  onChange={(e) => setForm({ ...form, wouldRecommendToOthers: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                How likely are you to recommend us? (0-10)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={form.recommendationScore}
+                  onChange={(e) => setForm({ ...form, recommendationScore: Number(e.target.value) })}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                />
+                <span className="text-2xl font-bold text-emerald-700 w-12 text-center">
+                  {form.recommendationScore}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Not Likely</span>
+                <span>Very Likely</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={resetForm}
+            className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+          >
+            Reset
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-lg"
+          >
+            {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
+            {submitting ? 'Submitting...' : 'Submit Feedback'}
+          </button>
+        </div>
+      </form>
+
+      {/* Previous Feedback */}
+      {feedbackList.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Your Previous Feedback</h2>
+          <div className="space-y-3">
+            {feedbackList.slice(0, 5).map((fb) => (
+              <div
+                key={fb._id}
+                className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-gray-900 capitalize">
+                        {fb.therapyType?.replace('_', ' ')}
+                      </span>
+                      <span className="text-gray-300">•</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                        <span className="text-sm font-bold text-gray-700">
+                          {fb.ratings?.overallSatisfaction || 0}/5
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {new Date(fb.createdAt).toLocaleString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {fb.wouldRecommendToOthers && (
+                      <ThumbsUp className="w-4 h-4 text-emerald-600" />
+                    )}
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      fb.status === 'reviewed'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {fb.status || 'submitted'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Feedback;
+export default PatientFeedbackForm;

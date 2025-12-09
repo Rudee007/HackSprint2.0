@@ -15,12 +15,15 @@ class NotificationScheduler {
 
     // 1) Generic dispatcher: run every minute
     cron.schedule('* * * * *', async () => {
+      console.log("Running hospital sync...");
       console.log('📤 Running scheduled notification dispatcher...');
       await this.dispatchDueNotifications();
     });
 
     // 2) Daily appointment reminders (for tomorrow) at 9 AM
     cron.schedule('0 9 * * *', async () => {
+      console.log("Running hospital sync...");
+
       console.log('🔔 Running daily appointment reminders (for tomorrow)...');
       await this.sendDailyConsultationReminders();
     });
@@ -33,12 +36,14 @@ class NotificationScheduler {
 
     // 4) Daily prescription end reminder planner at 8 AM
     cron.schedule('0 8 * * *', async () => {
+      console.log("Running hospital sync...");
       console.log('💊 Scheduling prescription end reminders...');
       await this.schedulePrescriptionEndReminders();
     });
 
     // 5) Daily therapy reminders: schedule from TreatmentPlan.generatedSessions at 7 AM
     cron.schedule('0 7 * * *', async () => {
+      
       console.log('🧘 Scheduling daily therapy reminders...');
       await this.scheduleTodayTherapyReminders();
     });

@@ -7,13 +7,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, Users, Activity, TrendingUp, DollarSign, LogOut,
   Loader2, WifiOff, Bell, Circle, Menu, ChevronRight, Sparkles, Zap, AlertCircle,
-  BarChart3, Stethoscope, Settings, Heart, FileText
+  BarChart3, Stethoscope, Settings, Heart, FileText,MessageSquare
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import { useRealTime } from "../context/RealTimeContext";
 import doctorApiService from "../services/doctorApiService";
 import websocketService from "../services/websocketService";
+import DoctorFeedbackManagement from "../components/DoctorFeedbackManagement";
 
 import RealTimeSessionDashboard from "../components/realtime/RealTimeSessionDashboard";
 import ProviderStatusWidget from "../components/realtime/ProviderStatusWidget";
@@ -141,15 +142,7 @@ const DoctorDashboard = () => {
       description: "Dashboard overview", 
       color: "emerald" 
     },
-    { 
-      id: "realtime", 
-      label: "Live Sessions", 
-      icon: Activity, 
-      description: "Real-time monitoring", 
-      color: "blue", 
-      badge: activeSessions?.size || 0, 
-      realTime: true 
-    },
+   
     { 
       id: "therapy-tracking", 
       label: "Therapy Tracker", 
@@ -172,6 +165,14 @@ const DoctorDashboard = () => {
       description: "Panchakarma planning", 
       color: "teal",
       badge: treatmentPlans.filter(p => p.status === 'active').length || 0
+    },
+    { 
+      id: "feedback", 
+      label: "Patient Feedback", 
+      icon: MessageSquare, 
+      description: "Review & respond to feedback", 
+      color: "indigo",
+      badge: 0 // Will be updated with pending count
     },
     { 
       id: "settings", 
@@ -198,6 +199,7 @@ const DoctorDashboard = () => {
     "therapy-tracking": "Real-time Panchakarma therapy progress, milestones, and session monitoring",
     patients: "Comprehensive patient care and consultation management",
     treatment: "Create and manage Panchakarma treatment protocols with template-based planning",
+    feedback: "💬 Patient Feedback Management",
     settings: "Customize your profile and practice preferences",
   };
 
@@ -621,6 +623,16 @@ const DoctorDashboard = () => {
                 </motion.div>
               )}
 
+{activeSection === "feedback" && (
+  <motion.div 
+    key="feedback" 
+    initial={{ opacity: 0, y: 20 }} 
+    animate={{ opacity: 1, y: 0 }} 
+    exit={{ opacity: 0, y: -20 }}
+  >
+    <DoctorFeedbackManagement />
+  </motion.div>
+)}
               {activeSection === "settings" && (
                 <motion.div key="settings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                   <ProfileSettings

@@ -1,102 +1,159 @@
+// routes/feedback.routes.js
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireAdmin, requirePermission } = require('../middleware/admin.middleware');
 const feedbackController = require('../controllers/feedback.controller');
 
-// Apply authentication to all routes
+// All feedback endpoints require auth
 router.use(authenticate);
 
 // ============ PATIENT ROUTES ============
+// Body for submitFeedback must include:
+// sessionId, sessionType ('consultation' | 'therapy_session'),
+// providerId, therapyType, ratings, healthMetrics etc.
 
-// Submit new feedback
-router.post('/', feedbackController.submitFeedback);
+// Submit new feedback (patient first)
+// router.post(
+//   '/',
+//   // optional hard check: only patients can create
+//   // (req, res, next) => req.user.role === 'patient' ? next() : res.status(403).json({ message: 'Only patients can submit feedback' }),
+//   feedbackController.submitFeedback
+// );
 
-// Get my feedback
-router.get('/my-feedback', feedbackController.getMyFeedback);
 
-// Get feedback for specific session
-router.get('/session/:sessionId', feedbackController.getSessionFeedback);
+router.post('/',feedbackController.createFeedback);
+// Get my feedback list (paginated)
+// router.get(
+//   '/my-feedback',
+//   feedbackController.getMyFeedback
+// );
+
+router.get(
+  '/me',
+  feedbackController.getMyFeedback
+);
+
+
+router.get(
+  '/doctor',
+  feedbackController.getDoctorFeedback
+);
+
+
+
+router.get(
+  '/doctor/:id',
+  feedbackController.getDoctorFeedbackById
+);
+
+router.patch(
+  '/doctor/:id/review',
+  feedbackController.reviewFeedbackAsDoctor
+);
+
+
+
+// Get feedback for a specific session (current patient)
+router.get(
+  '/session/:sessionId',
+  feedbackController.getSessionFeedback
+);
 
 // Update my feedback (within 24 hours)
-router.put('/my-feedback/:feedbackId', feedbackController.updateMyFeedback);
+router.put(
+  '/my-feedback/:feedbackId',
+  feedbackController.updateMyFeedback
+);
 
-// ============ PROVIDER ROUTES ============
+// ============ PROVIDER ROUTES (enable when needed) ============
 
-// Get feedback for my sessions (therapists/doctors)
-router.get('/provider/my-feedback', 
+// Feedback on my sessions (doctor / therapist dashboard)
+router.get(
+  '/provider/my-feedback',
+  // optional: ensure role is doctor/therapist
+  // requirePermission('view_provider_feedback'),
   feedbackController.getProviderFeedback
 );
 
-// Get my performance analytics
-router.get('/provider/analytics', 
+// Provider performance analytics
+router.get(
+  '/provider/analytics',
+  // requirePermission('view_provider_feedback'),
   feedbackController.getProviderAnalytics
 );
 
-// ============ ADMIN ROUTES ============
+// ============ ADMIN ROUTES (enable when needed) ============
 
-// Get all feedback with filters
-router.get('/admin/all', 
-  requireAdmin, 
-  // requirePermission('feedback_management'), 
+// All feedback with filters
+router.get(
+  '/admin/all',
+  requireAdmin,
+  // requirePermission('feedback_management'),
   feedbackController.getAllFeedback
 );
 
-// Get feedback statistics
-router.get('/admin/stats', 
-  requireAdmin, 
-  requirePermission('system_analytics'), 
+// Global feedback stats
+router.get(
+  '/admin/stats',
+  requireAdmin,
+  requirePermission('system_analytics'),
   feedbackController.getFeedbackStats
 );
 
-// Get patient progress analytics
-router.get('/admin/patient/:patientId/progress', 
-  requireAdmin, 
-  requirePermission('patient_analytics'), 
+// Patient progress analytics
+router.get(
+  '/admin/patient/:patientId/progress',
+  requireAdmin,
+  requirePermission('patient_analytics'),
   feedbackController.getPatientProgress
 );
 
-// Respond to feedback
-router.post('/admin/:feedbackId/respond', 
-  requireAdmin, 
-  requirePermission('feedback_management'), 
+// Respond to feedback (doctor vs admin decided by body.responderRole)
+router.post(
+  '/admin/:feedbackId/respond',
+  requireAdmin,
+  requirePermission('feedback_management'),
   feedbackController.respondToFeedback
 );
 
 // Flag feedback for attention
-router.patch('/admin/:feedbackId/flag', 
-  requireAdmin, 
-  requirePermission('feedback_management'), 
+router.patch(
+  '/admin/:feedbackId/flag',
+  requireAdmin,
+  requirePermission('feedback_management'),
   feedbackController.flagFeedback
 );
 
-// Get feedback requiring attention
-router.get('/admin/attention-required', 
-  requireAdmin, 
-  requirePermission('feedback_management'), 
+// List feedback requiring attention (admin queue)
+router.get(
+  '/admin/attention-required',
+  requireAdmin,
+  requirePermission('feedback_management'),
   feedbackController.getAttentionRequired
 );
 
-// ============ ANALYTICS & REPORTING ROUTES ============
-
-// Get analytics dashboard
-router.get('/admin/analytics/dashboard', 
-  requireAdmin, 
-  requirePermission('system_analytics'), 
+// Analytics dashboard
+router.get(
+  '/admin/analytics/dashboard',
+  requireAdmin,
+  requirePermission('system_analytics'),
   feedbackController.getAnalyticsDashboard
 );
 
-// Get improvement trends
-router.get('/admin/analytics/trends', 
-  requireAdmin, 
-  requirePermission('system_analytics'), 
+// Improvement trends (metric, timeRange as query)
+router.get(
+  '/admin/analytics/trends',
+  requireAdmin,
+  requirePermission('system_analytics'),
   feedbackController.getImprovementTrends
 );
 
-// Export feedback data
-router.post('/admin/export', 
-  requireAdmin, 
-  // requirePermission('data_export'), 
+// Export feedback (json/csv)
+router.post(
+  '/admin/export',
+  requireAdmin,
+  // requirePermission('data_export'),
   feedbackController.exportFeedbackData
 );
 

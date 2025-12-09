@@ -349,15 +349,7 @@ class DoctorService {
     }
   }
 
-  /**
-   * ═══════════════════════════════════════════════════════════
-   * 4. DOCTOR SEARCH & DISCOVERY
-   * ═══════════════════════════════════════════════════════════
-   */
 
-  /**
-   * Find doctors by specialization
-   */
   async findDoctorsBySpecialization(specialization, options = {}) {
     try {
       const { limit = 10, page = 1, sortBy = 'createdAt' } = options;

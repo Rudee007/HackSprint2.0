@@ -1,10 +1,10 @@
-// backend/models/Consultation.js - FIXED VERSION
+// backend/models/Consultation.js - ENHANCED WITH PATIENT SAFE VIEWS
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const ConsultationSchema = new Schema({
   // ═══════════════════════════════════════════════════════════
-  // CORE FIELDS
+  // CORE FIELDS (UNCHANGED)
   // ═══════════════════════════════════════════════════════════
   patientId: {
     type: Schema.Types.ObjectId,
@@ -13,17 +13,16 @@ const ConsultationSchema = new Schema({
     index: true
   },
   
-  // 🔥 FIX: Dynamic reference to Doctor or Therapist
   providerId: {
     type: Schema.Types.ObjectId,
-    refPath: 'providerModel',  // ✅ Dynamic reference
+    refPath: 'providerModel',
     required: true,
     index: true
   },
   providerModel: {
     type: String,
     required: true,
-    enum: ['User', 'Doctor', 'Therapist'],  // ✅ Can reference multiple models
+    enum: ['User', 'Doctor', 'Therapist'],
     default: 'User'
   },
   
@@ -45,13 +44,11 @@ const ConsultationSchema = new Schema({
     index: true
   },
   
-  // 🔥 NEW: Add scheduledTime field (missing in original)
   scheduledTime: {
-    type: String,  // Format: "HH:MM"
+    type: String,
     required: false
   },
   
-  // 🔥 NEW: Add scheduledDate field (for easier querying)
   scheduledDate: {
     type: Date,
     required: false,
@@ -69,7 +66,6 @@ const ConsultationSchema = new Schema({
   notes: String,
   meetingLink: String,
 
-  // Session Type & Status
   sessionType: {
     type: String,
     enum: ['consultation', 'followup', 'therapy'],
@@ -87,9 +83,6 @@ const ConsultationSchema = new Schema({
     default: 60
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // SESSION METADATA
-  // ═══════════════════════════════════════════════════════════
   sessionMetadata: {
     totalPauses: { type: Number, default: 0 },
     pausedDuration: { type: Number, default: 0 },
@@ -99,10 +92,9 @@ const ConsultationSchema = new Schema({
   },
 
   // ═══════════════════════════════════════════════════════════
-  // 🔥 THERAPY-SPECIFIC FIELDS (sessionType === 'therapy')
+  // THERAPY-SPECIFIC FIELDS (UNCHANGED)
   // ═══════════════════════════════════════════════════════════
   therapyData: {
-    // Treatment Plan Reference
     treatmentPlanId: {
       type: Schema.Types.ObjectId,
       ref: 'TreatmentPlan'
@@ -116,7 +108,6 @@ const ConsultationSchema = new Schema({
       ref: 'Therapist'
     },
     
-    // 🔥 NEW: Add missing fields from your consultation creation code
     therapyName: {
       type: String,
       required: false
@@ -126,7 +117,6 @@ const ConsultationSchema = new Schema({
       required: false
     },
     
-    // Therapy Details
     therapyType: {
       type: String,
       enum: ['abhyanga', 'shirodhara', 'panchakarma', 'swedana', 'nasya', 'virechana', 'basti', 'other']
@@ -136,7 +126,6 @@ const ConsultationSchema = new Schema({
     room: String,
     todayProcedure: String,
     
-    // 🔥 VITALS (Real-time tracking)
     vitals: {
       bloodPressure: {
         systolic: { type: Number, min: 70, max: 250 },
@@ -162,7 +151,6 @@ const ConsultationSchema = new Schema({
       oxygenSaturation: Number
     },
 
-    // 🔥 OBSERVATIONS (Real-time tracking)
     observations: {
       sweatingQuality: {
         type: String,
@@ -187,7 +175,6 @@ const ConsultationSchema = new Schema({
       timeOfObservation: [Date]
     },
 
-    // 🔥 ADVERSE EFFECTS (Critical for safety)
     adverseEffects: [{
       effect: {
         type: String,
@@ -211,7 +198,6 @@ const ConsultationSchema = new Schema({
       }
     }],
 
-    // 🔥 MATERIALS USED (Inventory tracking)
     materialsUsed: [{
       name: {
         type: String,
@@ -229,7 +215,6 @@ const ConsultationSchema = new Schema({
       batchNumber: String
     }],
 
-    // 🔥 REAL-TIME PROGRESS (For live tracking)
     progressUpdates: [{
       timestamp: {
         type: Date,
@@ -247,12 +232,10 @@ const ConsultationSchema = new Schema({
       }
     }],
 
-    // Special Instructions
     preInstructions: String,
     postInstructions: String,
     specialInstructions: String,
     
-    // Emergency
     emergencyReported: {
       type: Boolean,
       default: false
@@ -263,13 +246,9 @@ const ConsultationSchema = new Schema({
       actionTaken: String
     },
 
-    // 🔥 REMOVED: Duplicate patientFeedback (moved to root level only)
     nextSessionPrep: String
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // SESSION TRACKING
-  // ═══════════════════════════════════════════════════════════
   sessionNotes: [{
     timestamp: { type: Date, default: Date.now },
     note: String,
@@ -317,7 +296,6 @@ const ConsultationSchema = new Schema({
     max: 5
   },
   
-  // ✅ KEPT: Single patientFeedback at root level (duplicate removed from therapyData)
   patientFeedback: String
 
 }, {
@@ -327,21 +305,24 @@ const ConsultationSchema = new Schema({
 });
 
 // ═══════════════════════════════════════════════════════════
-// INDEXES
+// INDEXES (ENHANCED)
 // ═══════════════════════════════════════════════════════════
 ConsultationSchema.index({ patientId: 1, scheduledAt: -1 });
 ConsultationSchema.index({ providerId: 1, scheduledAt: -1 });
 ConsultationSchema.index({ status: 1, scheduledAt: 1 });
 ConsultationSchema.index({ providerType: 1, sessionType: 1 });
-ConsultationSchema.index({ 'therapyData.treatmentPlanId': 1 });  // ✅ Added index
+ConsultationSchema.index({ 'therapyData.treatmentPlanId': 1 });
 ConsultationSchema.index({ 'therapyData.doctorId': 1 });
-ConsultationSchema.index({ scheduledDate: 1, status: 1 });  // ✅ Added index
+ConsultationSchema.index({ scheduledDate: 1, status: 1 });
+
+// 🆕 NEW: Patient progress query optimization
+ConsultationSchema.index({ 'therapyData.treatmentPlanId': 1, status: 1 });
+ConsultationSchema.index({ patientId: 1, sessionType: 1, status: 1 });
 
 // ═══════════════════════════════════════════════════════════
-// METHODS
+// EXISTING METHODS (UNCHANGED)
 // ═══════════════════════════════════════════════════════════
 
-// Add therapy progress update
 ConsultationSchema.methods.addTherapyProgress = function(stage, notes, percentage) {
   if (this.sessionType === 'therapy' && this.therapyData) {
     if (!this.therapyData.progressUpdates) {
@@ -357,7 +338,6 @@ ConsultationSchema.methods.addTherapyProgress = function(stage, notes, percentag
   return this.save();
 };
 
-// Add adverse effect
 ConsultationSchema.methods.addAdverseEffect = function(effect, severity, description, actionTaken) {
   if (this.sessionType === 'therapy' && this.therapyData) {
     if (!this.therapyData.adverseEffects) {
@@ -372,7 +352,6 @@ ConsultationSchema.methods.addAdverseEffect = function(effect, severity, descrip
       resolved: false
     });
     
-    // Auto-create admin alert for severe/critical effects
     if (severity === 'severe' || severity === 'critical') {
       this.therapyData.emergencyReported = true;
       this.therapyData.emergencyDetails = {
@@ -385,7 +364,6 @@ ConsultationSchema.methods.addAdverseEffect = function(effect, severity, descrip
   return this.save();
 };
 
-// Update therapy vitals
 ConsultationSchema.methods.updateVitals = function(vitals) {
   if (this.sessionType === 'therapy' && this.therapyData) {
     this.therapyData.vitals = {
@@ -395,6 +373,87 @@ ConsultationSchema.methods.updateVitals = function(vitals) {
     };
   }
   return this.save();
+};
+
+// ═══════════════════════════════════════════════════════════
+// 🆕 NEW METHODS - PATIENT SAFE VIEWS
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * 🆕 Get patient-safe view of consultation
+ * Filters out clinical data (vitals, observations, adverse effects)
+ * @returns {Object} Sanitized consultation data for patient dashboard
+ */
+ConsultationSchema.methods.getPatientSafeView = function() {
+  const safeData = {
+    _id: this._id,
+    scheduledAt: this.scheduledAt,
+    scheduledTime: this.scheduledTime,
+    scheduledDate: this.scheduledDate,
+    status: this.status,
+    sessionType: this.sessionType,
+    estimatedDuration: this.estimatedDuration,
+    sessionStartTime: this.sessionStartTime,
+    sessionEndTime: this.sessionEndTime,
+    actualDuration: this.actualDuration,
+    rating: this.rating,
+    patientFeedback: this.patientFeedback,
+    createdAt: this.createdAt
+  };
+
+  // Add safe therapy data if exists
+  if (this.therapyData && this.sessionType === 'therapy') {
+    safeData.therapyData = {
+      therapyName: this.therapyData.therapyName,
+      therapyType: this.therapyData.therapyType,
+      dayNumber: this.therapyData.dayNumber,
+      totalDays: this.therapyData.totalDays,
+      room: this.therapyData.room,
+      todayProcedure: this.therapyData.todayProcedure,
+      durationMinutes: this.therapyData.durationMinutes,
+      
+      // Stage progress (NOT clinical details)
+      progressUpdates: this.therapyData.progressUpdates?.map(p => ({
+        stage: p.stage,
+        percentage: p.percentage,
+        timestamp: p.timestamp
+        // ❌ Excludes: p.notes (therapist internal notes)
+      })) || [],
+      
+      // Patient-facing instructions
+      preInstructions: this.therapyData.preInstructions,
+      postInstructions: this.therapyData.postInstructions
+    };
+  }
+
+  return safeData;
+};
+
+/**
+ * 🆕 Get active session progress for real-time tracking
+ * Used for displaying live session progress to patients
+ * @returns {Object|null} Current session progress or null
+ */
+ConsultationSchema.methods.getActiveSessionProgress = function() {
+  if (this.status !== 'in_progress' || this.sessionType !== 'therapy') {
+    return null;
+  }
+
+  const latestProgress = this.therapyData?.progressUpdates?.length > 0
+    ? this.therapyData.progressUpdates[this.therapyData.progressUpdates.length - 1]
+    : null;
+
+  return {
+    sessionId: this._id,
+    therapyName: this.therapyData?.therapyName,
+    currentStage: latestProgress?.stage || 'preparation',
+    percentage: latestProgress?.percentage || 0,
+    startedAt: this.sessionStartTime,
+    estimatedEndTime: this.sessionStartTime 
+      ? new Date(this.sessionStartTime.getTime() + (this.estimatedDuration * 60000))
+      : null,
+    stages: ['preparation', 'massage', 'steam', 'rest', 'cleanup']
+  };
 };
 
 module.exports = mongoose.model('Consultation', ConsultationSchema);

@@ -72,10 +72,8 @@ const Signup = () => {
     );
   };
 
-  // Reverse geocoding to get address from coordinates
   const reverseGeocode = async (lat, lng) => {
     try {
-      // Using a free geocoding service (you can replace with your preferred service)
       const response = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
       );
@@ -96,11 +94,9 @@ const Signup = () => {
       }
     } catch (err) {
       console.error('Reverse geocoding failed:', err);
-      // Don't show error to user as this is optional enhancement
     }
   };
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -120,7 +116,6 @@ const Signup = () => {
       }));
     }
     
-    // Clear errors when user types
     if (error) setError('');
   };
 
@@ -170,7 +165,6 @@ const Signup = () => {
     return true;
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -196,7 +190,6 @@ const Signup = () => {
       if (response.data.success) {
         setSuccess('Account created successfully! Please verify your email and phone number.');
         
-        // Redirect to login after delay
         setTimeout(() => {
           navigate('/patient-login');
         }, 3000);

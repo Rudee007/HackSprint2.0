@@ -1,17 +1,11 @@
-// backend/models/TreatmentPlan.js
-// 🔥 PANCHAKARMA TREATMENT PLAN SCHEMA - SCHEDULING OPTIMIZED
-
+// backend/models/TreatmentPlan.js - ENHANCED WITH PATIENT DASHBOARD METHODS
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 // ═══════════════════════════════════════════════════════════
-// SUB-SCHEMAS
+// SUB-SCHEMAS (UNCHANGED)
 // ═══════════════════════════════════════════════════════════
 
-/**
- * Individual Therapy Session Configuration
- * References TherapyMaster for default values, customizable by doctor
- */
 const therapySessionSchema = new Schema(
   {
     therapyId: {
@@ -20,7 +14,6 @@ const therapySessionSchema = new Schema(
       required: true,
     },
 
-    // Overridable from TherapyMaster defaults
     therapyName: {
       type: String,
       required: true,
@@ -46,7 +39,6 @@ const therapySessionSchema = new Schema(
       required: true,
     },
 
-    // Doctor-configurable per session
     sessionCount: {
       type: Number,
       required: true,
@@ -70,21 +62,19 @@ const therapySessionSchema = new Schema(
       min: 1,
     },
 
-    // 🔥 NEW: CSP Constraint Fields
     requiresPreviousPhaseComplete: {
       type: Boolean,
       default: false,
     },
     minimumDaysSincePreviousSession: {
       type: Number,
-      default: 0, // 0=daily, 1=alternate days, etc.
+      default: 0,
     },
     allowsParallelSessions: {
       type: Boolean,
-      default: false, // Can run simultaneously with other therapies
+      default: false,
     },
 
-    // Materials for this therapy
     materials: [
       {
         name: { type: String, required: true },
@@ -120,7 +110,6 @@ const therapySessionSchema = new Schema(
   { _id: true }
 );
 
-
 const phaseConfigSchema = new Schema(
   {
     phaseName: {
@@ -141,10 +130,8 @@ const phaseConfigSchema = new Schema(
       min: 1,
     },
 
-    // Multiple therapy sessions in this phase
     therapySessions: [therapySessionSchema],
 
-    // Phase-specific instructions
     phaseInstructions: {
       type: String,
       maxlength: 2000,
@@ -158,14 +145,12 @@ const phaseConfigSchema = new Schema(
       maxlength: 1000,
     },
 
-    // Minimum gap before next phase
     minGapDaysAfterPhase: {
       type: Number,
       default: 0,
       min: 0,
     },
 
-    // Tracking
     isCustom: {
       type: Boolean,
       default: false,
@@ -174,9 +159,6 @@ const phaseConfigSchema = new Schema(
   { _id: true }
 );
 
-/**
- * Scheduling Preferences
- */
 const schedulingPreferencesSchema = new Schema(
   {
     startDate: {
@@ -206,7 +188,6 @@ const schedulingPreferencesSchema = new Schema(
       default: true,
     },
 
-    // Flexibility for auto-scheduler
     flexibilityWindowDays: {
       type: Number,
       default: 0,
@@ -214,15 +195,11 @@ const schedulingPreferencesSchema = new Schema(
       max: 7,
     },
 
-    // Room preferences
     preferredRoom: String,
   },
   { _id: false }
 );
 
-/**
- * Duration with flexible units
- */
 const durationSchema = new Schema(
   {
     value: {
@@ -239,9 +216,6 @@ const durationSchema = new Schema(
   { _id: false }
 );
 
-/**
- * 🔥 NEW: Generated Session Tracking (Enhanced)
- */
 const generatedSessionSchema = new Schema(
   {
     consultationId: {
@@ -250,7 +224,6 @@ const generatedSessionSchema = new Schema(
       required: true,
     },
 
-    // Better phase linkage
     phaseSequence: {
       type: Number,
       required: true,
@@ -263,7 +236,6 @@ const generatedSessionSchema = new Schema(
       required: true,
     },
 
-    // Therapy details
     therapyId: {
       type: Schema.Types.ObjectId,
       ref: "Therapy",
@@ -274,7 +246,6 @@ const generatedSessionSchema = new Schema(
       required: true,
     },
 
-    // Session positioning
     sessionNumber: {
       type: Number,
       required: true,
@@ -286,7 +257,6 @@ const generatedSessionSchema = new Schema(
       min: 1,
     },
 
-    // Scheduling details
     scheduledDate: {
       type: Date,
       required: true,
@@ -300,7 +270,6 @@ const generatedSessionSchema = new Schema(
       required: true,
     },
 
-    // Status
     status: {
       type: String,
       enum: [
@@ -315,7 +284,6 @@ const generatedSessionSchema = new Schema(
       default: "scheduled",
     },
 
-    // 🔥 CRITICAL: CSP Dependencies
     dependsOn: [
       {
         type: Schema.Types.ObjectId,
@@ -327,7 +295,6 @@ const generatedSessionSchema = new Schema(
       default: true,
     },
 
-    // Rescheduling tracking
     originalScheduledDate: Date,
     rescheduledFrom: {
       type: Schema.Types.ObjectId,
@@ -338,9 +305,6 @@ const generatedSessionSchema = new Schema(
   { _id: true }
 );
 
-/**
- * 🔥 NEW: Scheduling Metadata
- */
 const schedulingMetadataSchema = new Schema(
   {
     algorithmUsed: {
@@ -366,15 +330,11 @@ const schedulingMetadataSchema = new Schema(
 );
 
 // ═══════════════════════════════════════════════════════════
-// MAIN TREATMENT PLAN SCHEMA
+// MAIN TREATMENT PLAN SCHEMA (UNCHANGED)
 // ═══════════════════════════════════════════════════════════
 
 const TreatmentPlanSchema = new Schema(
   {
-    // ═══════════════════════════════════════════════════════════
-    // REFERENCES
-    // ═══════════════════════════════════════════════════════════
-
     doctorId: {
       type: Schema.Types.ObjectId,
       ref: "Doctor",
@@ -402,16 +362,11 @@ const TreatmentPlanSchema = new Schema(
       index: true,
     },
 
-    // Template reference (null if fully custom)
     courseTemplateId: {
       type: Schema.Types.ObjectId,
       ref: "CourseTemplate",
       default: null,
     },
-
-    // ═══════════════════════════════════════════════════════════
-    // TREATMENT TYPE & CATEGORY
-    // ═══════════════════════════════════════════════════════════
 
     treatmentCategory: {
       type: String,
@@ -426,16 +381,11 @@ const TreatmentPlanSchema = new Schema(
       required: true,
     },
 
-    // Human-readable treatment name
     treatmentName: {
       type: String,
       required: true,
       trim: true,
     },
-
-    // ═══════════════════════════════════════════════════════════
-    // TEMPLATE VS CUSTOM FLAGS
-    // ═══════════════════════════════════════════════════════════
 
     isCustomPlan: {
       type: Boolean,
@@ -447,28 +397,15 @@ const TreatmentPlanSchema = new Schema(
       default: false,
     },
 
-    // ═══════════════════════════════════════════════════════════
-    // DURATION
-    // ═══════════════════════════════════════════════════════════
-
     duration: durationSchema,
 
-    // Auto-calculated total days
     totalDays: {
       type: Number,
       required: true,
       min: 3,
     },
 
-    // ═══════════════════════════════════════════════════════════
-    // THREE PHASES (Purva → Pradhana → Paschat)
-    // ═══════════════════════════════════════════════════════════
-
     phases: [phaseConfigSchema],
-
-    // ═══════════════════════════════════════════════════════════
-    // SCHEDULING
-    // ═══════════════════════════════════════════════════════════
 
     schedulingPreferences: schedulingPreferencesSchema,
 
@@ -477,7 +414,6 @@ const TreatmentPlanSchema = new Schema(
       default: false,
     },
 
-    // 🔥 NEW: When scheduling completed
     schedulingCompletedAt: {
       type: Date,
       default: null,
@@ -498,16 +434,10 @@ const TreatmentPlanSchema = new Schema(
       },
     ],
 
-    // 🔥 NEW: Scheduling metadata
     schedulingMetadata: schedulingMetadataSchema,
-
-    // ═══════════════════════════════════════════════════════════
-    // 🔥 ENHANCED: Generated Sessions
-    // ═══════════════════════════════════════════════════════════
 
     generatedSessions: [generatedSessionSchema],
 
-    // Session tracking
     totalSessionsPlanned: {
       type: Number,
       default: 0,
@@ -521,37 +451,25 @@ const TreatmentPlanSchema = new Schema(
       default: 0,
     },
 
-    // ═══════════════════════════════════════════════════════════
-    // INSTRUCTIONS (Medicines removed as per your requirement)
-    // ═══════════════════════════════════════════════════════════
-
-    // Pre-Panchakarma preparation instructions
     prePanchakarmaInstructions: {
       type: String,
       maxlength: 2000,
     },
 
-    // Post-Panchakarma care instructions
     postPanchakarmaInstructions: {
       type: String,
       maxlength: 2000,
     },
 
-    // General treatment notes
     treatmentNotes: {
       type: String,
       maxlength: 2000,
     },
 
-    // Patient safety notes
     safetyNotes: {
       type: String,
       maxlength: 1000,
     },
-
-    // ═══════════════════════════════════════════════════════════
-    // STATUS & PROGRESS
-    // ═══════════════════════════════════════════════════════════
 
     status: {
       type: String,
@@ -567,10 +485,6 @@ const TreatmentPlanSchema = new Schema(
       default: 0,
     },
 
-    // ═══════════════════════════════════════════════════════════
-    // TIMESTAMPS
-    // ═══════════════════════════════════════════════════════════
-
     startedAt: Date,
     completedAt: Date,
     pausedAt: Date,
@@ -584,7 +498,7 @@ const TreatmentPlanSchema = new Schema(
 );
 
 // ═══════════════════════════════════════════════════════════
-// INDEXES
+// INDEXES (UNCHANGED)
 // ═══════════════════════════════════════════════════════════
 
 TreatmentPlanSchema.index({ doctorId: 1, createdAt: -1 });
@@ -593,34 +507,27 @@ TreatmentPlanSchema.index({ status: 1, "schedulingPreferences.startDate": 1 });
 TreatmentPlanSchema.index({ courseTemplateId: 1 });
 TreatmentPlanSchema.index({ autoScheduled: 1, schedulingStatus: 1 });
 TreatmentPlanSchema.index({ assignedTherapistId: 1 });
-
-// 🔥 NEW: Scheduling query optimization
 TreatmentPlanSchema.index({
   schedulingStatus: 1,
   "schedulingPreferences.startDate": 1,
   assignedTherapistId: 1,
 });
-
-// 🔥 NEW: Session lookup optimization
 TreatmentPlanSchema.index({ "generatedSessions.consultationId": 1 });
 TreatmentPlanSchema.index({ "generatedSessions.scheduledDate": 1 });
 
 // ═══════════════════════════════════════════════════════════
-// VIRTUALS
+// EXISTING VIRTUALS (UNCHANGED)
 // ═══════════════════════════════════════════════════════════
 
-// Progress percentage
 TreatmentPlanSchema.virtual("progressPercentage").get(function () {
   if (this.totalSessionsPlanned === 0) return 0;
   return Math.round((this.completedSessions / this.totalSessionsPlanned) * 100);
 });
 
-// Is plan based on template
 TreatmentPlanSchema.virtual("isTemplateBased").get(function () {
   return !!this.courseTemplateId;
 });
 
-// Get current phase
 TreatmentPlanSchema.virtual("currentPhase").get(function () {
   if (!this.startedAt || !this.phases || this.phases.length === 0) return null;
 
@@ -639,7 +546,6 @@ TreatmentPlanSchema.virtual("currentPhase").get(function () {
   return "completed";
 });
 
-// 🔥 NEW: Estimated completion date
 TreatmentPlanSchema.virtual("estimatedCompletionDate").get(function () {
   if (!this.schedulingPreferences || !this.schedulingPreferences.startDate)
     return null;
@@ -651,11 +557,22 @@ TreatmentPlanSchema.virtual("estimatedCompletionDate").get(function () {
   return completionDate;
 });
 
+// 🆕 NEW VIRTUAL: Next scheduled session
+TreatmentPlanSchema.virtual("nextScheduledSession").get(function () {
+  if (!this.generatedSessions || this.generatedSessions.length === 0) return null;
+  
+  const now = new Date();
+  const upcomingSessions = this.generatedSessions
+    .filter(s => ['scheduled', 'confirmed'].includes(s.status) && s.scheduledDate >= now)
+    .sort((a, b) => a.scheduledDate - b.scheduledDate);
+  
+  return upcomingSessions.length > 0 ? upcomingSessions[0] : null;
+});
+
 // ═══════════════════════════════════════════════════════════
-// PRE-SAVE MIDDLEWARE
+// EXISTING PRE-SAVE MIDDLEWARE (UNCHANGED)
 // ═══════════════════════════════════════════════════════════
 
-// Auto-calculate totalDays from duration
 TreatmentPlanSchema.pre("save", function (next) {
   if (this.duration) {
     switch (this.duration.unit) {
@@ -672,7 +589,6 @@ TreatmentPlanSchema.pre("save", function (next) {
   next();
 });
 
-// Validate phase sequence
 TreatmentPlanSchema.pre("save", function (next) {
   if (this.phases && this.phases.length > 0) {
     const sequences = this.phases.map((p) => p.sequenceNumber).sort();
@@ -693,7 +609,6 @@ TreatmentPlanSchema.pre("save", function (next) {
   next();
 });
 
-// Calculate total planned sessions
 TreatmentPlanSchema.pre("save", function (next) {
   if (this.phases && this.phases.length > 0) {
     this.totalSessionsPlanned = this.phases.reduce((total, phase) => {
@@ -709,17 +624,15 @@ TreatmentPlanSchema.pre("save", function (next) {
 });
 
 // ═══════════════════════════════════════════════════════════
-// METHODS
+// EXISTING METHODS (UNCHANGED)
 // ═══════════════════════════════════════════════════════════
 
-// Mark plan as started
 TreatmentPlanSchema.methods.markAsStarted = function () {
   this.startedAt = new Date();
   this.status = "active";
   return this.save();
 };
 
-// Mark plan as completed
 TreatmentPlanSchema.methods.markAsCompleted = function () {
   this.completedAt = new Date();
   this.status = "completed";
@@ -791,6 +704,146 @@ TreatmentPlanSchema.methods.markSchedulingFailed = function (errorMessage) {
     timestamp: new Date(),
   });
   return this.save();
+};
+
+// ═══════════════════════════════════════════════════════════
+// 🆕 NEW METHODS - PATIENT DASHBOARD
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * 🆕 Get complete patient progress dashboard data
+ * Aggregates all patient-facing information in one call
+ * @returns {Promise<Object>} Complete patient dashboard data
+ */
+TreatmentPlanSchema.methods.getPatientProgressDashboard = async function() {
+  const Consultation = mongoose.model('Consultation');
+  
+  // Get completed sessions with patient-safe data
+  const completedConsultations = await Consultation.find({
+    'therapyData.treatmentPlanId': this._id,
+    status: 'completed'
+  })
+  .sort({ scheduledAt: -1 })
+  .limit(10)
+  .lean();
+
+  // Get active session if any
+  const activeSession = await Consultation.findOne({
+    'therapyData.treatmentPlanId': this._id,
+    status: 'in_progress'
+  }).lean();
+
+  return {
+    // Overall progress
+    overallProgress: {
+      treatmentName: this.treatmentName,
+      panchakarmaType: this.panchakarmaType,
+      completedSessions: this.completedSessions,
+      totalSessionsPlanned: this.totalSessionsPlanned,
+      progressPercentage: this.progressPercentage,
+      currentPhase: this.currentPhase,
+      estimatedCompletionDate: this.estimatedCompletionDate,
+      startedAt: this.startedAt,
+      status: this.status
+    },
+
+    // Upcoming sessions (next 5)
+    upcomingSessions: this.getUpcomingSessionsForPatient(5),
+
+    // Completed sessions (sanitized)
+    completedSessions: completedConsultations.map(c => ({
+      _id: c._id,
+      scheduledAt: c.scheduledAt,
+      therapyName: c.therapyData?.therapyName,
+      dayNumber: c.therapyData?.dayNumber,
+      rating: c.rating,
+      patientFeedback: c.patientFeedback,
+      status: c.status
+    })),
+
+    // Active session progress (if any)
+    activeSession: activeSession ? {
+      sessionId: activeSession._id,
+      therapyName: activeSession.therapyData?.therapyName,
+      currentStage: activeSession.therapyData?.progressUpdates?.length > 0
+        ? activeSession.therapyData.progressUpdates[activeSession.therapyData.progressUpdates.length - 1].stage
+        : 'preparation',
+      percentage: activeSession.therapyData?.progressUpdates?.length > 0
+        ? activeSession.therapyData.progressUpdates[activeSession.therapyData.progressUpdates.length - 1].percentage
+        : 0
+    } : null,
+
+    // Instructions
+    instructions: {
+      prePanchakarma: this.prePanchakarmaInstructions,
+      postPanchakarma: this.postPanchakarmaInstructions,
+      safety: this.safetyNotes
+    },
+
+    // Phase breakdown
+    phases: this.phases.map(phase => ({
+      name: phase.phaseName,
+      totalDays: phase.totalDays,
+      instructions: phase.phaseInstructions,
+      dietPlan: phase.dietPlan,
+      lifestyleGuidelines: phase.lifestyleGuidelines
+    }))
+  };
+};
+
+/**
+ * 🆕 Get upcoming sessions for patient
+ * @param {Number} limit - Number of sessions to return (default: 5)
+ * @returns {Array} Array of upcoming sessions
+ */
+TreatmentPlanSchema.methods.getUpcomingSessionsForPatient = function(limit = 5) {
+  if (!this.generatedSessions || this.generatedSessions.length === 0) {
+    return [];
+  }
+
+  const now = new Date();
+  return this.generatedSessions
+    .filter(s => ['scheduled', 'confirmed'].includes(s.status) && s.scheduledDate >= now)
+    .sort((a, b) => a.scheduledDate - b.scheduledDate)
+    .slice(0, limit)
+    .map(s => ({
+      sessionId: s.consultationId,
+      therapyName: s.therapyName,
+      scheduledDate: s.scheduledDate,
+      scheduledStartTime: s.scheduledStartTime,
+      scheduledEndTime: s.scheduledEndTime,
+      phaseName: s.phaseName,
+      sessionNumber: s.sessionNumber,
+      dayNumber: s.dayNumber,
+      status: s.status
+    }));
+};
+
+/**
+ * 🆕 Get completed sessions summary
+ * @param {Number} limit - Number of sessions to return (default: 10)
+ * @returns {Promise<Array>} Array of completed sessions
+ */
+TreatmentPlanSchema.methods.getCompletedSessionsForPatient = async function(limit = 10) {
+  const Consultation = mongoose.model('Consultation');
+  
+  const completedSessions = await Consultation.find({
+    'therapyData.treatmentPlanId': this._id,
+    status: 'completed'
+  })
+  .sort({ scheduledAt: -1 })
+  .limit(limit)
+  .select('scheduledAt therapyData.therapyName therapyData.dayNumber patientFeedback rating')
+  .lean();
+
+  return completedSessions.map(session => ({
+    _id: session._id,
+    scheduledAt: session.scheduledAt,
+    therapyName: session.therapyData?.therapyName,
+    dayNumber: session.therapyData?.dayNumber,
+    patientFeedback: session.patientFeedback,
+    rating: session.rating
+  }));
 };
 
 module.exports = mongoose.model("TreatmentPlan", TreatmentPlanSchema);

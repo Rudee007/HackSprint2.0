@@ -170,12 +170,21 @@ class NotificationService {
     body,
     templateKey,
     variables,
-    channels = { inApp: true, email: false, sms: false },
+    channels = { inApp: true, email: false, sms: true },
     priority = 'normal',
     scheduledAt = null,
     expiresAt = null,
     metadata = {}
   }) {
+    // 1) Log input
+    console.log("[Notification] createAndDispatchNotification called", {
+      recipientId: String(recipientId),
+      eventType,
+      category,
+      hasPhone: !!variables?.phone || !!variables?.userPhone,
+      channelsRequested: channels,
+    });
+  
     const notification = new Notification({
       recipientId,
       eventType,
@@ -190,92 +199,113 @@ class NotificationService {
       variables,
       channels: {
         inApp: {
-          enabled: !!channels.inApp
+          enabled: !!channels.inApp,
+          status: 'pending',
         },
         email: {
-          enabled: !!channels.email
+          enabled: !!channels.email,
+          status: 'pending',
         },
         sms: {
-          enabled: !!channels.sms
-        }
+          enabled: !!channels.sms,
+          status: 'pending',
+        },
       },
       priority,
       scheduledAt,
       expiresAt,
-      metadata
+      metadata,
     });
-
+  
     await notification.save();
-
+    console.log("[Notification] saved", {
+      id: notification._id.toString(),
+      smsEnabled: notification.channels.sms.enabled,
+      emailEnabled: notification.channels.email.enabled,
+      inAppEnabled: notification.channels.inApp.enabled,
+    });
+  
     if (scheduledAt && scheduledAt > new Date()) {
-      // scheduled – cron/worker will send later
+      console.log("[Notification] scheduled for later dispatch", {
+        id: notification._id.toString(),
+        scheduledAt,
+      });
       return notification;
     }
-
-    // send immediately
-    await this.dispatchNow(notification);
+  
+    // 2) Immediate dispatch
+    console.log("[Notification] dispatching now", {
+      id: notification._id.toString(),
+      eventType: notification.eventType,
+      smsEnabled: notification.channels.sms.enabled,
+    });
+  
+    try {
+      await this.dispatchNow(notification);
+      console.log("[Notification] dispatchNow completed", {
+        id: notification._id.toString(),
+      });
+    } catch (err) {
+      console.error("[Notification] dispatchNow FAILED", {
+        id: notification._id.toString(),
+        error: err.message,
+        stack: err.stack,
+      });
+      throw err;
+    }
+  
     return notification;
   }
+  
+// in notification.service.js
+async dispatchNow(notification) {
+  const { channels, eventType, variables } = notification;
 
-  async dispatchNow(notificationDoc) {
-    const notification =
-      notificationDoc instanceof Notification
-        ? notificationDoc
-        : await Notification.findById(notificationDoc);
+  // SMS for OTP
+  if (channels.sms?.enabled && eventType === "OTP") {
+    const otp = variables?.otp;
+    const rawPhone = variables?.phone;
 
-    if (!notification) return;
-
-    const user = await User.findById(notification.recipientId).lean();
-    if (!user) return;
-
-    const { email, phone, name } = user;
-    const { channels, title, body, templateKey, variables } = notification;
-
-    const now = new Date();
-    const firstSentAt = notification.firstSentAt || now;
-
-    // EMAIL
-    if (channels.email.enabled && email) {
-      try {
-        channels.email.status = 'sent';
-        const subject = title;
-        const templateName = templateKey || 'genericNotification';
-        await this.sendEmail(email, subject, templateName, {
-          userName: name,
-          ...variables
-        });
-        channels.email.status = 'delivered';
-        channels.email.deliveredAt = now;
-      } catch (err) {
-        channels.email.status = 'failed';
-        channels.email.lastError = err.message;
-      }
+    if (!rawPhone || !otp) {
+      console.error("SMS enabled but phone/otp missing on notification", {
+        id: notification._id.toString(),
+        variables,
+      });
+      return;
     }
 
-    // SMS
-    if (channels.sms.enabled && phone) {
-      try {
-        channels.sms.status = 'sent';
-        await this.sendSMS(phone, body);
-        channels.sms.status = 'delivered';
-        channels.sms.deliveredAt = now;
-      } catch (err) {
-        channels.sms.status = 'failed';
-        channels.sms.lastError = err.message;
-      }
+    // Format to E.164; adjust default country as needed
+    let to = rawPhone.trim();
+    if (!to.startsWith("+")) {
+      // assume Indian number if no country code
+      to = `+91${to}`;
     }
 
-    // IN-APP
-    if (channels.inApp.enabled) {
-      channels.inApp.status = 'delivered';
-      channels.inApp.deliveredAt = now;
-    }
+    const message = `Your AyurSutra verification code is ${otp}. It is valid for 10 minutes.`;
 
-    notification.firstSentAt = firstSentAt;
-    notification.lastAttemptAt = now;
-    notification.retryCount = (notification.retryCount || 0) + 1;
-    await notification.save();
+    try {
+      console.log("📤 Sending OTP SMS via Twilio", { to, otp });
+      const result = await this.sendSMS(to, message);
+      console.log("📥 Twilio result", result);
+
+      notification.channels.sms.status = "sent";
+      notification.channels.sms.deliveredAt = new Date();
+      await notification.save();
+    } catch (err) {
+      console.error("❌ Failed to send OTP SMS", {
+        id: notification._id.toString(),
+        error: err.message,
+        stack: err.stack,
+      });
+      notification.channels.sms.status = "failed";
+      notification.channels.sms.lastError = err.message;
+      await notification.save();
+    }
   }
+
+  // TODO: email / inApp if you want
+}
+
 
   // ---------------------------------------------------------
   // HIGH-LEVEL HELPERS
@@ -295,7 +325,8 @@ class NotificationService {
       templateKey: 'authOtp',
       variables: {
         userName: user.name,
-        otp
+        otp,
+        phone: user.phone
       },
       channels: {
         inApp: false,

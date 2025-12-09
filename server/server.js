@@ -12,9 +12,11 @@ const WebSocketService = require('./src/services/websocket.service');
 require('dotenv').config();
 const app = express();
 const NotificationScheduler = require('./src/jobs/notificationScheduler');
-
+const patientProgressRoutes = require('./src/routes/patientProgress.routes');
 const therapistRoutes = require('./src/routes/therapist.routes');
 const prescriptionRoutes = require('./src/routes/prescription.routes');
+const panchakarmaAIRoutes = require('./src/routes/panchakarmaAI.routes');
+const patientAuthRoutes = require('./src/routes/patientAuth.routes');
 
 
 // ✅ Connect Database
@@ -39,7 +41,9 @@ app.use(errorHandler);
 
 // Mount routes
 app.use('/api/therapists', therapistRoutes);
-
+app.use('/api/v1/patients', patientProgressRoutes);
+app.use('/api', panchakarmaAIRoutes);
+app.use('/api/patient-auth', patientAuthRoutes);
 // app.use('/api/prescriptions', prescriptionRoutes);
 
 console.log('✅ Therapist routes mounted at /api/therapists');

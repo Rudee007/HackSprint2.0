@@ -31,7 +31,12 @@ router.get('/provider/:providerId/stats', authenticate, consultationController.g
 router.get('/doctor/:doctorId', authenticate, consultationController.getDoctorConsultations);
 router.get('/therapist/:therapistId', authenticate, consultationController.getTherapistConsultations);
 
-
-
-
+// Patient reschedule request
+router.post(
+    '/sessions/:id/reschedule-request',
+    authenticate,
+    // requireRole('patient'),
+    consultationController.patientRescheduleRequest
+  );
+  
 module.exports = router;

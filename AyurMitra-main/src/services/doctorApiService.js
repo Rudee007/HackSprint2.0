@@ -467,11 +467,18 @@ export const doctorApiService = {
       ...(filters.specialization && { specialization: filters.specialization }),
       ...(filters.date && { date: filters.date }),
       ...(filters.skillLevel && { skillLevel: filters.skillLevel }),
+      ...(filters.therapy && { therapy: filters.therapy }),
+      ...(filters.patientId && { patientId: filters.patientId }), // ⬅ important
     });
-    console.log("🔄 Fetching available therapists");
-    return apiClient.get(`/therapists/available${queryParams.toString() ? '?' + queryParams : ''}`);
+  
+    const url = `/therapists/available${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  
+    console.log("🔄 Fetching available therapists with URL:", url);
+    console.log("🔄 getAvailableTherapists filters:", filters);
+  
+    return apiClient.get(url);
   },
-
+  
   // ═══════════════════════════════════════════════════════════
   // 💊 PRESCRIPTIONS (FULL CRUD)
   // ═══════════════════════════════════════════════════════════

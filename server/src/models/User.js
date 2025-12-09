@@ -128,9 +128,15 @@ const userSchema = new mongoose.Schema({
     country: String,
     zipCode: String
   },
+
+  profileCompleted: {
+    type: Boolean,
+    default: false
+  },
   
   // Profile information
   profile: {
+   
     dateOfBirth: Date,
     gender: {
       type: String,
@@ -157,7 +163,7 @@ const userSchema = new mongoose.Schema({
     bowelHabits: String,
     addictions: [String],
     exerciseRoutine: String,
-    menstrualHistory: String, // only relevant if gender = female
+    menstrualHistory: String,
     currentMedications: [String]
   },
   
@@ -186,22 +192,18 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// ✅ Geospatial index for location-based queries
 userSchema.index({ location: '2dsphere' });
 
-// Virtual for account lock status
 userSchema.virtual('isLocked').get(function() {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 });
 
-// ✅ ADMIN HELPER METHODS
 userSchema.methods.isAdmin = function() {
   return this.role === 'admin';
 };
 
 userSchema.methods.hasPermission = function(permission) {
   if (this.role === 'admin' && !this.permissions.length) {
-    // Super admin with no specific permissions has all permissions
     return true;
   }
   return this.role === 'admin' && this.permissions.includes(permission);
@@ -210,10 +212,8 @@ userSchema.methods.hasPermission = function(permission) {
 userSchema.methods.canManageUser = function(targetUser) {
   if (!this.isAdmin()) return false;
   
-  // Super admin can manage anyone
   if (!this.permissions.length) return true;
   
-  // Admin with user_management permission can manage non-admins
   if (this.hasPermission('user_management')) {
     return targetUser.role !== 'admin';
   }
@@ -221,7 +221,6 @@ userSchema.methods.canManageUser = function(targetUser) {
   return false;
 };
 
-// ✅ AUDIT HELPER METHOD
 userSchema.methods.setAuditInfo = function(userId) {
   if (this.isNew) {
     this.createdBy = userId;
@@ -230,9 +229,7 @@ userSchema.methods.setAuditInfo = function(userId) {
   this.updatedAt = new Date();
 };
 
-// ✅ PRE-SAVE MIDDLEWARE TO CLEAN INVALID LOCATION DATA
 userSchema.pre('save', function(next) {
-  // If location is set but coordinates are invalid/empty, remove location entirely
   if (this.location) {
     if (!this.location.coordinates || 
         this.location.coordinates.length !== 2 ||
@@ -243,7 +240,6 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-// ✅ PRE-SAVE MIDDLEWARE TO HASH PASSWORD
 userSchema.pre('save', async function(next) {
   if (!this.isModified('passwordHash')) return next();
   

@@ -103,16 +103,7 @@ router.get('/health', (req, res) => {
   });
 });
 
-// // 404 handler for undefined API routes
-// router.use('*', (req, res) => {
-//   res.status(404).json({
-//     success: false,
-//     message: 'API endpoint not found',
-//     path: req.originalUrl,
-//     method: req.method,
-//     timestamp: new Date().toISOString()
-//   });
-// });
+
 
 module.exports = router;
 

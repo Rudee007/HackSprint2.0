@@ -25,10 +25,11 @@ import TherapistDashboard from './pages/TherapistDashboard';
 import ManagementDashboard from './pages/ManagementDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin'; // ✅ NEW: Admin Login
-
+import PatientProfileForm from './components/PatientProfileForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import DoctorProtectedRoute from './components/DoctorProtectedRoute';
 import TherapistProtectedRoute from './components/TherapistProtectedRoute';
+import PatientSignup from './pages/PatientSignup';
 
 import PatientDetailsForm from './components/PatientDetailsForm';
 import AppointmentBooking from './components/AppointmentBooking';
@@ -65,12 +66,13 @@ function AppContent() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/panchakarma" element={<PanchakarmePage />} />
         <Route path="/register" element={<Signup />} />
+        <Route path="patient-signup" element={<PatientSignup/>}/>
         <Route path="/patient-login" element={<PatientLogin />} />
         <Route path="/doctor-login" element={<DoctorLogin />} />
         <Route path="/therapist-login" element={<TherapistLogin />} />
         <Route path="/initial-profile" element={<IntialPatientProfile />} />
+        <Route path="/patient-form" element={<IntialPatientProfile />} />
 
-        {/* ---------- Patient routes (with Navbar) ---------- */}
         <Route
           path="/patient-dashboard"
           element={
@@ -80,7 +82,6 @@ function AppContent() {
           }
         />
 
-        {/* ---------- Doctor routes (no Navbar) ---------- */}
         <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
         <Route
           path="/doctor/:doctorId"

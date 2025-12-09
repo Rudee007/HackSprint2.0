@@ -2,21 +2,25 @@
 // 🔥 PANCHAKARMA TREATMENT WIZARD v2.0 - WITH PHASE VALIDATION
 
 import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Check, Loader2, CheckCircle, Sparkles, Clipboard, FileText, ChevronRight,
-  AlertCircle, Plus, Trash2, Edit3, X
+import { motion } from "framer-motion";
+import {
+  Check,
+  Loader2,
+  CheckCircle,
+  Sparkles,
+  Clipboard,
+  FileText,
+  AlertCircle,
+  Plus,
+  Trash2,
+  X
 } from "lucide-react";
 import doctorApiService from "../services/doctorApiService";
 import CustomPlanBuilder from "./CustomPlanBuilder";
 
 const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
-  // ═══════════════════════════════════════════════════════════
-  // STATE MANAGEMENT
-  // ═══════════════════════════════════════════════════════════
-
   const [wizardStep, setWizardStep] = useState(1);
-  const [planType, setPlanType] = useState('template');
+  const [planType, setPlanType] = useState("template");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [availableTemplates, setAvailableTemplates] = useState([]);
   const [availableTherapies, setAvailableTherapies] = useState([]);
@@ -25,45 +29,50 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
   const [validationErrors, setValidationErrors] = useState([]);
 
   const [panchakarmaForm, setPanchakarmaForm] = useState({
-    patientId: '',
-    consultationId: '',
-    assignedTherapistId: '',
+    patientId: "",
+    consultationId: "",
+    assignedTherapistId: "",
     courseTemplateId: null,
-    panchakarmaType: 'vamana',
-    treatmentName: '',
-    treatmentCategory: 'Panchakarma',
+    panchakarmaType: "vamana",
+    treatmentName: "",
+    treatmentCategory: "Panchakarma",
     isCustomPlan: false,
     isTemplateModified: false,
-    duration: { value: 21, unit: 'days' },
+    duration: { value: 21, unit: "days" },
     totalDays: 21,
     phases: [],
     schedulingPreferences: {
-      startDate: new Date().toISOString().split('T')[0],
-      preferredTimeSlot: 'morning',
-      specificTime: '08:00',
+      startDate: new Date().toISOString().split("T")[0],
+      preferredTimeSlot: "morning",
+      specificTime: "08:00",
       skipWeekends: false,
       skipHolidays: false,
       requireSameTherapist: true,
       flexibilityWindowDays: 2,
-      preferredRoom: ''
+      preferredRoom: ""
     },
-    prePanchakarmaInstructions: '',
-    postPanchakarmaInstructions: '',
-    treatmentNotes: '',
-    safetyNotes: ''
+    prePanchakarmaInstructions: "",
+    postPanchakarmaInstructions: "",
+    treatmentNotes: "",
+    safetyNotes: ""
   });
 
-  // ═══════════════════════════════════════════════════════════
-  // DATA FETCHING
-  // ═══════════════════════════════════════════════════════════
+  // ═════════ DATA FETCHING ═════════
 
   const fetchWizardData = useCallback(async () => {
     try {
+      const patientId = panchakarmaForm.patientId;
+
+      console.log("[PK] fetchWizardData called");
+      console.log("[PK] Current patientId in form:", patientId);
+
       const [templatesRes, therapiesRes, therapistsRes] = await Promise.all([
         doctorApiService.getAllCourseTemplates(),
         doctorApiService.getAllTherapies(),
-        doctorApiService.getAvailableTherapists()
+        doctorApiService.getAvailableTherapists({ patientId })
       ]);
+
+      console.log("[PK] Therapists API response raw:", therapistsRes?.data);
 
       if (templatesRes.data.success) {
         setAvailableTemplates(templatesRes.data.data || []);
@@ -72,72 +81,85 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
         setAvailableTherapies(therapiesRes.data.data || []);
       }
       if (therapistsRes.data.success) {
-        setAvailableTherapists(therapistsRes.data.data || []);
+        const list = therapistsRes.data.data || [];
+        console.log(
+          "[PK] Setting availableTherapists, count =",
+          list.length
+        );
+        setAvailableTherapists(list);
       }
     } catch (err) {
-      console.error('❌ Error fetching wizard data:', err);
+      console.error("❌ Error fetching wizard data:", err);
     }
-  }, []);
+  }, [panchakarmaForm.patientId]);
 
   useEffect(() => {
     fetchWizardData();
   }, [fetchWizardData]);
 
-  // ═══════════════════════════════════════════════════════════
-  // PHASE VALIDATION
-  // ═══════════════════════════════════════════════════════════
+  // ═════════ PHASE VALIDATION ═════════
 
   const validatePhases = () => {
     const errors = [];
-    
+
     if (!panchakarmaForm.phases || panchakarmaForm.phases.length === 0) {
-      errors.push('Treatment plan must have at least one phase');
+      errors.push("Treatment plan must have at least one phase");
       return errors;
     }
 
-    panchakarmaForm.phases.forEach((phase, index) => {
+    panchakarmaForm.phases.forEach((phase) => {
       if (!phase.therapySessions || phase.therapySessions.length === 0) {
-        errors.push(`Phase "${phase.phaseName}" must have at least one therapy session`);
+        errors.push(
+          `Phase "${phase.phaseName}" must have at least one therapy session`
+        );
       }
-      
+
       if (phase.totalDays <= 0) {
-        errors.push(`Phase "${phase.phaseName}" must have duration greater than 0 days`);
+        errors.push(
+          `Phase "${phase.phaseName}" must have duration greater than 0 days`
+        );
       }
     });
 
     return errors;
   };
 
-  // ═══════════════════════════════════════════════════════════
-  // HANDLERS
-  // ═══════════════════════════════════════════════════════════
+  // ═════════ HANDLERS ═════════
 
   const handleSelectTemplate = async (template) => {
     try {
       setSelectedTemplate(template);
-      
-      const detailsRes = await doctorApiService.getCourseTemplateDetails(template._id);
-      const fullTemplate = detailsRes.data.data;
-      
-      console.log('📋 Template Details:', fullTemplate);
 
-      // Map phases with validation
-      const mappedPhases = fullTemplate.phases.map(phase => {
-        const therapySessions = (phase.therapies || []).map(therapy => ({
+      const detailsRes = await doctorApiService.getCourseTemplateDetails(
+        template._id
+      );
+      const fullTemplate = detailsRes.data.data;
+
+      console.log("📋 Template Details:", fullTemplate);
+
+      const mappedPhases = fullTemplate.phases.map((phase) => {
+        const therapySessions = (phase.therapies || []).map((therapy) => ({
           therapyId: therapy.therapyId?._id || therapy.therapyId,
-          therapyName: therapy.therapyId?.therapyName || therapy.therapyName || 'Unknown Therapy',
-          therapyType: therapy.therapyId?.therapyType || therapy.therapyType || 'general',
+          therapyName:
+            therapy.therapyId?.therapyName ||
+            therapy.therapyName ||
+            "Unknown Therapy",
+          therapyType:
+            therapy.therapyId?.therapyType || therapy.therapyType || "general",
           sessionCount: therapy.sessionCount || 1,
-          frequency: therapy.frequency || 'daily',
-          durationMinutes: therapy.therapyId?.standardDuration || therapy.durationMinutes || 60,
+          frequency: therapy.frequency || "daily",
+          durationMinutes:
+            therapy.therapyId?.standardDuration ||
+            therapy.durationMinutes ||
+            60,
           durationDays: therapy.durationDays || 1,
           requiresPreviousPhaseComplete: false,
           minimumDaysSincePreviousSession: 0,
           allowsParallelSessions: false,
           materials: [],
-          instructions: therapy.notes || '',
-          preConditions: '',
-          stopCriteria: '',
+          instructions: therapy.notes || "",
+          preConditions: "",
+          stopCriteria: "",
           isCustom: false
         }));
 
@@ -145,43 +167,49 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
           phaseName: phase.phaseName || phase.name,
           sequenceNumber: phase.sequence || 0,
           totalDays: phase.totalDays || phase.duration || 7,
-          therapySessions: therapySessions,
-          phaseInstructions: phase.phaseInstructions || phase.instructions || '',
-          dietPlan: phase.dietGuidelines || phase.diet || '',
-          lifestyleGuidelines: '',
+          therapySessions,
+          phaseInstructions:
+            phase.phaseInstructions || phase.instructions || "",
+          dietPlan: phase.dietGuidelines || phase.diet || "",
+          lifestyleGuidelines: "",
           minGapDaysAfterPhase: phase.minimumGapToNext || 0,
           isCustom: false
         };
       });
 
-      setPanchakarmaForm(prev => ({
+      setPanchakarmaForm((prev) => ({
         ...prev,
         courseTemplateId: template._id,
         panchakarmaType: template.panchakarmaType,
         treatmentName: template.displayName,
-        treatmentCategory: template.category || 'Panchakarma',
+        treatmentCategory: template.category || "Panchakarma",
         duration: {
           value: template.totalDuration,
-          unit: 'days'
+          unit: "days"
         },
         totalDays: template.totalDuration,
         phases: mappedPhases,
-        prePanchakarmaInstructions: fullTemplate.preTreatmentInstructions || '',
-        postPanchakarmaInstructions: fullTemplate.postTreatmentInstructions || '',
+        prePanchakarmaInstructions:
+          fullTemplate.preTreatmentInstructions || "",
+        postPanchakarmaInstructions:
+          fullTemplate.postTreatmentInstructions || "",
         isCustomPlan: false,
         isTemplateModified: false
       }));
-      
+
       setWizardStep(2);
     } catch (error) {
-      console.error('❌ Error loading template details:', error);
-      alert('Failed to load template details: ' + (error.response?.data?.message || error.message));
+      console.error("❌ Error loading template details:", error);
+      alert(
+        "Failed to load template details: " +
+          (error.response?.data?.message || error.message)
+      );
     }
   };
 
   const handleAddTherapyToPhase = (phaseIndex) => {
     if (availableTherapies.length === 0) {
-      alert('No therapies available. Please contact administrator.');
+      alert("No therapies available. Please contact administrator.");
       return;
     }
 
@@ -189,22 +217,22 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
     const newTherapy = {
       therapyId: firstTherapy._id,
       therapyName: firstTherapy.therapyName,
-      therapyType: firstTherapy.therapyType || 'general',
+      therapyType: firstTherapy.therapyType || "general",
       sessionCount: 1,
-      frequency: 'daily',
+      frequency: "daily",
       durationMinutes: firstTherapy.standardDuration || 60,
       durationDays: 1,
       requiresPreviousPhaseComplete: false,
       minimumDaysSincePreviousSession: 0,
       allowsParallelSessions: false,
       materials: [],
-      instructions: '',
-      preConditions: '',
-      stopCriteria: '',
+      instructions: "",
+      preConditions: "",
+      stopCriteria: "",
       isCustom: true
     };
 
-    setPanchakarmaForm(prev => {
+    setPanchakarmaForm((prev) => {
       const updatedPhases = [...prev.phases];
       updatedPhases[phaseIndex].therapySessions.push(newTherapy);
       return {
@@ -216,7 +244,7 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
   };
 
   const handleRemoveTherapyFromPhase = (phaseIndex, therapyIndex) => {
-    setPanchakarmaForm(prev => {
+    setPanchakarmaForm((prev) => {
       const updatedPhases = [...prev.phases];
       updatedPhases[phaseIndex].therapySessions.splice(therapyIndex, 1);
       return {
@@ -228,23 +256,23 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
   };
 
   const handleUpdateTherapy = (phaseIndex, therapyIndex, field, value) => {
-    setPanchakarmaForm(prev => {
+    setPanchakarmaForm((prev) => {
       const updatedPhases = [...prev.phases];
       const therapy = updatedPhases[phaseIndex].therapySessions[therapyIndex];
-      
-      // If changing therapy, update related fields
-      if (field === 'therapyId') {
-        const selectedTherapy = availableTherapies.find(t => t._id === value);
+
+      if (field === "therapyId") {
+        const selectedTherapy = availableTherapies.find((t) => t._id === value);
         if (selectedTherapy) {
           therapy.therapyId = value;
           therapy.therapyName = selectedTherapy.therapyName;
-          therapy.therapyType = selectedTherapy.therapyType || 'general';
-          therapy.durationMinutes = selectedTherapy.standardDuration || 60;
+          therapy.therapyType = selectedTherapy.therapyType || "general";
+          therapy.durationMinutes =
+            selectedTherapy.standardDuration || 60;
         }
       } else {
         therapy[field] = value;
       }
-      
+
       return {
         ...prev,
         phases: updatedPhases,
@@ -258,19 +286,22 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
       setSubmitting(true);
       setValidationErrors([]);
 
-      // Client-side validation
       const errors = validatePhases();
       if (errors.length > 0) {
         setValidationErrors(errors);
         setSubmitting(false);
-        alert('⚠️ Validation Errors:\n' + errors.join('\n'));
+        alert("⚠️ Validation Errors:\n" + errors.join("\n"));
         return;
       }
 
-      console.log('📋 Submitting treatment plan:', JSON.stringify(panchakarmaForm, null, 2));
+      console.log(
+        "📋 Submitting treatment plan:",
+        JSON.stringify(panchakarmaForm, null, 2)
+      );
 
-      // Validate with backend
-      const validation = await doctorApiService.validateTreatmentPlan(panchakarmaForm);
+      const validation = await doctorApiService.validateTreatmentPlan(
+        panchakarmaForm
+      );
       if (!validation.valid) {
         setValidationErrors([validation.error]);
         alert(`❌ Validation Error: ${validation.error}`);
@@ -278,16 +309,17 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
         return;
       }
 
-      // Submit treatment plan
-      const response = await doctorApiService.createTreatmentPlan(panchakarmaForm);
-      
+      const response = await doctorApiService.createTreatmentPlan(
+        panchakarmaForm
+      );
+
       if (response.data.success) {
-        alert('✅ Panchakarma treatment plan created successfully!');
+        alert("✅ Panchakarma treatment plan created successfully!");
         onSuccess();
         onBack();
       }
     } catch (err) {
-      console.error('❌ Error creating treatment plan:', err);
+      console.error("❌ Error creating treatment plan:", err);
       const errorMsg = err.response?.data?.error?.message || err.message;
       setValidationErrors([errorMsg]);
       alert(`Failed to create treatment plan: ${errorMsg}`);
@@ -296,18 +328,15 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
     }
   };
 
-  // ═══════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════
+  // ═════════ RENDER ═════════
 
-  // 🔥 IF CUSTOM PLAN SELECTED, SHOW CUSTOM BUILDER INSTEAD
-  if (planType === 'custom') {
+  if (planType === "custom") {
     return (
       <CustomPlanBuilder
         consultations={consultations}
         availableTherapies={availableTherapies}
         availableTherapists={availableTherapists}
-        onBack={() => setPlanType('template')}
+        onBack={() => setPlanType("template")}
         onSuccess={onSuccess}
       />
     );
@@ -326,7 +355,9 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h4 className="font-bold text-red-800 mb-2">Validation Errors</h4>
+              <h4 className="font-bold text-red-800 mb-2">
+                Validation Errors
+              </h4>
               <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
                 {validationErrors.map((error, idx) => (
                   <li key={idx}>{error}</li>
@@ -348,17 +379,25 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
         <div className="flex items-center justify-between mb-8">
           {[1, 2, 3, 4, 5].map((step) => (
             <div key={step} className="flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                wizardStep >= step 
-                  ? 'bg-emerald-600 text-white' 
-                  : 'bg-slate-200 text-slate-500'
-              }`}>
-                {wizardStep > step ? <Check className="w-5 h-5" /> : step}
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                  wizardStep >= step
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-200 text-slate-500"
+                }`}
+              >
+                {wizardStep > step ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  step
+                )}
               </div>
               {step < 5 && (
-                <div className={`w-20 h-1 mx-2 ${
-                  wizardStep > step ? 'bg-emerald-600' : 'bg-slate-200'
-                }`} />
+                <div
+                  className={`w-20 h-1 mx-2 ${
+                    wizardStep > step ? "bg-emerald-600" : "bg-slate-200"
+                  }`}
+                />
               )}
             </div>
           ))}
@@ -366,18 +405,23 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
 
         <div className="text-center mb-6">
           <h3 className="text-2xl font-bold text-slate-800 mb-2">
-            {wizardStep === 1 && '🌿 Select Template or Custom Plan'}
-            {wizardStep === 2 && '👤 Patient & Therapist Selection'}
-            {wizardStep === 3 && '🔧 Review & Customize Phases'}
-            {wizardStep === 4 && '📅 Scheduling Preferences'}
-            {wizardStep === 5 && '✅ Final Review & Submit'}
+            {wizardStep === 1 && "🌿 Select Template or Custom Plan"}
+            {wizardStep === 2 && "👤 Patient & Therapist Selection"}
+            {wizardStep === 3 && "🔧 Review & Customize Phases"}
+            {wizardStep === 4 && "📅 Scheduling Preferences"}
+            {wizardStep === 5 && "✅ Final Review & Submit"}
           </h3>
           <p className="text-slate-600">
-            {wizardStep === 1 && 'Choose a pre-built protocol or create custom treatment plan'}
-            {wizardStep === 2 && 'Assign patient consultation and therapist'}
-            {wizardStep === 3 && 'Review and customize treatment phases and therapies'}
-            {wizardStep === 4 && 'Set treatment start date and preferences'}
-            {wizardStep === 5 && 'Review all details before creating the plan'}
+            {wizardStep === 1 &&
+              "Choose a pre-built protocol or create custom treatment plan"}
+            {wizardStep === 2 &&
+              "Assign patient consultation and therapist"}
+            {wizardStep === 3 &&
+              "Review and customize treatment phases and therapies"}
+            {wizardStep === 4 &&
+              "Set treatment start date and preferences"}
+            {wizardStep === 5 &&
+              "Review all details before creating the plan"}
           </p>
         </div>
 
@@ -386,33 +430,37 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <button
-                onClick={() => setPlanType('template')}
+                onClick={() => setPlanType("template")}
                 className={`p-6 rounded-xl border-2 transition-all ${
-                  planType === 'template'
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-slate-200 hover:border-emerald-200'
+                  planType === "template"
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-slate-200 hover:border-emerald-200"
                 }`}
               >
                 <Clipboard className="w-12 h-12 mx-auto mb-4 text-emerald-600" />
                 <h4 className="font-bold text-lg mb-2">Use Template</h4>
-                <p className="text-sm text-slate-600">Select from pre-built Panchakarma protocols</p>
+                <p className="text-sm text-slate-600">
+                  Select from pre-built Panchakarma protocols
+                </p>
               </button>
 
               <button
-                onClick={() => setPlanType('custom')}
+                onClick={() => setPlanType("custom")}
                 className={`p-6 rounded-xl border-2 transition-all ${
-                  planType === 'custom'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-200 hover:border-blue-200'
+                  planType === "custom"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-slate-200 hover:border-blue-200"
                 }`}
               >
                 <FileText className="w-12 h-12 mx-auto mb-4 text-blue-600" />
                 <h4 className="font-bold text-lg mb-2">Custom Plan</h4>
-                <p className="text-sm text-slate-600">Build your own treatment protocol</p>
+                <p className="text-sm text-slate-600">
+                  Build your own treatment protocol
+                </p>
               </button>
             </div>
 
-            {planType === 'template' && (
+            {planType === "template" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {availableTemplates.map((template) => (
                   <motion.div
@@ -422,12 +470,16 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                     className="border-2 border-slate-200 rounded-xl p-6 cursor-pointer hover:border-emerald-400 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-bold text-slate-800 truncate">{template.displayName}</h4>
+                      <h4 className="font-bold text-slate-800 truncate">
+                        {template.displayName}
+                      </h4>
                       {template.isFeatured && (
                         <Sparkles className="w-5 h-5 text-amber-500" />
                       )}
                     </div>
-                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{template.description}</p>
+                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">
+                      {template.description}
+                    </p>
                     <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>{template.totalDuration} days</span>
                       <span>{template.estimatedSessionCount} sessions</span>
@@ -450,17 +502,34 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Select Patient Consultation <span className="text-red-500">*</span>
+                  Select Patient Consultation{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={panchakarmaForm.consultationId}
                   onChange={(e) => {
-                    const selectedConsult = consultations.find(c => c._id === e.target.value);
-                    setPanchakarmaForm({
-                      ...panchakarmaForm,
+                    const selectedConsult = consultations.find(
+                      (c) => c._id === e.target.value
+                    );
+                    const newPatientId =
+                      selectedConsult?.patientId?._id ||
+                      selectedConsult?.patientId ||
+                      "";
+
+                    console.log(
+                      "[PK] Consultation changed, selected:",
+                      selectedConsult
+                    );
+                    console.log(
+                      "[PK] Derived patientId from consultation:",
+                      newPatientId
+                    );
+
+                    setPanchakarmaForm((prev) => ({
+                      ...prev,
                       consultationId: e.target.value,
-                      patientId: selectedConsult?.patientId?._id || selectedConsult?.patientId || ''
-                    });
+                      patientId: newPatientId
+                    }));
                   }}
                   className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                   required
@@ -468,7 +537,11 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                   <option value="">Select Consultation</option>
                   {consultations.map((consultation) => (
                     <option key={consultation._id} value={consultation._id}>
-                      {consultation.patientId?.name} - {new Date(consultation.scheduledFor || consultation.scheduledAt).toLocaleDateString()}
+                      {consultation.patientId?.name} -{" "}
+                      {new Date(
+                        consultation.scheduledFor ||
+                          consultation.scheduledAt
+                      ).toLocaleDateString()}
                     </option>
                   ))}
                 </select>
@@ -480,14 +553,24 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                 </label>
                 <select
                   value={panchakarmaForm.assignedTherapistId}
-                  onChange={(e) => setPanchakarmaForm({...panchakarmaForm, assignedTherapistId: e.target.value})}
+                  onChange={(e) =>
+                    setPanchakarmaForm((prev) => ({
+                      ...prev,
+                      assignedTherapistId: e.target.value
+                    }))
+                  }
                   className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                   required
                 >
                   <option value="">Select Therapist</option>
+                  {console.log(
+                    "[PK] Rendering therapist options, count =",
+                    availableTherapists.length
+                  )}
                   {availableTherapists.map((therapist) => (
                     <option key={therapist._id} value={therapist._id}>
-                      {therapist.userId?.name} - {therapist.specialization?.join(', ')}
+                      {therapist.userId?.name} -{" "}
+                      {therapist.specialization?.join(", ")}
                     </option>
                   ))}
                 </select>
@@ -501,8 +584,15 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
               <input
                 type="text"
                 value={panchakarmaForm.treatmentName}
-                onChange={(e) => setPanchakarmaForm({...panchakarmaForm, treatmentName: e.target.value})}
-                placeholder={selectedTemplate?.displayName || 'Enter custom treatment name'}
+                onChange={(e) =>
+                  setPanchakarmaForm((prev) => ({
+                    ...prev,
+                    treatmentName: e.target.value
+                  }))
+                }
+                placeholder={
+                  selectedTemplate?.displayName || "Enter custom treatment name"
+                }
                 className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -516,8 +606,13 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
               </button>
               <button
                 onClick={() => {
-                  if (!panchakarmaForm.consultationId || !panchakarmaForm.assignedTherapistId) {
-                    alert('Please select both patient consultation and therapist');
+                  if (
+                    !panchakarmaForm.consultationId ||
+                    !panchakarmaForm.assignedTherapistId
+                  ) {
+                    alert(
+                      "Please select both patient consultation and therapist"
+                    );
                     return;
                   }
                   setWizardStep(3);
@@ -530,7 +625,7 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
           </div>
         )}
 
-        {/* STEP 3: 🔥 PHASE REVIEW & CUSTOMIZATION */}
+        {/* STEP 3: Phase Review & Customization */}
         {wizardStep === 3 && (
           <div className="space-y-6">
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
@@ -538,18 +633,21 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                 <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-amber-800">
                   <p className="font-semibold mb-1">Review Required Phases</p>
-                  <p>Each phase must have at least one therapy session. Add therapies to empty phases or remove empty phases.</p>
+                  <p>
+                    Each phase must have at least one therapy session. Add
+                    therapies to empty phases or remove empty phases.
+                  </p>
                 </div>
               </div>
             </div>
 
             {panchakarmaForm.phases.map((phase, phaseIndex) => (
-              <div 
-                key={phaseIndex} 
+              <div
+                key={phaseIndex}
                 className={`border-2 rounded-xl p-6 ${
-                  phase.therapySessions.length === 0 
-                    ? 'border-red-300 bg-red-50' 
-                    : 'border-emerald-200 bg-emerald-50'
+                  phase.therapySessions.length === 0
+                    ? "border-red-300 bg-red-50"
+                    : "border-emerald-200 bg-emerald-50"
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -562,7 +660,9 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                         </span>
                       )}
                     </h4>
-                    <p className="text-sm text-slate-600">Duration: {phase.totalDays} days</p>
+                    <p className="text-sm text-slate-600">
+                      Duration: {phase.totalDays} days
+                    </p>
                   </div>
                   <button
                     onClick={() => handleAddTherapyToPhase(phaseIndex)}
@@ -573,26 +673,39 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                   </button>
                 </div>
 
-                {/* Therapies in this phase */}
                 <div className="space-y-3">
                   {phase.therapySessions.length === 0 ? (
                     <div className="text-center py-8 text-slate-500">
                       <AlertCircle className="w-12 h-12 mx-auto mb-2 text-red-400" />
                       <p className="font-medium">No therapies in this phase</p>
-                      <p className="text-sm">Click "Add Therapy" to add sessions</p>
+                      <p className="text-sm">
+                        Click "Add Therapy" to add sessions
+                      </p>
                     </div>
                   ) : (
                     phase.therapySessions.map((therapy, therapyIndex) => (
-                      <div key={therapyIndex} className="bg-white border border-slate-200 rounded-lg p-4">
+                      <div
+                        key={therapyIndex}
+                        className="bg-white border border-slate-200 rounded-lg p-4"
+                      >
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Therapy</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                              Therapy
+                            </label>
                             <select
                               value={therapy.therapyId}
-                              onChange={(e) => handleUpdateTherapy(phaseIndex, therapyIndex, 'therapyId', e.target.value)}
+                              onChange={(e) =>
+                                handleUpdateTherapy(
+                                  phaseIndex,
+                                  therapyIndex,
+                                  "therapyId",
+                                  e.target.value
+                                )
+                              }
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             >
-                              {availableTherapies.map(t => (
+                              {availableTherapies.map((t) => (
                                 <option key={t._id} value={t._id}>
                                   {t.therapyName} - {t.therapyType}
                                 </option>
@@ -601,45 +714,79 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Sessions</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                              Sessions
+                            </label>
                             <input
                               type="number"
                               min="1"
                               value={therapy.sessionCount}
-                              onChange={(e) => handleUpdateTherapy(phaseIndex, therapyIndex, 'sessionCount', parseInt(e.target.value))}
+                              onChange={(e) =>
+                                handleUpdateTherapy(
+                                  phaseIndex,
+                                  therapyIndex,
+                                  "sessionCount",
+                                  parseInt(e.target.value, 10)
+                                )
+                              }
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Frequency</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                              Frequency
+                            </label>
                             <select
                               value={therapy.frequency}
-                              onChange={(e) => handleUpdateTherapy(phaseIndex, therapyIndex, 'frequency', e.target.value)}
+                              onChange={(e) =>
+                                handleUpdateTherapy(
+                                  phaseIndex,
+                                  therapyIndex,
+                                  "frequency",
+                                  e.target.value
+                                )
+                              }
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             >
                               <option value="daily">Daily</option>
-                              <option value="alternate_days">Alternate Days</option>
+                              <option value="alternate_days">
+                                Alternate Days
+                              </option>
                               <option value="weekly">Weekly</option>
                               <option value="twice_daily">Twice Daily</option>
                             </select>
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Duration (mins)</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">
+                              Duration (mins)
+                            </label>
                             <input
                               type="number"
                               min="15"
                               step="15"
                               value={therapy.durationMinutes}
-                              onChange={(e) => handleUpdateTherapy(phaseIndex, therapyIndex, 'durationMinutes', parseInt(e.target.value))}
+                              onChange={(e) =>
+                                handleUpdateTherapy(
+                                  phaseIndex,
+                                  therapyIndex,
+                                  "durationMinutes",
+                                  parseInt(e.target.value, 10)
+                                )
+                              }
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             />
                           </div>
 
                           <div className="flex items-end">
                             <button
-                              onClick={() => handleRemoveTherapyFromPhase(phaseIndex, therapyIndex)}
+                              onClick={() =>
+                                handleRemoveTherapyFromPhase(
+                                  phaseIndex,
+                                  therapyIndex
+                                )
+                              }
                               className="w-full px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
                             >
                               <Trash2 className="w-4 h-4 inline mr-1" />
@@ -649,10 +796,19 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                         </div>
 
                         <div className="mt-3">
-                          <label className="block text-xs font-semibold text-slate-600 mb-1">Instructions (Optional)</label>
+                          <label className="block text-xs font-semibold text-slate-600 mb-1">
+                            Instructions (Optional)
+                          </label>
                           <textarea
                             value={therapy.instructions}
-                            onChange={(e) => handleUpdateTherapy(phaseIndex, therapyIndex, 'instructions', e.target.value)}
+                            onChange={(e) =>
+                              handleUpdateTherapy(
+                                phaseIndex,
+                                therapyIndex,
+                                "instructions",
+                                e.target.value
+                              )
+                            }
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                             rows="2"
                             placeholder="Special instructions for this therapy..."
@@ -677,7 +833,9 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                   const errors = validatePhases();
                   if (errors.length > 0) {
                     setValidationErrors(errors);
-                    alert('⚠️ Please fix phase errors:\n' + errors.join('\n'));
+                    alert(
+                      "⚠️ Please fix phase errors:\n" + errors.join("\n")
+                    );
                     return;
                   }
                   setValidationErrors([]);
@@ -702,14 +860,16 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                 <input
                   type="date"
                   value={panchakarmaForm.schedulingPreferences.startDate}
-                  onChange={(e) => setPanchakarmaForm({
-                    ...panchakarmaForm,
-                    schedulingPreferences: {
-                      ...panchakarmaForm.schedulingPreferences,
-                      startDate: e.target.value
-                    }
-                  })}
-                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) =>
+                    setPanchakarmaForm((prev) => ({
+                      ...prev,
+                      schedulingPreferences: {
+                        ...prev.schedulingPreferences,
+                        startDate: e.target.value
+                      }
+                    }))
+                  }
+                  min={new Date().toISOString().split("T")[0]}
                   className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                   required
                 />
@@ -721,13 +881,15 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                 </label>
                 <select
                   value={panchakarmaForm.schedulingPreferences.preferredTimeSlot}
-                  onChange={(e) => setPanchakarmaForm({
-                    ...panchakarmaForm,
-                    schedulingPreferences: {
-                      ...panchakarmaForm.schedulingPreferences,
-                      preferredTimeSlot: e.target.value
-                    }
-                  })}
+                  onChange={(e) =>
+                    setPanchakarmaForm((prev) => ({
+                      ...prev,
+                      schedulingPreferences: {
+                        ...prev.schedulingPreferences,
+                        preferredTimeSlot: e.target.value
+                      }
+                    }))
+                  }
                   className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="morning">Morning (6 AM - 12 PM)</option>
@@ -743,13 +905,15 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                 <input
                   type="time"
                   value={panchakarmaForm.schedulingPreferences.specificTime}
-                  onChange={(e) => setPanchakarmaForm({
-                    ...panchakarmaForm,
-                    schedulingPreferences: {
-                      ...panchakarmaForm.schedulingPreferences,
-                      specificTime: e.target.value
-                    }
-                  })}
+                  onChange={(e) =>
+                    setPanchakarmaForm((prev) => ({
+                      ...prev,
+                      schedulingPreferences: {
+                        ...prev.schedulingPreferences,
+                        specificTime: e.target.value
+                      }
+                    }))
+                  }
                   className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -761,16 +925,21 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                   type="checkbox"
                   id="skipWeekends"
                   checked={panchakarmaForm.schedulingPreferences.skipWeekends}
-                  onChange={(e) => setPanchakarmaForm({
-                    ...panchakarmaForm,
-                    schedulingPreferences: {
-                      ...panchakarmaForm.schedulingPreferences,
-                      skipWeekends: e.target.checked
-                    }
-                  })}
+                  onChange={(e) =>
+                    setPanchakarmaForm((prev) => ({
+                      ...prev,
+                      schedulingPreferences: {
+                        ...prev.schedulingPreferences,
+                        skipWeekends: e.target.checked
+                      }
+                    }))
+                  }
                   className="w-5 h-5"
                 />
-                <label htmlFor="skipWeekends" className="font-medium text-slate-700">
+                <label
+                  htmlFor="skipWeekends"
+                  className="font-medium text-slate-700"
+                >
                   Skip Weekends
                 </label>
               </div>
@@ -779,17 +948,24 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
                 <input
                   type="checkbox"
                   id="sameTherapist"
-                  checked={panchakarmaForm.schedulingPreferences.requireSameTherapist}
-                  onChange={(e) => setPanchakarmaForm({
-                    ...panchakarmaForm,
-                    schedulingPreferences: {
-                      ...panchakarmaForm.schedulingPreferences,
-                      requireSameTherapist: e.target.checked
-                    }
-                  })}
+                  checked={
+                    panchakarmaForm.schedulingPreferences.requireSameTherapist
+                  }
+                  onChange={(e) =>
+                    setPanchakarmaForm((prev) => ({
+                      ...prev,
+                      schedulingPreferences: {
+                        ...prev.schedulingPreferences,
+                        requireSameTherapist: e.target.checked
+                      }
+                    }))
+                  }
                   className="w-5 h-5"
                 />
-                <label htmlFor="sameTherapist" className="font-medium text-slate-700">
+                <label
+                  htmlFor="sameTherapist"
+                  className="font-medium text-slate-700"
+                >
                   Require Same Therapist
                 </label>
               </div>
@@ -816,35 +992,55 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
         {wizardStep === 5 && (
           <div className="space-y-6">
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
-              <h4 className="font-bold text-emerald-900 mb-4">Plan Summary</h4>
+              <h4 className="font-bold text-emerald-900 mb-4">
+                Plan Summary
+              </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-slate-600">Template:</span>
-                  <p className="font-semibold">{selectedTemplate?.displayName || 'Custom'}</p>
+                  <p className="font-semibold">
+                    {selectedTemplate?.displayName || "Custom"}
+                  </p>
                 </div>
                 <div>
                   <span className="text-slate-600">Total Phases:</span>
-                  <p className="font-semibold">{panchakarmaForm.phases.length}</p>
+                  <p className="font-semibold">
+                    {panchakarmaForm.phases.length}
+                  </p>
                 </div>
                 <div>
                   <span className="text-slate-600">Duration:</span>
-                  <p className="font-semibold">{panchakarmaForm.totalDays} days</p>
+                  <p className="font-semibold">
+                    {panchakarmaForm.totalDays} days
+                  </p>
                 </div>
                 <div>
                   <span className="text-slate-600">Total Sessions:</span>
                   <p className="font-semibold">
-                    {panchakarmaForm.phases.reduce((sum, phase) => 
-                      sum + phase.therapySessions.reduce((s, t) => s + (t.sessionCount || 0), 0), 0
+                    {panchakarmaForm.phases.reduce(
+                      (sum, phase) =>
+                        sum +
+                        phase.therapySessions.reduce(
+                          (s, t) => s + (t.sessionCount || 0),
+                          0
+                        ),
+                      0
                     )}
                   </p>
                 </div>
                 <div>
                   <span className="text-slate-600">Start Date:</span>
-                  <p className="font-semibold">{new Date(panchakarmaForm.schedulingPreferences.startDate).toLocaleDateString()}</p>
+                  <p className="font-semibold">
+                    {new Date(
+                      panchakarmaForm.schedulingPreferences.startDate
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
                 <div>
                   <span className="text-slate-600">Time Slot:</span>
-                  <p className="font-semibold capitalize">{panchakarmaForm.schedulingPreferences.preferredTimeSlot}</p>
+                  <p className="font-semibold capitalize">
+                    {panchakarmaForm.schedulingPreferences.preferredTimeSlot}
+                  </p>
                 </div>
               </div>
             </div>
@@ -855,7 +1051,12 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
               </label>
               <textarea
                 value={panchakarmaForm.prePanchakarmaInstructions}
-                onChange={(e) => setPanchakarmaForm({...panchakarmaForm, prePanchakarmaInstructions: e.target.value})}
+                onChange={(e) =>
+                  setPanchakarmaForm((prev) => ({
+                    ...prev,
+                    prePanchakarmaInstructions: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 rows="3"
                 placeholder="Instructions before starting treatment..."
@@ -868,7 +1069,12 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
               </label>
               <textarea
                 value={panchakarmaForm.postPanchakarmaInstructions}
-                onChange={(e) => setPanchakarmaForm({...panchakarmaForm, postPanchakarmaInstructions: e.target.value})}
+                onChange={(e) =>
+                  setPanchakarmaForm((prev) => ({
+                    ...prev,
+                    postPanchakarmaInstructions: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 rows="3"
                 placeholder="Instructions after completing treatment..."
@@ -881,7 +1087,12 @@ const PanchakarmaPlanner = ({ consultations, onBack, onSuccess }) => {
               </label>
               <textarea
                 value={panchakarmaForm.safetyNotes}
-                onChange={(e) => setPanchakarmaForm({...panchakarmaForm, safetyNotes: e.target.value})}
+                onChange={(e) =>
+                  setPanchakarmaForm((prev) => ({
+                    ...prev,
+                    safetyNotes: e.target.value
+                  }))
+                }
                 className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
                 rows="2"
                 placeholder="Safety precautions and contraindications..."

@@ -527,14 +527,14 @@ const MyPatients = () => {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* <button
                       onClick={(e) => handleViewConsultations(patient._id, e)}
                       className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-50 text-slate-700 rounded-xl hover:bg-slate-100 transition-all border border-slate-200 font-medium hover:shadow-sm"
                     >
                       <Calendar className="w-4 h-4" />
                       <span>Consultations</span>
-                    </button>
+                    </button> */}
                     <button
                       onClick={(e) => handleViewPatientDetails(patient, e)}
                       className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-all border border-blue-200 font-medium hover:shadow-sm"
